@@ -25,6 +25,22 @@ class VersionLogicTests(unittest.TestCase):
         self.assertFalse(sync_remote_skills.should_upgrade_agent_browser("0.15.0", "0.14.0"))
 
 
+class SyncTargetConfigurationTests(unittest.TestCase):
+    def test_sync_targets_include_pdf_mapping(self) -> None:
+        targets_by_name = {target.name: target for target in sync_remote_skills.SYNC_TARGETS}
+        self.assertIn("pdf", targets_by_name)
+
+        pdf_target = targets_by_name["pdf"]
+        self.assertEqual(pdf_target.repo_url, "https://github.com/anthropics/skills.git")
+        self.assertEqual(pdf_target.branch, "main")
+        self.assertEqual(pdf_target.remote_path, "skills/pdf")
+        self.assertEqual(pdf_target.local_path.as_posix(), "skills/pdf")
+
+    def test_sync_target_names_are_unique(self) -> None:
+        names = [target.name for target in sync_remote_skills.SYNC_TARGETS]
+        self.assertEqual(len(names), len(set(names)))
+
+
 class WorkflowOrderTests(unittest.TestCase):
     def test_run_order_sync_then_install_checks(self) -> None:
         call_order: list[str] = []
