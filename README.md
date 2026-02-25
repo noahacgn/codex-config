@@ -16,12 +16,10 @@ The script performs these steps:
    `https://github.com/trailofbits/skills` (`main`)
 2. Force-sync `skills/agent-browser` from:
    `https://github.com/vercel-labs/agent-browser` (`main`)
-3. Force-sync `skills/pdf` from:
-   `https://github.com/anthropics/skills` (`main`)
-4. Check local `agent-browser` version against npm latest
-5. Run `npm install -g agent-browser` only if missing or outdated
-6. Run `agent-browser install` only when CLI was upgraded
-7. Print `git status --short skills`
+3. Check local `agent-browser` version against npm latest
+4. Run `npm install -g agent-browser` only if missing or outdated
+5. Run `agent-browser install` only when CLI was upgraded
+6. Print `git status --short skills`
 
 The script does not commit or push changes.
 
