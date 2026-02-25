@@ -18,7 +18,7 @@ The script performs these steps:
    `https://github.com/vercel-labs/agent-browser` (`main`)
 3. Check local `agent-browser` version against npm latest
 4. Run `npm install -g agent-browser` only if missing or outdated
-5. Run `agent-browser install` only when CLI was upgraded or browser probe fails
+5. Run `agent-browser install` only when CLI was upgraded
 6. Print `git status --short skills`
 
 The script does not commit or push changes.

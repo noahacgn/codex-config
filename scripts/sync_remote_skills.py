@@ -245,25 +245,6 @@ def read_latest_agent_browser_version() -> str:
     return extract_semver(output, source="npm view agent-browser version")
 
 
-def probe_agent_browser() -> bool:
-    if find_executable("agent-browser") is None:
-        return False
-
-    try:
-        run_command(
-            ["agent-browser", "open", "about:blank"],
-            operation="Probe agent-browser open about:blank",
-        )
-    except SyncExecutionError:
-        return False
-
-    try:
-        run_command(["agent-browser", "close"], operation="Probe agent-browser close")
-    except SyncExecutionError:
-        return False
-    return True
-
-
 def maintain_agent_browser() -> None:
     """Ensures agent-browser CLI and Chromium are available when required."""
 
@@ -290,25 +271,17 @@ def maintain_agent_browser() -> None:
     else:
         print("[agent-browser] CLI is already up to date; skipping npm global install")
 
-    healthy = probe_agent_browser()
-    needs_browser_install = upgraded or not healthy
+    needs_browser_install = upgraded
     if not needs_browser_install:
-        print("[agent-browser] browser probe passed; skipping agent-browser install")
+        print("[agent-browser] skipping agent-browser install (no CLI upgrade performed)")
         return
 
-    reason = "CLI upgraded" if upgraded else "browser probe failed"
-    print(f"[agent-browser] running agent-browser install ({reason})")
+    print("[agent-browser] running agent-browser install (CLI upgraded)")
     run_command(
         ["agent-browser", "install"],
         operation="Install Chromium via agent-browser",
     )
-    if not probe_agent_browser():
-        message = (
-            "agent-browser is not operational after agent-browser install. "
-            "Suggested fix: rerun with network access and review local security software restrictions."
-        )
-        raise SyncExecutionError(message)
-    print("[agent-browser] browser probe passed after install")
+    print("[agent-browser] install completed")
 
 
 def print_skills_git_status(repo_root: Path) -> str:
