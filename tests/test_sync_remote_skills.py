@@ -36,6 +36,16 @@ class SyncTargetConfigurationTests(unittest.TestCase):
         self.assertEqual(pdf_target.remote_path, "skills/pdf")
         self.assertEqual(pdf_target.local_path.as_posix(), "skills/pdf")
 
+    def test_sync_targets_include_frontend_design_mapping(self) -> None:
+        targets_by_name = {target.name: target for target in sync_remote_skills.SYNC_TARGETS}
+        self.assertIn("frontend-design", targets_by_name)
+
+        frontend_design_target = targets_by_name["frontend-design"]
+        self.assertEqual(frontend_design_target.repo_url, "https://github.com/anthropics/skills.git")
+        self.assertEqual(frontend_design_target.branch, "main")
+        self.assertEqual(frontend_design_target.remote_path, "skills/frontend-design")
+        self.assertEqual(frontend_design_target.local_path.as_posix(), "skills/frontend-design")
+
     def test_sync_target_names_are_unique(self) -> None:
         names = [target.name for target in sync_remote_skills.SYNC_TARGETS]
         self.assertEqual(len(names), len(set(names)))
