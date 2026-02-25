@@ -59,3 +59,7 @@ Run:
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
 ```
+
+## Acknowledgements
+
+- Thanks to [trailofbits/claude-code-config](https://github.com/trailofbits/claude-code-config)
