@@ -50,13 +50,6 @@ SYNC_TARGETS: tuple[SyncTarget, ...] = (
         remote_path="skills/pdf",
         local_path=Path("skills/pdf"),
     ),
-    SyncTarget(
-        name="frontend-design",
-        repo_url="https://github.com/anthropics/skills.git",
-        branch="main",
-        remote_path="skills/frontend-design",
-        local_path=Path("skills/frontend-design"),
-    ),
 )
 
 
