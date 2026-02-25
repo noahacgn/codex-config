@@ -51,7 +51,7 @@ For each issue: describe concretely with file:line references, present options w
 
 **Mock boundaries, not logic.** Only mock things that are slow (network, filesystem), non-deterministic (time, randomness), or external services you don't control.
 
-**Verify tests catch failures.** Break the code, confirm the test fails, then fix. Use mutation testing to verify systematically. Use property-based testing for parsers, serialization, and algorithms. Use `agent-browser` for integration testing.
+**Verify tests catch failures.** Break the code, confirm the test fails, then fix. Use mutation testing to verify systematically. Use property-based testing for parsers, serialization, and algorithms.
 
 ## Development
 
