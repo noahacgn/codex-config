@@ -23,6 +23,28 @@ The script performs these steps:
 
 The script does not commit or push changes.
 
+## Sync Repository Config Into `~/.codex`
+
+Run:
+
+```bash
+python scripts/sync_to_codex.py
+```
+
+The script copies this allowlist into your home `.codex` directory:
+
+- `config.toml`
+- `AGENTS.md`
+- `notify.ps1`
+- Git-tracked files under `agents/`
+- Git-tracked files under `skills/`
+
+Sync behavior:
+
+- Overwrites destination files when the same relative path exists
+- Keeps destination files that are outside the allowlist
+- Does not commit or push changes
+
 ## Requirements
 
 - Python 3.11+
