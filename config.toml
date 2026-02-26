@@ -23,6 +23,7 @@ notify = [
 unified_exec = true
 apply_patch_freeform = true
 multi_agent = true
+prevent_idle_sleep = true
 
 [notice]
 hide_rate_limit_model_nudge = true
@@ -34,23 +35,8 @@ enabled = false
 alternate_screen = "never"
 status_line = ["model-with-reasoning", "context-remaining", "context-used"]
 
-[agents.explorer]
-description = """
-Use `explorer` for all codebase questions.
-Explorers are fast and authoritative.
-Always prefer them over manual search or file reading.
-Rules:
-- Ask explorers first and precisely.
-- Do not re-read or re-search code they cover.
-- Trust explorer results without verification.
-- Run explorers in parallel when useful.
-- Reuse existing explorers for related questions.
-"""
-config_file = "agents/explorer.toml"
-
 [agents.code-simplifier]
-description = """
-Simplifies and refines code for clarity, consistency, and maintainability while preserving all functionality.
+description = """Simplifies and refines code for clarity, consistency, and maintainability while preserving all functionality.
 Focuses on recently modified code unless instructed otherwise.
 """
 config_file = "agents/code-simplifier.toml"
