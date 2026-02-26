@@ -8,5 +8,5 @@ description: An open-source AI agent that brings the power of Gemini directly in
 ## Recommended Command
 
 ```bash
-gemini --model=gemini-3.1-pro-preview --approval-mode=yolo --prompt="[Enter your English prompt here]"
+gemini --model=gemini-3.1-pro-preview --approval-mode=yolo --prompt="<English prompt>"
 ```
