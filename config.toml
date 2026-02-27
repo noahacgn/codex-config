@@ -25,7 +25,6 @@ unified_exec = true
 apply_patch_freeform = true
 multi_agent = true
 prevent_idle_sleep = true
-js_repl = true
 
 [notice]
 hide_rate_limit_model_nudge = true
