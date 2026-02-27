@@ -21,11 +21,14 @@ class CollectSyncFilesTests(unittest.TestCase):
             write_file(repo_root / "AGENTS.md", "# agents\n")
             write_file(repo_root / "notify.ps1", "Write-Output 'notify'\n")
             write_file(repo_root / "agents" / "explorer.toml", "name = 'explorer'\n")
-            write_file(repo_root / "skills" / "agent-browser" / "SKILL.md", "# skill\n")
-            git_output = "agents/explorer.toml\nskills/agent-browser/SKILL.md\n"
-            with patch.object(sync_to_codex, "run_command", return_value=git_output):
+            git_output = "agents/explorer.toml\n"
+            with patch.object(sync_to_codex, "run_command", return_value=git_output) as run_command_mock:
                 collected = sync_to_codex.collect_sync_files(repo_root)
 
+        run_command_mock.assert_called_once_with(
+            ["git", "-C", str(repo_root), "ls-files", "--", "agents"],
+            operation="Collect git-tracked files for sync directories",
+        )
         self.assertEqual(
             [path.as_posix() for path in collected],
             [
@@ -33,7 +36,6 @@ class CollectSyncFilesTests(unittest.TestCase):
                 "agents/explorer.toml",
                 "config.toml",
                 "notify.ps1",
-                "skills/agent-browser/SKILL.md",
             ],
         )
 

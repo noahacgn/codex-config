@@ -32,7 +32,6 @@ The script copies this allowlist into your home `.codex` directory:
 - `AGENTS.md`
 - `notify.ps1`
 - Git-tracked files under `agents/`
-- Git-tracked files under `skills/`
 
 Sync behavior:
 

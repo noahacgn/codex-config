@@ -19,7 +19,6 @@ SYNC_FILE_TARGETS: tuple[Path, ...] = (
 )
 SYNC_DIR_TARGETS: tuple[Path, ...] = (
     Path("agents"),
-    Path("skills"),
 )
 DEFAULT_DESTINATION = Path.home() / ".codex"
 
