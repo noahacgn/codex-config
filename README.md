@@ -7,8 +7,10 @@ This repository keeps local Codex configuration and mirrored skills content.
 Run these commands manually:
 
 ```bash
-npx skills add https://github.com/trailofbits/skills --skill ask-questions-if-underspecified -g -a codex -y
 npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -a codex -y
+npx skills add https://github.com/trailofbits/skills --skill ask-questions-if-underspecified -g -a codex -y
+npx skills add https://github.com/trailofbits/skills --skill audit-context-building -g -a codex -y
+npx skills add https://github.com/stellarlinkco/myclaude --skill harness -g -a codex -y
 npx skills add https://github.com/nextlevelbuilder/ui-ux-pro-max-skill --skill ui-ux-pro-max -g -a codex -y
 ```
 
