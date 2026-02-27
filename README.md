@@ -4,24 +4,19 @@ This repository keeps local Codex configuration and mirrored skills content.
 
 ## Manual Sync Workflow
 
-Run:
+Run these commands manually:
 
 ```bash
-python scripts/sync_remote_skills.py
+npx skills add https://github.com/trailofbits/skills --skill ask-questions-if-underspecified -g -a codex -y
+npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -a codex -y
+npx skills add https://github.com/nextlevelbuilder/ui-ux-pro-max-skill --skill ui-ux-pro-max -g -a codex -y
 ```
 
-The script performs these steps:
+After installing the skills, upgrade all installed skills to their latest versions:
 
-1. Force-sync `skills/ask-questions-if-underspecified` from:
-   `https://github.com/trailofbits/skills` (`main`)
-2. Force-sync `skills/agent-browser` from:
-   `https://github.com/vercel-labs/agent-browser` (`main`)
-3. Check local `agent-browser` version against npm latest
-4. Run `npm install -g agent-browser` only if missing or outdated
-5. Run `agent-browser install` only when CLI was upgraded
-6. Print `git status --short skills`
-
-The script does not commit or push changes.
+```bash
+npx skills update
+```
 
 ## Sync Repository Config Into `~/.codex`
 
