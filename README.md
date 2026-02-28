@@ -8,6 +8,7 @@ Run these commands manually:
 
 ```bash
 npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -a codex -y
+npx skills add https://github.com/obra/superpowers -g -a codex
 ```
 
 Other commands:
