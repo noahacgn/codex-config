@@ -1,65 +1,69 @@
 # codex-config
 
-This repository keeps local Codex configuration and mirrored skills content.
+Version-controlled configuration for [OpenAI Codex CLI](https://github.com/openai/codex). Keeps settings, agent definitions, and notification scripts in Git so they can be reviewed, diffed, and synced to `~/.codex` on any machine.
 
-## Manual Sync Workflow
+## Repository Layout
 
-Run these commands manually:
-
-```bash
-npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -a codex -y
-npx skills add https://github.com/obra/superpowers -g -a codex
+```
+config.toml          # Codex CLI settings (model, sandbox, features, TUI, etc.)
+AGENTS.md            # Global development standards & coding guidelines
+notify.ps1           # Windows toast notification script (BurntToast)
+agents/              # Custom agent definitions
+  code-simplifier.toml
+scripts/
+  sync_to_codex.py   # Copies allowlisted files into ~/.codex
+tests/
+  test_sync_to_codex.py
 ```
 
-Other commands:
-
-```bash
-# List only global skills
-npx skills ls -g
-
-# Update all skills to latest versions
-npx skills update
-
-# Remove all installed skills without confirmation
-npx skills remove --all -g
-```
-
-## Sync Repository Config Into `~/.codex`
-
-Run:
+## Sync to `~/.codex`
 
 ```bash
 python scripts/sync_to_codex.py
 ```
 
-The script copies this allowlist into your home `.codex` directory:
+Copies the following into `~/.codex`, preserving relative paths:
 
-- `config.toml`
-- `AGENTS.md`
-- `notify.ps1`
-- Git-tracked files under `agents/`
+| Target | Source |
+|---|---|
+| `config.toml` | Repo root |
+| `AGENTS.md` | Repo root |
+| `notify.ps1` | Repo root |
+| `agents/*` | Git-tracked files under `agents/` |
 
-Sync behavior:
+- Overwrites destination files that share the same relative path.
+- Leaves destination files outside the allowlist untouched.
+- Does not commit or push.
 
-- Overwrites destination files when the same relative path exists
-- Keeps destination files that are outside the allowlist
-- Does not commit or push changes
+## Skills
 
-## Requirements
+```bash
+# Install skills
+npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -a codex -y
+npx skills add https://github.com/obra/superpowers -g -a codex
 
-- Python 3.11+
-- `git`
-- `node` and `npm`
-- Network access to GitHub and npm registry
+# List global skills
+npx skills ls -g
+
+# Update all skills
+npx skills update
+
+# Remove all global skills
+npx skills remove --all -g
+```
 
 ## Tests
-
-Run:
 
 ```bash
 python -m unittest discover -s tests -p "test_*.py"
 ```
 
+## Requirements
+
+- Python 3.11+
+- Git
+- Node.js and npm (for skills management)
+
 ## Acknowledgements
 
-- Thanks to [trailofbits/claude-code-config](https://github.com/trailofbits/claude-code-config)
+- [trailofbits/claude-code-config](https://github.com/trailofbits/claude-code-config)
