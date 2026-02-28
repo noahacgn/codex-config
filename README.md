@@ -8,16 +8,19 @@ Run these commands manually:
 
 ```bash
 npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -a codex -y
-npx skills add https://github.com/trailofbits/skills --skill ask-questions-if-underspecified -g -a codex -y
-npx skills add https://github.com/trailofbits/skills --skill audit-context-building -g -a codex -y
-npx skills add https://github.com/stellarlinkco/myclaude --skill harness -g -a codex -y
-npx skills add https://github.com/nextlevelbuilder/ui-ux-pro-max-skill --skill ui-ux-pro-max -g -a codex -y
 ```
 
-After installing the skills, upgrade all installed skills to their latest versions:
+Other commands:
 
 ```bash
+# List only global skills
+npx skills ls -g
+
+# Update all skills to latest versions
 npx skills update
+
+# Remove all installed skills without confirmation
+npx skills remove --all -g
 ```
 
 ## Sync Repository Config Into `~/.codex`
