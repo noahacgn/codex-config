@@ -16,10 +16,16 @@ tests/
   test_sync_to_codex.py
 ```
 
+## Setup
+
+```bash
+uv sync --group dev
+```
+
 ## Sync to `~/.codex`
 
 ```bash
-python scripts/sync_to_codex.py
+uv run python scripts/sync_to_codex.py
 ```
 
 Copies the following into `~/.codex`, preserving relative paths:
@@ -53,14 +59,17 @@ npx skills update
 npx skills remove --all -g
 ```
 
-## Tests
+## Quality Checks
 
 ```bash
-python -m unittest discover -s tests -p "test_*.py"
+uv run pytest
+uv run ruff check .
+uv run ty check scripts tests
 ```
 
 ## Requirements
 
+- uv
 - Python 3.11+
 - Git
 - Node.js and npm (for skills management)
