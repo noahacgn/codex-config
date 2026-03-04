@@ -55,4 +55,5 @@ For each issue: describe concretely with file:line references, present options w
 
 ## Development
 
-When adding dependencies, CI actions, or tool versions, always look up the current stable version — never assume from memory unless the user provides one.
+1. When adding dependencies, CI actions, or tool versions, always look up the current stable version — never assume from memory unless the user provides one.
+2. Commit everytime you have something stable. You should end up having ONE commit per task. Use `commit --amend` if needed. NEVER have two different tasks commited together.
