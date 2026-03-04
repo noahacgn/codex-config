@@ -40,7 +40,6 @@ Copies the following into `~/.codex`, preserving relative paths:
 ```bash
 # Install skills
 npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -a codex -y
-npx skills add https://github.com/obra/superpowers -g -a codex
 
 # List global skills
 npx skills ls -g
