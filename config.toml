@@ -50,3 +50,11 @@ enabled = false
 [[skills.config]]
 path = "skills/.system/skill-installer/SKILL.md"
 enabled = false
+
+[[skills.config]]
+path = "skills/.system/slides/SKILL.md"
+enabled = false
+
+[[skills.config]]
+path = "skills/.system/spreadsheets/SKILL.md"
+enabled = false
