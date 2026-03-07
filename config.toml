@@ -10,6 +10,7 @@ web_search = "live"
 personality = "pragmatic"
 suppress_unstable_features_warning = true
 plan_mode_reasoning_effort = "xhigh"
+review_model = "gpt-5.4"
 
 notify = [
   "powershell.exe",
