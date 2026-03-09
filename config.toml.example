@@ -691,6 +691,15 @@ exclude_slash_tmp = false
 # 默认用户临时目录是可写的; 设为 true 后变为只读
 exclude_tmpdir_env_var = false
 
+# ── default_permissions ──────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 指定默认启用的命名权限配置文件 (对应 [permissions.<名称>] 中定义的 profile)
+# 说明: 当设置此字段时, Codex 将使用指定 profile 的文件系统和网络权限规则,
+#       替代 sandbox_mode 的默认行为。profile 中必须定义 filesystem 子表。
+# 示例: 引用第 12 节中定义的 "dev" profile
+# default_permissions = "dev"
+
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║                     第 8 节: Shell 环境变量策略                         ║
@@ -802,9 +811,11 @@ min_rollout_idle_hours = 6
 view_image = true
 
 # ── [tools.web_search] — 网络搜索工具配置 ──────────────────────────────────
-# 注意: 这里的 web_search 是工具级别的配置 (搜索范围、地理位置等)
-#       不要和顶层的 web_search = "cached" 混淆
-#       顶层的 web_search 控制"是否启用", 这里控制"怎么搜"
+# 类型: 对象 (可选) | 对应结构体: WebSearchToolConfig
+# 作用: 配置搜索工具的行为细节 (搜索范围、地理位置等)
+# 说明: 这里的 web_search 是工具级别的配置对象,
+#       不要和顶层的 web_search = "cached" 混淆 —
+#       顶层的 web_search 控制"是否启用及模式", 这里控制"怎么搜"
 
 # [tools.web_search]
 # context_size — 类型: 字符串 (可选) | 可选值: "low" | "medium" | "high"
@@ -896,76 +907,101 @@ theme = "catppuccin-latte"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 12 节: 网络权限与代理                            ║
+# ║                     第 12 节: 命名权限配置文件与网络代理                 ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
-# 作用: 配置 Codex 托管的网络代理, 用于控制沙箱中的网络访问
-# 说明: 当 enabled = true 时, Codex 会启动本地代理并将沙箱内的流量路由过去
+# 作用: 定义命名权限配置文件 (permission profiles), 通过 default_permissions 引用
+# 说明: [permissions] 表使用扁平映射结构 — 每个 key 都是一个 profile 名称,
+#       对应一个包含 filesystem 和 network 子表的权限配置。
+#
+# 结构:
+#   [permissions.<profile-name>]
+#   [permissions.<profile-name>.filesystem]
+#     可以为每个路径设置: "read-only" | "read-write"
+#     特殊路径:
+#       ":root"          — 文件系统根目录
+#       ":minimal"       — 最小路径集
+#       ":project_roots" — 所有项目根目录 (支持子路径作用域)
+#       ":tmpdir"        — 临时目录
+#   [permissions.<profile-name>.network]
+#     控制网络代理行为 (字段见下方示例)
+#
+# 使用: 在顶层设置 default_permissions = "<profile-name>" 来激活
 
-[permissions.network]
+# ── 示例: 标准开发权限配置 ────────────────────────────────────────────────
+# [permissions.dev]
+# [permissions.dev.filesystem]
+# ":root" = "read-only"
+# ":project_roots" = "read-write"
+# ":tmpdir" = "read-write"
+#
+# [permissions.dev.network]
+# enabled = true
+# mode = "limited"
+# allowed_domains = ["api.openai.com", "pypi.org"]
+
+# ── 示例: 只读审计权限 ───────────────────────────────────────────────────
+# [permissions.audit]
+# [permissions.audit.filesystem]
+# ":root" = "read-only"
+# ":project_roots" = "read-only"
+#
+# [permissions.audit.network]
+# enabled = false
+
+# ── 示例: 带子路径作用域的文件系统权限 ────────────────────────────────────
+# [permissions.scoped]
+# [permissions.scoped.filesystem]
+# ":minimal" = "read-only"
+# [permissions.scoped.filesystem.":project_roots"]
+# "." = "read-write"
+# "build" = "read-write"
+
+# ── network 子表的完整字段参考 ────────────────────────────────────────────
+# 以下字段可以在任何 [permissions.<profile>.network] 中设置:
+#
 # enabled — 类型: 布尔值 | 默认: false
-# 总开关: 是否启动托管的网络代理
-# 设为 true 后沙箱中的进程可以通过代理进行网络访问
-enabled = false
-
+#   总开关: 是否启动托管的网络代理
+#   设为 true 后沙箱中的进程可以通过代理进行网络访问
+#
 # mode — 类型: 字符串 | 默认: "full"
-# 可选值:
-#   "full"    — 允许所有 HTTP 方法; HTTPS CONNECT 请求直接隧道传输 (不做中间人)
-#   "limited" — 仅允许 GET/HEAD/OPTIONS; HTTPS CONNECT 被阻止; SOCKS5 被禁用
-# 说明: limited 模式更安全, 只允许只读的网络请求
-mode = "limited"
-
+#   可选值:
+#     "full"    — 允许所有 HTTP 方法; HTTPS CONNECT 请求直接隧道传输 (不做中间人)
+#     "limited" — 仅允许 GET/HEAD/OPTIONS; HTTPS CONNECT 被阻止; SOCKS5 被禁用
+#   说明: limited 模式更安全, 只允许只读的网络请求
+#
 # allowed_domains — 类型: 字符串数组 | 默认: [] (不限)
-# 域名白名单: 如果非空, 只有列出的域名可以访问
-allowed_domains = ["api.openai.com", "developers.openai.com"]
-
+#   域名白名单: 如果非空, 只有列出的域名可以访问
+#
 # denied_domains — 类型: 字符串数组 | 默认: []
-# 域名黑名单: 列出的域名会被阻止访问
-denied_domains = ["example-blocked.com"]
-
+#   域名黑名单: 列出的域名会被阻止访问
+#
 # proxy_url — 类型: 字符串 | 默认: "http://127.0.0.1:3128"
-# 托管 HTTP 代理的监听地址
-proxy_url = "http://127.0.0.1:7890"
-
+#   托管 HTTP 代理的监听地址
+#
 # socks_url — 类型: 字符串 | 默认: "http://127.0.0.1:8081"
-# 托管 SOCKS5 代理的监听地址
-socks_url = "socks5://127.0.0.1:1080"
-
-# admin_url — 类型: 字符串 (可选)
-# 代理管理接口的地址
-admin_url = "http://127.0.0.1:19080"
-
+#   托管 SOCKS5 代理的监听地址
+#
 # enable_socks5 — 类型: 布尔值 | 默认: true
-# 是否启用 SOCKS5 代理支持
-enable_socks5 = false
-
+#   是否启用 SOCKS5 代理支持
+#
 # enable_socks5_udp — 类型: 布尔值 | 默认: true
-# 是否启用 SOCKS5 UDP 中继
-enable_socks5_udp = false
-
+#   是否启用 SOCKS5 UDP 中继
+#
 # allow_upstream_proxy — 类型: 布尔值 | 默认: true
-# 是否允许托管代理将请求转发到上游代理 (如企业代理)
-allow_upstream_proxy = false
-
+#   是否允许托管代理将请求转发到上游代理 (如企业代理)
+#
 # allow_local_binding — 类型: 布尔值 | 默认: false
-# 是否允许沙箱进程绑定本地端口 (监听连接)
-allow_local_binding = false
-
+#   是否允许沙箱进程绑定本地端口 (监听连接)
+#
 # allow_unix_sockets — 类型: 字符串数组 | 默认: []
-# 允许代理连接的 Unix 域套接字路径白名单 (必须是绝对路径)
-allow_unix_sockets = ["/var/run/docker.sock"]
-
+#   允许代理连接的 Unix 域套接字路径白名单 (必须是绝对路径)
+#
 # dangerously_allow_non_loopback_proxy — 类型: 布尔值 | 默认: false
-# ⚠️ 危险: 允许 HTTP/SOCKS 代理绑定非 loopback 地址 (如 0.0.0.0)
-# 默认强制绑定 127.0.0.1; 开启后代理可被局域网访问
-dangerously_allow_non_loopback_proxy = false
-
-# dangerously_allow_non_loopback_admin — 类型: 布尔值 | 默认: false
-# ⚠️ 危险: 允许管理接口绑定非 loopback 地址
-dangerously_allow_non_loopback_admin = false
-
+#   ⚠️ 危险: 允许 HTTP/SOCKS 代理绑定非 loopback 地址 (如 0.0.0.0)
+#   默认强制绑定 127.0.0.1; 开启后代理可被局域网访问
+#
 # dangerously_allow_all_unix_sockets — 类型: 布尔值 | 默认: false
-# ⚠️ 危险: 允许连接所有 Unix 域套接字 (绕过 allow_unix_sockets 白名单)
-dangerously_allow_all_unix_sockets = false
+#   ⚠️ 危险: 允许连接所有 Unix 域套接字 (绕过 allow_unix_sockets 白名单)
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -1039,9 +1075,10 @@ apps = true
 # 前提: 需要 Node.js >= v22.22.0
 js_repl = true
 
-# guardian_approval — 默认: false | 实验
+# guardian_approval — 默认: false | 实验 (菜单名: "Guardian approvals")
 # 启用 Guardian 子 Agent 审批 (替代人工审批)
-# 说明: 开启后, on-request 策略下的审批提示会路由给 Guardian 子 Agent 评估
+# 说明: 开启后, on-request 策略下的审批提示 (包括沙箱升级和被阻止的网络访问)
+#       会路由给 Guardian 子 Agent 评估, 而不是显示给用户
 # guardian_approval = false
 
 # prevent_idle_sleep — 默认: false | 实验 (macOS/Linux/Windows)
@@ -1553,6 +1590,14 @@ shell_snapshot = true
 memories = true
 fast_mode = true
 
+# ── Profile 中的工具配置 (tools 子对象) ───────────────────────────────────
+# 可以在 profile 中嵌入 [tools] 的完整配置, 与顶层 [tools] 合并
+# [profiles.default.tools]
+# view_image = true
+# [profiles.default.tools.web_search]
+# context_size = "medium"
+# allowed_domains = ["docs.python.org"]
+
 # ── 预设: fast (追求速度) ──────────────────────────────────────────────────
 [profiles.fast]
 model = "gpt-5.4"
@@ -1605,25 +1650,3 @@ model_verbosity = "medium"
 # sandbox_approval = true
 # rules = false
 # mcp_elicitations = false
-
-
-# ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 24 节: 文件系统权限 (高级)                       ║
-# ╚═══════════════════════════════════════════════════════════════════════════╝
-# 作用: 定义命名权限配置文件, 通过 default_permissions 引用
-# 说明: 可以精细控制每个路径的读写权限
-#
-# [permissions.my-profile]
-# [permissions.my-profile.filesystem]
-# 可以为每个路径设置: "read-only" | "read-write"
-# 特殊路径:
-#   ":root"          — 文件系统根目录
-#   ":minimal"       — 最小路径集
-#   ":project_roots" — 所有项目根目录
-#   ":tmpdir"        — 临时目录
-#
-# 示例:
-# [permissions.my-profile.filesystem]
-# ":root" = "read-only"
-# ":project_roots" = "read-write"
-# ":tmpdir" = "read-write"
