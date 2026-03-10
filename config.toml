@@ -35,6 +35,10 @@ enabled = false
 [notice]
 hide_rate_limit_model_nudge = true
 
+# 第 6 节: Windows 沙箱
+[windows]
+sandbox = "unelevated"
+
 # 第 11 节: TUI 配置
 [tui]
 alternate_screen = "never"
@@ -56,10 +60,5 @@ Focuses on recently modified code unless instructed otherwise.
 config_file = "agents/code-simplifier.toml"
 
 # 第 15 节: Skills 配置
-[[skills.config]]
-path = "skills/.system/skill-creator/SKILL.md"
-enabled = false
-
-[[skills.config]]
-path = "skills/.system/skill-installer/SKILL.md"
+[skills.bundled]
 enabled = false

@@ -1075,7 +1075,7 @@ apps = true
 # 前提: 需要 Node.js >= v22.22.0
 js_repl = true
 
-# guardian_approval — 默认: false | 实验 (菜单名: "Guardian approvals")
+# guardian_approval — 默认: false | 实验 (菜单名: "Automatic approval review")
 # 启用 Guardian 子 Agent 审批 (替代人工审批)
 # 说明: 开启后, on-request 策略下的审批提示 (包括沙箱升级和被阻止的网络访问)
 #       会路由给 Guardian 子 Agent 评估, 而不是显示给用户
@@ -1090,6 +1090,10 @@ prevent_idle_sleep = true
 # use_linux_sandbox_bwrap = false
 
 # ── 开发中功能 (Under Development) ─────────────────────────────────────────
+
+# code_mode — 默认: false | 开发中
+# 启用基于 Node 内置 vm 运行时的最小 JavaScript 模式
+# code_mode = false
 
 # shell_zsh_fork — 默认: false | 开发中
 # 将 shell 执行路由到 zsh exec bridge
@@ -1118,6 +1122,14 @@ apply_patch_freeform = true
 # request_permissions — 默认: false | 开发中
 # 允许在沙箱中动态请求额外的文件系统权限
 # request_permissions = false
+
+# codex_hooks — 默认: false | 开发中
+# 启用从 hooks.json 文件加载的生命周期钩子 (类似 Claude Code 的 hooks 机制)
+# codex_hooks = false
+
+# request_permissions_tool — 默认: false | 开发中
+# 暴露内置的 request_permissions 工具, 让模型可以主动请求文件系统权限
+# request_permissions_tool = false
 
 # plugins — 默认: false | 开发中
 # 启用插件系统
@@ -1240,6 +1252,15 @@ max_depth = 2
 config = [
   # { path = 'C:\Users\you\.codex\skills\my-skill\SKILL.md', enabled = true },
 ]
+
+# ── [skills.bundled] — 内置技能控制 ─────────────────────────────────────────
+# 作用: 控制 Codex 自带的内置技能是否启用
+# 说明: 内置技能是 Codex 预装的功能模块 (如 artifact 工作流等);
+#       如果你只想使用自定义技能, 可以在这里禁用内置技能
+[skills.bundled]
+# enabled — 类型: 布尔值 | 默认: true
+# 是否加载内置技能; 设为 false 可完全禁用所有内置技能
+# enabled = true
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
