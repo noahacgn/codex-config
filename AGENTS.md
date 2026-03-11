@@ -56,4 +56,4 @@ For each issue: describe concretely with file:line references, present options w
 ## Development
 
 - When adding dependencies, CI actions, or tool versions, always look up the current stable version — never assume from memory unless the user provides one.
-- Commit everytime you have something stable — do not wait to be asked. Use `commit --amend` if needed. Never bundle multiple changes into a single commit.
+- Commit everytime you have something stable — do not wait to be asked. Use `commit --amend` if needed. Never bundle multiple changes into a single commit. Do not commit planning or proposal documents (for example `*plan*.md`).
