@@ -14,7 +14,6 @@ model_verbosity = "high"
 
 # 杂项开关
 suppress_unstable_features_warning = true
-show_raw_agent_reasoning = true
 windows_wsl_setup_acknowledged = true
 
 # 通知命令
