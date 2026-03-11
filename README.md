@@ -1,6 +1,6 @@
 # codex-config
 
-Version-controlled configuration for [OpenAI Codex CLI](https://github.com/openai/codex). Keeps settings, agent definitions, and notification scripts in Git so they can be reviewed, diffed, and synced to `~/.codex` on any machine.
+Version-controlled configuration for [OpenAI Codex CLI](https://github.com/openai/codex). Keeps settings, development instructions, and notification scripts in Git so they can be reviewed, diffed, and synced to `~/.codex` on any machine.
 
 ## Repository Layout
 
@@ -8,8 +8,6 @@ Version-controlled configuration for [OpenAI Codex CLI](https://github.com/opena
 config.toml          # Codex CLI settings (model, sandbox, features, TUI, etc.)
 AGENTS.md            # Global development standards & coding guidelines
 notify.ps1           # Windows toast notification script (BurntToast)
-agents/              # Custom agent definitions
-  code-simplifier.toml
 scripts/
   sync_to_codex.py   # Copies allowlisted files into ~/.codex
 tests/
@@ -35,7 +33,6 @@ Copies the following into `~/.codex`, preserving relative paths:
 | `config.toml` | Repo root |
 | `AGENTS.md` | Repo root |
 | `notify.ps1` | Repo root |
-| `agents/*` | Git-tracked files under `agents/` |
 
 - Overwrites destination files that share the same relative path.
 - Leaves destination files outside the allowlist untouched.

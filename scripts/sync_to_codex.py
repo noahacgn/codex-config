@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import shutil
-import subprocess
 import sys
 import time
 from collections.abc import Sequence
@@ -17,59 +16,7 @@ SYNC_FILE_TARGETS: tuple[Path, ...] = (
     Path("AGENTS.md"),
     Path("notify.ps1"),
 )
-SYNC_DIR_TARGETS: tuple[Path, ...] = (
-    Path("agents"),
-)
 DEFAULT_DESTINATION = Path.home() / ".codex"
-
-
-def run_command(args: Sequence[str], *, operation: str, cwd: Path | None = None) -> str:
-    """Runs a command and returns trimmed stdout.
-
-    Args:
-      args: Command and argument tokens.
-      operation: Human-readable operation context.
-      cwd: Optional working directory.
-
-    Returns:
-      Command stdout without surrounding whitespace.
-
-    Raises:
-      SyncExecutionError: If command launch fails or exits with non-zero code.
-    """
-
-    try:
-        completed = subprocess.run(
-            list(args),
-            cwd=str(cwd) if cwd else None,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            check=False,
-        )
-    except OSError as exc:
-        message = (
-            f"{operation} failed while launching command: {args[0] if args else '<missing-command>'}. "
-            f"System error: {exc}. Suggested fix: ensure command exists and PATH is configured correctly."
-        )
-        raise SyncExecutionError(message) from exc
-
-    if completed.returncode == 0:
-        return (completed.stdout or "").strip()
-
-    command_text = subprocess.list2cmdline(list(args))
-    stderr = (completed.stderr or "").strip() or "<empty>"
-    stdout = (completed.stdout or "").strip() or "<empty>"
-    message = (
-        f"{operation} failed.\n"
-        f"Command: {command_text}\n"
-        f"Exit code: {completed.returncode}\n"
-        f"stderr: {stderr}\n"
-        f"stdout: {stdout}\n"
-        "Suggested fix: verify repository state, command availability, and file permissions."
-    )
-    raise SyncExecutionError(message)
 
 
 def validate_relative_file(repo_root: Path, relative_path: Path, *, operation: str) -> None:
@@ -106,41 +53,8 @@ def validate_relative_file(repo_root: Path, relative_path: Path, *, operation: s
         raise SyncExecutionError(message)
 
 
-def collect_tracked_directory_files(repo_root: Path, directories: Sequence[Path]) -> list[Path]:
-    """Collects Git-tracked files from the provided directories.
-
-    Args:
-      repo_root: Repository root directory.
-      directories: Directory paths to query via git ls-files.
-
-    Returns:
-      Sorted list of repository-relative tracked file paths.
-
-    Raises:
-      SyncExecutionError: If git fails or returns invalid entries.
-    """
-
-    output = run_command(
-        ["git", "-C", str(repo_root), "ls-files", "--", *[str(path) for path in directories]],
-        operation="Collect git-tracked files for sync directories",
-    )
-    tracked_paths: list[Path] = []
-    for line in output.splitlines():
-        text = line.strip()
-        if not text:
-            continue
-        relative_path = Path(text)
-        validate_relative_file(
-            repo_root,
-            relative_path,
-            operation="Validate git-tracked file entry",
-        )
-        tracked_paths.append(relative_path)
-    return sorted(set(tracked_paths), key=lambda path: path.as_posix())
-
-
 def collect_sync_files(repo_root: Path) -> list[Path]:
-    """Builds the full synchronized file list from allowlists and Git-tracked paths.
+    """Builds the full synchronized file list from the explicit allowlist.
 
     Args:
       repo_root: Repository root directory.
@@ -161,8 +75,7 @@ def collect_sync_files(repo_root: Path) -> list[Path]:
         )
         selected_paths.append(relative_file)
 
-    selected_paths.extend(collect_tracked_directory_files(repo_root, SYNC_DIR_TARGETS))
-    return sorted(set(selected_paths), key=lambda path: path.as_posix())
+    return sorted(selected_paths, key=lambda path: path.as_posix())
 
 
 def sync_files(repo_root: Path, destination_root: Path, relative_files: Sequence[Path]) -> int:

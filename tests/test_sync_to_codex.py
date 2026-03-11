@@ -14,26 +14,18 @@ def write_file(path: Path, content: str) -> None:
 
 
 class CollectSyncFilesTests(unittest.TestCase):
-    def test_collect_sync_files_combines_allowlist_and_git_tracked_files(self) -> None:
+    def test_collect_sync_files_returns_allowlisted_files(self) -> None:
         with TemporaryDirectory() as temp_dir:
             repo_root = Path(temp_dir)
             write_file(repo_root / "config.toml", "model = 'x'\n")
             write_file(repo_root / "AGENTS.md", "# agents\n")
             write_file(repo_root / "notify.ps1", "Write-Output 'notify'\n")
-            write_file(repo_root / "agents" / "explorer.toml", "name = 'explorer'\n")
-            git_output = "agents/explorer.toml\n"
-            with patch.object(sync_to_codex, "run_command", return_value=git_output) as run_command_mock:
-                collected = sync_to_codex.collect_sync_files(repo_root)
+            collected = sync_to_codex.collect_sync_files(repo_root)
 
-        run_command_mock.assert_called_once_with(
-            ["git", "-C", str(repo_root), "ls-files", "--", "agents"],
-            operation="Collect git-tracked files for sync directories",
-        )
         self.assertEqual(
             [path.as_posix() for path in collected],
             [
                 "AGENTS.md",
-                "agents/explorer.toml",
                 "config.toml",
                 "notify.ps1",
             ],
@@ -49,22 +41,6 @@ class CollectSyncFilesTests(unittest.TestCase):
 
         self.assertIn("notify.ps1", str(context.exception))
 
-    def test_collect_sync_files_surfaces_git_errors(self) -> None:
-        with TemporaryDirectory() as temp_dir:
-            repo_root = Path(temp_dir)
-            write_file(repo_root / "config.toml", "model = 'x'\n")
-            write_file(repo_root / "AGENTS.md", "# agents\n")
-            write_file(repo_root / "notify.ps1", "Write-Output 'notify'\n")
-            with patch.object(
-                sync_to_codex,
-                "run_command",
-                side_effect=sync_to_codex.SyncExecutionError("git failed"),
-            ):
-                with self.assertRaises(sync_to_codex.SyncExecutionError) as context:
-                    sync_to_codex.collect_sync_files(repo_root)
-
-        self.assertIn("git failed", str(context.exception))
-
 
 class SyncFilesTests(unittest.TestCase):
     def test_sync_files_overwrites_existing_and_preserves_unrelated_files(self) -> None:
@@ -72,21 +48,21 @@ class SyncFilesTests(unittest.TestCase):
             repo_root = Path(source_dir)
             destination_root = Path(destination_dir)
             write_file(repo_root / "config.toml", "new config\n")
-            write_file(repo_root / "agents" / "explorer.toml", "new explorer\n")
+            write_file(repo_root / "AGENTS.md", "new instructions\n")
             write_file(destination_root / "config.toml", "old config\n")
             write_file(destination_root / "unrelated.txt", "keep me\n")
 
             copied = sync_to_codex.sync_files(
                 repo_root,
                 destination_root,
-                [Path("config.toml"), Path("agents/explorer.toml")],
+                [Path("config.toml"), Path("AGENTS.md")],
             )
 
             self.assertEqual(copied, 2)
             self.assertEqual((destination_root / "config.toml").read_text(encoding="utf-8"), "new config\n")
             self.assertEqual(
-                (destination_root / "agents" / "explorer.toml").read_text(encoding="utf-8"),
-                "new explorer\n",
+                (destination_root / "AGENTS.md").read_text(encoding="utf-8"),
+                "new instructions\n",
             )
             self.assertEqual((destination_root / "unrelated.txt").read_text(encoding="utf-8"), "keep me\n")
 
