@@ -48,7 +48,6 @@ For each issue: describe concretely with file:line references, present options w
 ## Development
 
 - When adding dependencies, CI actions, or tool versions, always look up the current stable version — never assume from memory unless the user provides one.
-- Write Conventional Commits every time you have something stable — do not wait to be asked. Use `commit --amend` if needed. Never bundle multiple changes into a single commit. Do not commit planning or proposal documents (for example `*plan*.md`).
 
 ### CLI tools
 
@@ -59,3 +58,8 @@ For each issue: describe concretely with file:line references, present options w
 | `ast-grep` | - | `ast-grep --pattern '$FUNC($$$)' --lang py` - AST-based code search |
 
 Prefer `ast-grep` over ripgrep when searching for code structure (function calls, class definitions, imports, pattern matching across arguments). Use ripgrep for literal strings and log messages.
+
+## Miscellaneous
+
+- Think in English, respond in Chinese.
+- Write Conventional Commits every time you have something stable — do not wait to be asked. Use `commit --amend` if needed. Never bundle multiple changes into a single commit. Do not commit planning or proposal documents (for example `*plan*.md`).
