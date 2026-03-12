@@ -8,20 +8,12 @@
 - **Justify new dependencies** - Each dependency is attack surface and maintenance burden
 - **No phantom features** - Don't document or validate features that aren't implemented
 - **Replace, don't deprecate** - When a new implementation replaces an old one, remove the old one entirely. No backward-compatible shims, dual config formats, or migration paths. Proactively flag dead code — it adds maintenance burden and misleads both developers and LLMs.
-- **Verify at every level** - Set up automated guardrails (linters, type checkers, pre-commit hooks, tests) as the first step, not an afterthought. Review your own output critically. Every layer catches what the others miss.
+- **Verify at every level** - Set up automated guardrails (linters, type checkers, pre-commit hooks, tests) as the first step, not an afterthought. Prefer structure-aware tools (ast-grep, compilers) over text pattern matching. Review your own output critically. Every layer catches what the others miss.
 - **Bias toward action** - Decide and move for anything easily reversed; state your assumption so the reasoning is visible. Ask before committing to interfaces, data models, architecture, or destructive/write operations on external services.
 - **Finish the job** - Don't stop at the minimum that technically satisfies the request. Handle the edge cases you can see. Clean up what you touched. If something is broken adjacent to your change, flag it. But don't invent new scope — there's a difference between thoroughness and gold-plating.
 - **Agent-native by default** - Design so agents can achieve any outcome users can. Tools are atomic primitives; features are outcomes described in prompts. Prefer file-based state for transparency and portability. When adding UI capability, ask: can an agent achieve this outcome too?
 
 ## Code Quality
-
-### Hard limits
-
-1. ≤80 lines/function, cyclomatic complexity ≤8
-2. ≤5 positional params
-3. 120-char line length
-4. Absolute imports only — no relative (`..`) paths
-5. Google-style docstrings on non-trivial public APIs
 
 ### Zero warnings policy
 
@@ -57,3 +49,13 @@ For each issue: describe concretely with file:line references, present options w
 
 - When adding dependencies, CI actions, or tool versions, always look up the current stable version — never assume from memory unless the user provides one.
 - Commit everytime you have something stable — do not wait to be asked. Use `commit --amend` if needed. Never bundle multiple changes into a single commit. Do not commit planning or proposal documents (for example `*plan*.md`).
+
+### CLI tools
+
+| tool | replaces | usage |
+|------|----------|-------|
+| `rg` (ripgrep) | grep | `rg "pattern"` - 10x faster regex search |
+| `fd` | find | `fd "*.py"` - fast file finder |
+| `ast-grep` | - | `ast-grep --pattern '$FUNC($$$)' --lang py` - AST-based code search |
+
+Prefer `ast-grep` over ripgrep when searching for code structure (function calls, class definitions, imports, pattern matching across arguments). Use ripgrep for literal strings and log messages.
