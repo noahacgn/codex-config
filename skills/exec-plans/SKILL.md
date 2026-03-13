@@ -1,6 +1,6 @@
 ---
 name: exec-plans
-description: When writing complex features or significant refactors, use an ExecPlan from design to implementation.
+description: When writing complex features or significant refactors or user ask explicitly, use an ExecPlan from design to implementation.
 ---
 
 # Execution Plans (ExecPlans):
