@@ -3,9 +3,18 @@ name: exec-plans
 description: When writing complex features or significant refactors or user ask explicitly, use an ExecPlan from design to implementation.
 ---
 
-# Execution Plans (ExecPlans):
+# Codex Execution Plans (ExecPlans):
 
 This document describes the requirements for an execution plan ("ExecPlan"), a design document that a coding agent can follow to deliver a working feature or system change. Treat the reader as a complete beginner to this repository: they have only the current working tree and the single ExecPlan file you provide. There is no memory of prior plans and no external context.
+
+## Integration with Plan Mode (Conflict Resolution)
+
+If you are currently operating in "Plan Mode", you must reconcile the rules of Plan Mode with this ExecPlans specification. When generating the final plan, the rules here **OVERRIDE** Plan Mode's default constraints:
+
+1. **Verbosity over Conciseness:** Ignore Plan Mode's instructions to be "concise by default", use "3-5 short sections", or "avoid naming more than 3 paths". You MUST follow the comprehensive, verbose "Skeleton of a Good ExecPlan" defined below.
+2. **Document Structure:** ExecPlans are living documents. You must include the `Progress` checkboxes, `Decision Log`, and all other mandatory ExecPlan sections, ignoring Plan Mode's instruction to omit a Scope section.
+3. **Envelope/Formatting:** To satisfy Plan Mode's tooling, you MUST wrap the final ExecPlan inside the `<proposed_plan>` and `</proposed_plan>` XML tags. The content inside these tags should be the standard ExecPlan Markdown.
+4. **Process:** Continue to rigorously follow Plan Mode's conversational phases (Phase 1, 2, 3) to explore, ask questions, and reach a decision-complete state *BEFORE* you output this ExecPlan.
 
 ## How to use ExecPlans and PLANS.md
 
