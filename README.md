@@ -44,7 +44,7 @@ Copies the following into `~/.codex`, preserving relative paths:
 # Install skills
 npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -a codex -y
 npx skills add https://github.com/trailofbits/skills --skill ask-questions-if-underspecified -g -a codex -y
-npx skills add https://github.com/tiann/execplan-skill --skill execplan -g -a codex -y
+npx skills add https://github.com/noahacgn/codex-config --skill exec-plans -g -a codex -y
 
 # List global skills
 npx skills ls -g
