@@ -1,6 +1,6 @@
 ---
 name: exec-plans
-description: When writing complex features or significant refactors or user ask explicitly, use an ExecPlan from design to implementation.
+description: Only when explicitly invoked, use an ExecPlan from design to implementation for complex features or significant refactors. Do not use it automatically.
 ---
 
 # Codex Execution Plans (ExecPlans):

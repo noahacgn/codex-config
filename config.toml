@@ -47,7 +47,6 @@ status_line = ["model-with-reasoning", "context-remaining", "context-used", "con
 [features]
 unified_exec = true
 apply_patch_freeform = true
-multi_agent = true
 prevent_idle_sleep = true
 default_mode_request_user_input = true
 
