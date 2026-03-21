@@ -1,0 +1,45 @@
+# 第 1 节: 核心模型与运行策略
+model = "gpt-5.4"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+web_search = "live"
+personality = "pragmatic"
+
+# 推理能力相关
+model_reasoning_effort = "xhigh"
+plan_mode_reasoning_effort = "xhigh"
+model_reasoning_summary = "detailed"
+model_supports_reasoning_summaries = true
+model_verbosity = "high"
+
+# 杂项开关
+suppress_unstable_features_warning = true
+windows_wsl_setup_acknowledged = true
+
+# 第 2 节: 分析、反馈与音频
+[analytics]
+enabled = false
+
+# 第 5 节: 通知与迁移记录
+[notice]
+hide_rate_limit_model_nudge = true
+
+# 第 6 节: Windows 沙箱
+[windows]
+sandbox = "unelevated"
+
+# 第 11 节: TUI 配置
+[tui]
+alternate_screen = "never"
+status_line = ["model-with-reasoning", "context-remaining", "context-used", "context-window-size", "five-hour-limit", "weekly-limit"]
+
+# 第 13 节: 功能标志
+[features]
+unified_exec = true
+apply_patch_freeform = true
+prevent_idle_sleep = true
+default_mode_request_user_input = true
+
+# 第 15 节: Skills 配置
+[skills.bundled]
+enabled = false
