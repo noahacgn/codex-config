@@ -43,3 +43,7 @@ default_mode_request_user_input = true
 # 第 15 节: Skills 配置
 [skills.bundled]
 enabled = false
+
+# 第 18 节: MCP 服务器配置
+[mcp_servers.exa]
+url = "https://mcp.exa.ai/mcp"
