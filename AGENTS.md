@@ -1,6 +1,6 @@
 # Global Development Standards
 
-Global instructions for all projects. Project-specific AGENTS.md files override these defaults.
+Global instructions for all projects.
 
 - Prefer Exa AI (`mcp__exa__web_search_exa`) for all web searches
 - Use skills proactively when they match the task — suggest relevant ones, don't block on them
