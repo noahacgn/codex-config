@@ -338,7 +338,7 @@ mcp_oauth_credentials_store = "auto"
 # 默认: "https://chatgpt.com/backend-api/"
 # 作用: ChatGPT 后端 API 的基础 URL
 # 说明: 通常不需要修改; 仅在企业部署或使用代理时才需要调整
-chatgpt_base_url = "https://chatgpt.com"
+chatgpt_base_url = "https://chatgpt.com/backend-api/"
 
 # ── openai_base_url ──────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
@@ -939,6 +939,20 @@ show_tooltips = true
 #   "fast-mode"            — Fast 模式状态
 status_line = ["model-with-reasoning", "context-remaining", "current-dir"]
 
+# terminal_title — 类型: 字符串数组 (可选)
+# 默认: ["spinner", "project"]
+# 作用: 配置终端窗口/标签页标题中显示的信息项 (按顺序排列)
+# 可用项:
+#   "app-name"      — Codex 应用名
+#   "project"       — 项目名 (若无法识别项目则回退为当前目录名)
+#   "spinner"       — 任务运行时的动画指示器
+#   "status"        — 紧凑状态文本 (如 Ready / Working / Thinking)
+#   "thread"        — 当前线程标题 (可用时显示)
+#   "git-branch"    — 当前 Git 分支 (可用时显示)
+#   "model"         — 当前模型名
+#   "task-progress" — 最近一次 update_plan 的任务进度 (可用时显示)
+terminal_title = ["spinner", "project"]
+
 # theme — 类型: 字符串 (可选) | 默认: 无 (自动检测明/暗主题)
 # 代码高亮的配色主题 (kebab-case 格式)
 # 说明: 不设置时 Codex 会自动检测终端的明暗模式;
@@ -1095,10 +1109,6 @@ fast_mode = true
 # 使用 zstd 压缩请求体, 减少网络传输
 enable_request_compression = true
 
-# powershell_utf8 — 默认: true (Windows) / false (其他) | 稳定 (Windows)
-# 在 PowerShell 中强制使用 UTF-8 输出
-powershell_utf8 = true
-
 # skill_mcp_dependency_install — 默认: true | 稳定
 # 当 Skill 需要的 MCP 依赖缺失时, 提示安装
 skill_mcp_dependency_install = true
@@ -1112,12 +1122,28 @@ skill_mcp_dependency_install = true
 # 说明: 允许模型派生子 Agent 来并行处理复杂任务
 multi_agent = true
 
-# ── 实验功能 (Experimental) ────────────────────────────────────────────────
-
-# apps — 默认: false | 实验
+# apps — 默认: true | 稳定
 # 启用 ChatGPT Apps/Connectors 集成 (别名: connectors)
 # 说明: 允许通过 $ 符号引用外部应用
 apps = true
+
+# tool_suggest — 默认: true | 稳定
+# 启用工具建议功能, 当模型缺少所需工具时自动推荐
+tool_suggest = true
+
+# plugins — 默认: true | 稳定
+# 启用插件系统
+plugins = true
+
+# tool_call_mcp_elicitation — 默认: true | 稳定
+# 通过 MCP elicitation 路径路由 MCP 工具审批提示
+tool_call_mcp_elicitation = true
+
+# tui_app_server — 默认: true | 稳定
+# 使用 app-server 后端驱动的 TUI 实现
+tui_app_server = true
+
+# ── 实验功能 (Experimental) ────────────────────────────────────────────────
 
 # js_repl — 默认: false | 实验
 # 启用持久化的 JavaScript REPL 工具
@@ -1129,10 +1155,6 @@ js_repl = true
 # 说明: 开启后, on-request 策略下的审批提示 (包括沙箱升级和被阻止的网络访问)
 #       会路由给 Guardian 子 Agent 评估, 而不是显示给用户
 # guardian_approval = false
-
-# tui_app_server — 默认: false | 实验 (菜单名: "App-server TUI")
-# 使用 app-server 后端驱动的 TUI 实现
-# tui_app_server = false
 
 # prevent_idle_sleep — 默认: false | 实验 (macOS/Linux/Windows)
 # 防止系统在 Codex 活跃时进入休眠
@@ -1160,6 +1182,10 @@ codex_git_commit = true
 # 启用记忆系统 (从会话中提取经验, 在未来会话中注入)
 memories = true
 
+# multi_agent_v2 — 默认: false | 开发中
+# 启用新一代多 Agent 协作实现
+# multi_agent_v2 = false
+
 # child_agents_md — 默认: false | 开发中
 # 为子 Agent 注入额外的 AGENTS.md 指导
 # child_agents_md = false
@@ -1184,10 +1210,6 @@ apply_patch_freeform = true
 # 暴露内置的 request_permissions 工具, 让模型可以主动请求文件系统权限
 # request_permissions_tool = false
 
-# plugins — 默认: false | 开发中
-# 启用插件系统
-# plugins = false
-
 # image_generation — 默认: false | 开发中
 # 启用内置图片生成工具
 # image_generation = false
@@ -1200,13 +1222,9 @@ apply_patch_freeform = true
 # 在 Default 模式 (非 Plan 模式) 中允许 request_user_input
 # default_mode_request_user_input = false
 
-# tool_call_mcp_elicitation — 默认: false | 开发中
-# 通过 MCP elicitation 路径路由 MCP 工具审批提示
-# tool_call_mcp_elicitation = false
-
-# artifact — 默认: false | 开发中
-# 启用原生 artifact 工具
-# artifact = false
+# tool_search — 默认: false | 开发中
+# 为 Apps 暴露 tool_search 工具, 按需延迟加载可用工具
+# tool_search = false
 
 # voice_transcription — 默认: false | 开发中
 # 在 TUI 输入框中启用语音转文字
@@ -1227,10 +1245,6 @@ apply_patch_freeform = true
 # enable_fanout — 默认: false | 开发中
 # 启用 SpawnCsv 扇出能力, 允许 Agent 批量派生子任务
 # enable_fanout = false
-
-# tool_suggest — 默认: false | 开发中
-# 启用工具建议功能, 当模型缺少所需工具时自动推荐
-# tool_suggest = false
 
 # ── 已弃用功能 (Deprecated) ────────────────────────────────────────────────
 # 以下功能已被其他机制替代, 不建议使用
@@ -1299,15 +1313,17 @@ max_depth = 2
 [skills]
 # config — 类型: 对象数组
 # 每个条目:
-#   path    — SKILL.md 文件的绝对路径
+#   path    — 按 SKILL.md 文件绝对路径选择
+#   name    — 按技能名称选择
 #   enabled — 是否启用这个技能
 config = [
   # { path = 'C:\Users\you\.codex\skills\my-skill\SKILL.md', enabled = true },
+  # { name = 'agent-browser', enabled = false },
 ]
 
 # ── [skills.bundled] — 内置技能控制 ─────────────────────────────────────────
 # 作用: 控制 Codex 自带的内置技能是否启用
-# 说明: 内置技能是 Codex 预装的功能模块 (如 artifact 工作流等);
+# 说明: 内置技能是 Codex 预装的功能模块 (如系统内置工作流与辅助能力);
 #       如果你只想使用自定义技能, 可以在这里禁用内置技能
 [skills.bundled]
 # enabled — 类型: 布尔值 | 默认: true
@@ -1319,7 +1335,7 @@ config = [
 # ║                     第 16 节: Plugins (插件) 配置                       ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 启用或禁用已安装的插件
-# 前提: 需要启用 [features] plugins = true
+# 前提: 插件功能默认已启用; 若显式设置 [features] plugins = false, 本节不会生效
 
 # [plugins.example-plugin]
 # enabled — 类型: 布尔值 | 默认: true
@@ -1468,6 +1484,12 @@ disabled_tools = ["delete_file"]
 # OAuth 资源参数 (RFC 8707), 用于 MCP OAuth 登录
 # oauth_resource = "https://github.com/"
 
+# ── 单个 MCP 工具审批覆盖 (可选) ──────────────────────────────────────────
+# [mcp_servers.filesystem.tools.read_file]
+# approval_mode — 类型: 字符串 | 可选值: "auto" | "prompt" | "approve"
+# 仅覆盖这个 MCP 工具的审批方式
+# approval_mode = "approve"
+
 # ── 示例 2: streamable_http 传输 (远程服务器) ──────────────────────────────
 [mcp_servers.github]
 # url — 类型: 字符串 (streamable_http 必填)
@@ -1500,7 +1522,7 @@ tool_timeout_sec = 120
 # ║                     第 19 节: Apps 控制                                 ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 控制 ChatGPT Apps/Connectors 的行为
-# 前提: 需要启用 [features] apps = true
+# 前提: Apps 功能默认已启用; 若显式设置 [features] apps = false, 本节不会生效
 
 # ── 全局默认 ───────────────────────────────────────────────────────────────
 [apps._default]
