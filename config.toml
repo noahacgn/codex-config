@@ -49,4 +49,7 @@ enabled = false
 
 # 第 18 节: MCP 服务器配置
 [mcp_servers.exa]
-url = "https://mcp.exa.ai/mcp"
+url = "https://mcp.exa.ai/mcp?exaApiKey=your-exa-api-key-here"
+
+[mcp_servers.figma]
+url = "https://mcp.figma.com/mcp"
