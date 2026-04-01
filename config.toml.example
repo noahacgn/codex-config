@@ -1139,10 +1139,6 @@ plugins = true
 # 通过 MCP elicitation 路径路由 MCP 工具审批提示
 tool_call_mcp_elicitation = true
 
-# tui_app_server — 默认: true | 稳定
-# 使用 app-server 后端驱动的 TUI 实现
-tui_app_server = true
-
 # ── 实验功能 (Experimental) ────────────────────────────────────────────────
 
 # js_repl — 默认: false | 实验
@@ -1226,6 +1222,10 @@ apply_patch_freeform = true
 # 为 Apps 暴露 tool_search 工具, 按需延迟加载可用工具
 # tool_search = false
 
+# artifact — 默认: false | 开发中
+# 启用 Artifact 功能
+# artifact = false
+
 # voice_transcription — 默认: false | 开发中
 # 在 TUI 输入框中启用语音转文字
 # voice_transcription = false
@@ -1264,6 +1264,7 @@ apply_patch_freeform = true
 # elevated_windows_sandbox      — 已移除 (用 [windows].sandbox 替代)
 # remote_models                 — 已移除
 # use_linux_sandbox_bwrap       — 已移除
+# tui_app_server                — 已移除 (始终启用)
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -1414,6 +1415,34 @@ query_params = { "api-version" = "2026-01-01" }
 # experimental_bearer_token — 类型: 字符串 (可选)
 # ⚠️ 不推荐: 明文 bearer token; 请优先使用 env_key
 # experimental_bearer_token = "avoid plaintext secrets"
+
+# ── [model_providers.<id>.auth] — 动态 Bearer Token (v0.118.0 新增) ────────
+# 作用: 通过执行外部命令来动态获取并刷新短期 bearer token
+# 说明: 适合令牌有有效期的场景 (如 cloud IAM、vault、SSO 等)
+#       命令的 stdout 输出将作为 Bearer token 使用
+# ⚠️ 互斥: auth 不能与 env_key、experimental_bearer_token、
+#           requires_openai_auth 同时使用
+#
+# [model_providers.custom.auth]
+# command — 类型: 字符串 (必填)
+# 要执行的命令; 裸名称通过 PATH 查找, 路径相对于 cwd 解析
+# command = "gcloud"
+#
+# args — 类型: 字符串数组 | 默认: []
+# 传给 command 的参数
+# args = ["auth", "print-access-token"]
+#
+# timeout_ms — 类型: 正整数 (毫秒) | 默认: 5000
+# 等待命令执行完成的最大时间
+# timeout_ms = 5000
+#
+# refresh_interval_ms — 类型: 正整数 (毫秒) | 默认: 300000 (5 分钟)
+# 缓存 token 的最大有效时间; 超过后重新执行命令刷新
+# refresh_interval_ms = 300000
+#
+# cwd — 类型: 路径 (可选) | 默认: 当前工作目录
+# 执行命令时的工作目录
+# cwd = 'C:\Users\you'
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
