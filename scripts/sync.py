@@ -22,11 +22,13 @@ class SyncTarget:
 
 CODEX_HOME = Path.home() / ".codex"
 CLAUDE_HOME = Path.home() / ".claude"
+GEMINI_HOME = Path.home() / ".gemini"
 
 SYNC_TARGETS: tuple[SyncTarget, ...] = (
     SyncTarget(source=Path("config.toml"), destination=CODEX_HOME / "config.toml"),
     SyncTarget(source=Path("AGENTS.md"), destination=CODEX_HOME / "AGENTS.md"),
     SyncTarget(source=Path("AGENTS.md"), destination=CLAUDE_HOME / "CLAUDE.md"),
+    SyncTarget(source=Path("AGENTS.md"), destination=GEMINI_HOME / "AGENTS.md"),
 )
 
 

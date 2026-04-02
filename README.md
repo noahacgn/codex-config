@@ -32,6 +32,7 @@ Copies allowlisted files to their configured destinations:
 | `config.toml` | `~/.codex/config.toml` |
 | `AGENTS.md` | `~/.codex/AGENTS.md` |
 | `AGENTS.md` | `~/.claude/CLAUDE.md` |
+| `AGENTS.md` | `~/.gemini/AGENTS.md` |
 
 - Overwrites destination files that share the same relative path.
 - Leaves destination files outside the allowlist untouched.
