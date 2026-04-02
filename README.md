@@ -42,9 +42,9 @@ Copies allowlisted files to their configured destinations:
 
 ```bash
 # Install skills
-npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -a codex -a claude-code -y
-npx skills add https://github.com/trailofbits/skills --skill ask-questions-if-underspecified -g -a codex -a claude-code -y
-npx skills add https://github.com/noahacgn/codex-config --skill exec-plans -g -a codex -a claude-code -y
+npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -a codex -a claude-code -a gemini-cli -y
+npx skills add https://github.com/trailofbits/skills --skill ask-questions-if-underspecified -g -a codex -a claude-code -a gemini-cli -y
+npx skills add https://github.com/noahacgn/codex-config --skill exec-plans -g -a codex -a claude-code -a gemini-cli -y
 
 # List global skills
 npx skills ls -g
