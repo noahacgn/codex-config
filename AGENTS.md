@@ -34,7 +34,7 @@ Fix every warning from every tool — linters, type checkers, compilers, tests. 
 
 ### Comments
 
-Code should be self-documenting. No commented-out code—delete it. If you need a comment to explain WHAT the code does, refactor the code instead.
+Code should be self-documenting. No commented-out code—delete it. If you need a comment to explain WHAT the code does, refactor the code instead. Use Simplified Chinese for comments.
 
 ### Error handling
 
