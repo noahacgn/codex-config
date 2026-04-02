@@ -1,6 +1,6 @@
 # codex-config
 
-Version-controlled configuration for [OpenAI Codex CLI](https://github.com/openai/codex) and [Claude Code](https://docs.anthropic.com/en/docs/claude-code). Keeps settings and development instructions in Git so they can be reviewed, diffed, and synced to `~/.codex` and `~/.claude` on any machine.
+Version-controlled configuration for [OpenAI Codex CLI](https://github.com/openai/codex), [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [Gemini CLI](https://github.com/google/gemini-cli). Keeps settings and development instructions in Git so they can be reviewed, diffed, and synced to `~/.codex`, `~/.claude` and `~/.gemini` on any machine.
 
 ## Repository Layout
 
@@ -8,7 +8,7 @@ Version-controlled configuration for [OpenAI Codex CLI](https://github.com/opena
 config.toml        # Codex CLI settings (model, sandbox, features, TUI, etc.)
 AGENTS.md          # Global development standards & coding guidelines
 scripts/
-  sync.py          # Copies allowlisted files into ~/.codex and ~/.claude
+  sync.py          # Copies allowlisted files into ~/.codex, ~/.claude and ~/.gemini
 tests/
   test_sync.py
 ```
