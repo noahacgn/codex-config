@@ -79,8 +79,8 @@ Prefer `ast-grep` over ripgrep when searching for code structure (function calls
 2. Run relevant tests — not the full suite
 3. Run linters and type checker — fix everything before committing
 
-**Commits:**
-- 🚨 **CRITICAL:** Write Conventional Commits every time you have something stable — do not wait to be asked
+**Proactive commits:**
+- **CRITICAL:** Write Conventional Commits every time you have something stable — do not wait to be asked
 - Never bundle multiple changes into a single commit
 - Never commit any documentation files (for example, `*.md`, `*.txt`, etc.) unless they are already tracked by git
 - Never run `add` and `commit` in parallel; always run them sequentially and wait for `add` to complete first
