@@ -28,7 +28,7 @@ SYNC_TARGETS: tuple[SyncTarget, ...] = (
     SyncTarget(source=Path("config.toml"), destination=CODEX_HOME / "config.toml"),
     SyncTarget(source=Path("AGENTS.md"), destination=CODEX_HOME / "AGENTS.md"),
     SyncTarget(source=Path("AGENTS.md"), destination=CLAUDE_HOME / "CLAUDE.md"),
-    SyncTarget(source=Path("AGENTS.md"), destination=GEMINI_HOME / "AGENTS.md"),
+    SyncTarget(source=Path("AGENTS.md"), destination=GEMINI_HOME / "GEMINI.md"),
 )
 
 
@@ -66,11 +66,12 @@ def validate_relative_file(repo_root: Path, relative_path: Path, *, operation: s
         raise SyncExecutionError(message)
 
 
-def collect_sync_files(repo_root: Path) -> list[SyncTarget]:
+def collect_sync_files(repo_root: Path, sync_config: bool = False) -> list[SyncTarget]:
     """Builds the full synchronized target list from the explicit allowlist.
 
     Args:
       repo_root: Repository root directory.
+      sync_config: Whether to synchronize config.toml.
 
     Returns:
       Sorted sync targets to synchronize.
@@ -82,6 +83,8 @@ def collect_sync_files(repo_root: Path) -> list[SyncTarget]:
     validated: set[Path] = set()
     targets: list[SyncTarget] = []
     for target in SYNC_TARGETS:
+        if not sync_config and target.source == Path("config.toml"):
+            continue
         if target.source not in validated:
             validate_relative_file(repo_root, target.source, operation="Validate allowlisted file")
             validated.add(target.source)
@@ -114,18 +117,19 @@ def sync_files(repo_root: Path, targets: Sequence[SyncTarget]) -> int:
     return copied_files
 
 
-def execute_workflow(repo_root: Path) -> int:
+def execute_workflow(repo_root: Path, sync_config: bool = False) -> int:
     """Runs file collection and synchronization workflow.
 
     Args:
       repo_root: Repository root directory.
+      sync_config: Whether to synchronize config.toml.
 
     Returns:
       Zero on successful completion.
     """
 
     started_at = time.perf_counter()
-    targets = collect_sync_files(repo_root)
+    targets = collect_sync_files(repo_root, sync_config=sync_config)
     copied_count = sync_files(repo_root, targets)
     elapsed = time.perf_counter() - started_at
     print(f"[sync] files copied: {copied_count}")
@@ -135,10 +139,15 @@ def execute_workflow(repo_root: Path) -> int:
 
 def main() -> int:
     """Entry point for manual execution."""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Synchronize configuration files.")
+    parser.add_argument("--sync-config", action="store_true", help="Synchronize config.toml")
+    args = parser.parse_args()
 
     repo_root = Path(__file__).resolve().parents[1]
     try:
-        return execute_workflow(repo_root)
+        return execute_workflow(repo_root, sync_config=args.sync_config)
     except SyncExecutionError as exc:
         print(f"[error] {exc}", file=sys.stderr)
         return 1

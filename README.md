@@ -25,14 +25,20 @@ uv sync --group dev
 uv run python scripts/sync.py
 ```
 
+To also synchronize `config.toml`, use the `--sync-config` flag:
+
+```bash
+uv run python scripts/sync.py --sync-config
+```
+
 Copies allowlisted files to their configured destinations:
 
 | Source | Destination |
 |---|---|
-| `config.toml` | `~/.codex/config.toml` |
+| `config.toml` | `~/.codex/config.toml` (requires `--sync-config`) |
 | `AGENTS.md` | `~/.codex/AGENTS.md` |
 | `AGENTS.md` | `~/.claude/CLAUDE.md` |
-| `AGENTS.md` | `~/.gemini/AGENTS.md` |
+| `AGENTS.md` | `~/.gemini/GEMINI.md` |
 
 - Overwrites destination files that share the same relative path.
 - Leaves destination files outside the allowlist untouched.

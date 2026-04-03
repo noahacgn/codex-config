@@ -29,11 +29,27 @@ class CollectSyncFilesTests(unittest.TestCase):
                 SyncTarget(source=Path("AGENTS.md"), destination=dest_b / "CLAUDE.md"),
             )
             with patch.object(sync, "SYNC_TARGETS", test_targets):
-                collected = sync.collect_sync_files(repo_root)
+                collected = sync.collect_sync_files(repo_root, sync_config=True)
 
         self.assertEqual(len(collected), 3)
         destinations = [t.destination.name for t in collected]
         self.assertIn("CLAUDE.md", destinations)
+
+    def test_collect_sync_files_excludes_config_by_default(self) -> None:
+        with TemporaryDirectory() as temp_dir:
+            repo_root = Path(temp_dir)
+            write_file(repo_root / "config.toml", "model = 'x'\n")
+            write_file(repo_root / "AGENTS.md", "# agents\n")
+
+            test_targets = (
+                SyncTarget(source=Path("config.toml"), destination=Path(temp_dir) / "config.toml"),
+                SyncTarget(source=Path("AGENTS.md"), destination=Path(temp_dir) / "AGENTS.md"),
+            )
+            with patch.object(sync, "SYNC_TARGETS", test_targets):
+                collected = sync.collect_sync_files(repo_root)
+
+        self.assertEqual(len(collected), 1)
+        self.assertEqual(collected[0].source.name, "AGENTS.md")
 
     def test_collect_sync_files_fails_when_allowlisted_file_missing(self) -> None:
         with TemporaryDirectory() as temp_dir:
@@ -106,7 +122,7 @@ class EntryPointTests(unittest.TestCase):
         with patch.object(
             sync,
             "collect_sync_files",
-            side_effect=lambda repo_root: call_order.append("collect") or [mock_target],
+            side_effect=lambda repo_root, sync_config: call_order.append("collect") or [mock_target],
         ) as collect_mock:
             with patch.object(
                 sync,
