@@ -77,5 +77,5 @@ Prefer `ast-grep` over ripgrep when searching for code structure (function calls
 
 - Think in English, respond in Simplified Chinese.
 - On Windows PowerShell (never cmd): avoid Bash syntax, do not pass unexpanded wildcards, prefer fixed-string searches (`rg -F` / `Select-String -SimpleMatch`), and always enclose string values in single quotes (do not use backslashes to escape inside; use `''` for a literal `'`).
-- When editing files, modify at most 2 files per patch. If more files need to be changed, break the work into multiple steps.
+- Native Windows: use only small `apply_patch` edits, one file at a time, under 1000 lines each; split anything larger and never retry a failed large patch.
 - Write Conventional Commits every time you have something stable — do not wait to be asked. Never bundle multiple changes into a single commit. Do not commit any documentation files (for example, `*.md`, `*.txt`, etc.) unless they are already tracked by git. Run `add` and `commit` sequentially, not in parallel. Wait for `add` to complete first.
