@@ -43,6 +43,10 @@ apply_patch_freeform = true
 prevent_idle_sleep = true
 default_mode_request_user_input = true
 
+# 第 14 节: Agent 配置
+[agents.reviewer]
+description = "Senior code reviewer that evaluates changes across five dimensions — correctness, readability, architecture, security, and performance. Use for thorough code review before merge."
+
 # 第 15 节: Skills 配置
 [skills.bundled]
 enabled = false
