@@ -604,7 +604,7 @@ enabled = true
 
 # ── [audio] — 实时语音设备 ──────────────────────────────────────────────────
 # 作用: 配置实时语音对话功能使用的音频设备
-# 前提: 需要启用 realtime_conversation 和/或 voice_transcription 功能
+# 前提: 需要启用 realtime_conversation 功能
 [audio]
 # microphone — 类型: 字符串 (可选) | 默认: 系统默认输入设备
 # 指定麦克风设备名称; 设为 "default" 表示使用系统默认;
@@ -714,6 +714,16 @@ sandbox = "elevated"
 # 作用: 当 sandbox_mode = "workspace-write" 时, 定制沙箱的详细行为
 # 说明: 仅在 workspace-write 模式下生效; 其他沙箱模式忽略此配置
 
+# ── default_permissions ──────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 指定默认启用的命名权限配置文件 (对应 [permissions.<名称>] 中定义的 profile)
+# 说明: 这是顶层键, 必须写在表外; 当设置此字段时, Codex 将使用指定 profile 的
+#       文件系统和网络权限规则, 替代 sandbox_mode 的默认行为。profile 中必须
+#       定义 filesystem 子表。
+# 示例: 引用第 12 节中定义的 "dev" profile
+# default_permissions = "dev"
+
 [sandbox_workspace_write]
 # network_access — 类型: 布尔值 | 默认: false
 # 是否允许在 workspace-write 沙箱中进行网络访问
@@ -735,15 +745,6 @@ exclude_slash_tmp = false
 # 是否将 $TMPDIR 指向的目录从可写路径中排除
 # 默认用户临时目录是可写的; 设为 true 后变为只读
 exclude_tmpdir_env_var = false
-
-# ── default_permissions ──────────────────────────────────────────────────
-# 类型: 字符串 (可选)
-# 默认: 无
-# 作用: 指定默认启用的命名权限配置文件 (对应 [permissions.<名称>] 中定义的 profile)
-# 说明: 当设置此字段时, Codex 将使用指定 profile 的文件系统和网络权限规则,
-#       替代 sandbox_mode 的默认行为。profile 中必须定义 filesystem 子表。
-# 示例: 引用第 12 节中定义的 "dev" profile
-# default_permissions = "dev"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -975,7 +976,7 @@ theme = "catppuccin-latte"
 # 结构:
 #   [permissions.<profile-name>]
 #   [permissions.<profile-name>.filesystem]
-#     可以为每个路径设置: "read-only" | "read-write"
+#     可以为每个路径设置: "read" | "write" | "none"
 #     特殊路径:
 #       ":root"          — 文件系统根目录
 #       ":minimal"       — 最小路径集
@@ -989,20 +990,22 @@ theme = "catppuccin-latte"
 # ── 示例: 标准开发权限配置 ────────────────────────────────────────────────
 # [permissions.dev]
 # [permissions.dev.filesystem]
-# ":root" = "read-only"
-# ":project_roots" = "read-write"
-# ":tmpdir" = "read-write"
+# ":root" = "read"
+# ":project_roots" = "write"
+# ":tmpdir" = "write"
 #
 # [permissions.dev.network]
 # enabled = true
 # mode = "limited"
-# allowed_domains = ["api.openai.com", "pypi.org"]
+# [permissions.dev.network.domains]
+# "api.openai.com" = "allow"
+# "pypi.org" = "allow"
 
 # ── 示例: 只读审计权限 ───────────────────────────────────────────────────
 # [permissions.audit]
 # [permissions.audit.filesystem]
-# ":root" = "read-only"
-# ":project_roots" = "read-only"
+# ":root" = "read"
+# ":project_roots" = "read"
 #
 # [permissions.audit.network]
 # enabled = false
@@ -1010,10 +1013,10 @@ theme = "catppuccin-latte"
 # ── 示例: 带子路径作用域的文件系统权限 ────────────────────────────────────
 # [permissions.scoped]
 # [permissions.scoped.filesystem]
-# ":minimal" = "read-only"
+# ":minimal" = "read"
 # [permissions.scoped.filesystem.":project_roots"]
-# "." = "read-write"
-# "build" = "read-write"
+# "." = "write"
+# "build" = "write"
 
 # ── network 子表的完整字段参考 ────────────────────────────────────────────
 # 以下字段可以在任何 [permissions.<profile>.network] 中设置:
@@ -1027,12 +1030,6 @@ theme = "catppuccin-latte"
 #     "full"    — 允许所有 HTTP 方法; HTTPS CONNECT 请求直接隧道传输 (不做中间人)
 #     "limited" — 仅允许 GET/HEAD/OPTIONS; HTTPS CONNECT 被阻止; SOCKS5 被禁用
 #   说明: limited 模式更安全, 只允许只读的网络请求
-#
-# allowed_domains — 类型: 字符串数组 | 默认: [] (不限)
-#   域名白名单: 如果非空, 只有列出的域名可以访问
-#
-# denied_domains — 类型: 字符串数组 | 默认: []
-#   域名黑名单: 列出的域名会被阻止访问
 #
 # proxy_url — 类型: 字符串 | 默认: "http://127.0.0.1:3128"
 #   托管 HTTP 代理的监听地址
@@ -1052,15 +1049,25 @@ theme = "catppuccin-latte"
 # allow_local_binding — 类型: 布尔值 | 默认: false
 #   是否允许沙箱进程绑定本地端口 (监听连接)
 #
-# allow_unix_sockets — 类型: 字符串数组 | 默认: []
-#   允许代理连接的 Unix 域套接字路径白名单 (必须是绝对路径)
-#
 # dangerously_allow_non_loopback_proxy — 类型: 布尔值 | 默认: false
 #   ⚠️ 危险: 允许 HTTP/SOCKS 代理绑定非 loopback 地址 (如 0.0.0.0)
 #   默认强制绑定 127.0.0.1; 开启后代理可被局域网访问
 #
 # dangerously_allow_all_unix_sockets — 类型: 布尔值 | 默认: false
-#   ⚠️ 危险: 允许连接所有 Unix 域套接字 (绕过 allow_unix_sockets 白名单)
+#   ⚠️ 危险: 允许连接所有 Unix 域套接字 (绕过 unix_sockets 白名单)
+#
+# [permissions.<profile>.network.domains]
+# 类型: 键值对 | key 为域名/模式, value 为 "allow" | "deny"
+# 示例:
+#   [permissions.dev.network.domains]
+#   "api.openai.com" = "allow"
+#   "*.internal.example.com" = "deny"
+#
+# [permissions.<profile>.network.unix_sockets]
+# 类型: 键值对 | key 为绝对路径, value 为 "allow" | "none"
+# 示例:
+#   [permissions.dev.network.unix_sockets]
+#   "/tmp/example.sock" = "allow"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -1194,7 +1201,7 @@ memories = true
 # 包含自由格式的 apply_patch 工具
 apply_patch_freeform = true
 
-# exec_permission_approvals — 默认: false | 开发中
+# exec_permission_approvals — 默认: false | 开发中 (别名: request_permissions)
 # 允许在沙箱中动态请求额外的文件系统权限审批
 # exec_permission_approvals = false
 
@@ -1221,14 +1228,6 @@ apply_patch_freeform = true
 # tool_search — 默认: false | 开发中
 # 为 Apps 暴露 tool_search 工具, 按需延迟加载可用工具
 # tool_search = false
-
-# artifact — 默认: false | 开发中
-# 启用 Artifact 功能
-# artifact = false
-
-# voice_transcription — 默认: false | 开发中
-# 在 TUI 输入框中启用语音转文字
-# voice_transcription = false
 
 # realtime_conversation — 默认: false | 开发中
 # 启用实验性实时语音对话模式
@@ -1261,6 +1260,7 @@ apply_patch_freeform = true
 # responses_websockets    — 已移除
 # responses_websockets_v2 — 已移除
 # experimental_windows_sandbox  — 已移除 (用 [windows].sandbox 替代)
+# enable_experimental_windows_sandbox — 历史别名, 现已移除 (用 [windows].sandbox 替代)
 # elevated_windows_sandbox      — 已移除 (用 [windows].sandbox 替代)
 # remote_models                 — 已移除
 # use_linux_sandbox_bwrap       — 已移除
@@ -1765,17 +1765,24 @@ model_verbosity = "medium"
 # 作用: 除了字符串形式的 approval_policy, 还支持对象形式, 可以细粒度控制审批
 # 说明: 使用此形式时, 必须删除顶层的字符串形式 approval_policy
 #
-# [approval_policy.reject]
+# [approval_policy.granular]
 # sandbox_approval — 类型: 布尔值 | 默认: false
-#   设为 true: 自动拒绝沙箱升级请求 (命令被禁止执行)
-#   设为 false: 弹出提示让你决定
+#   设为 true: 允许 shell 提权/沙箱升级类审批请求
+#   设为 false: 直接拒绝这类请求, 不再弹提示
 # rules — 类型: 布尔值 | 默认: false
-#   设为 true: 自动拒绝执行策略规则提示
+#   设为 true: 允许执行策略规则触发的审批提示
+#   设为 false: 直接拒绝这类请求
+# skill_approval — 类型: 布尔值 | 默认: false
+#   设为 true: 允许 Skill 脚本执行触发的审批提示
+# request_permissions — 类型: 布尔值 | 默认: false
+#   设为 true: 允许 request_permissions 工具触发的审批提示
 # mcp_elicitations — 类型: 布尔值 | 默认: false
-#   设为 true: 自动拒绝 MCP 信息采集提示
+#   设为 true: 允许 MCP elicitation 审批提示
 #
 # 示例:
-# [approval_policy.reject]
+# [approval_policy.granular]
 # sandbox_approval = true
-# rules = false
-# mcp_elicitations = false
+# rules = true
+# skill_approval = false
+# request_permissions = false
+# mcp_elicitations = true
