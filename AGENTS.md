@@ -1,5 +1,10 @@
 # Global Development Standards
 
+Global instructions for all projects.
+
+- Prefer Exa AI (`mcp__exa__web_search_exa`) for all web searches
+- Use skills proactively when they match the task — suggest relevant ones, don't block on them
+
 ## Philosophy
 
 - **No speculative features** - Don't add features, flags, or configuration unless users actively need them
@@ -14,6 +19,14 @@
 - **Agent-native by default** - Design so agents can achieve any outcome users can. Tools are atomic primitives; features are outcomes described in prompts. Prefer file-based state for transparency and portability. When adding UI capability, ask: can an agent achieve this outcome too?
 
 ## Code Quality
+
+### Hard limits
+
+1. ≤80 lines/function, cyclomatic complexity ≤8
+2. ≤5 positional params
+3. 100-char line length
+4. Absolute imports only — no relative (`..`) paths
+5. Google-style docstrings on non-trivial public APIs
 
 ### Zero warnings policy
 
@@ -64,7 +77,6 @@ Prefer `ast-grep` over ripgrep when searching for code structure (function calls
 
 - Think in English, respond in Simplified Chinese.
 - On Windows PowerShell (never cmd): avoid Bash syntax, do not pass unexpanded wildcards, prefer fixed-string searches (`rg -F` / `Select-String -SimpleMatch`), and always enclose string values in single quotes (do not use backslashes to escape inside; use `''` for a literal `'`).
-- Prefer Exa AI (`mcp__exa__web_search_exa`) for all web searches.
 - Do not generate large `apply_patch` calls: edit only one file at a time, keep each apply_patch under 200 lines (hard max 300), split larger changes into multiple small patches, and if you hit code 206 or "The filename or extension is too long", do not retry the same large patch.
 - Write Conventional Commits every time you have something stable — do not wait to be asked. Never bundle multiple changes into a single commit. Do not commit any documentation files (for example, `*.md`, `*.txt`, etc.) unless they are already tracked by git.
 - If some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially. For instance, if one operation must complete before another starts (e.g., executing `git add` before `git commit`), run these operations sequentially instead.
