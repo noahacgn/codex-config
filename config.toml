@@ -4,6 +4,7 @@ approval_policy = "never"
 sandbox_mode = "danger-full-access"
 web_search = "live"
 personality = "pragmatic"
+model_provider = "custom"
 
 # 推理能力相关
 model_reasoning_effort = "xhigh"
@@ -50,6 +51,13 @@ description = "Senior code reviewer that evaluates changes across five dimension
 # 第 15 节: Skills 配置
 [skills.bundled]
 enabled = false
+
+# 第 17 节: 模型提供商定义
+[model_providers.custom]
+name = "OpenAI"
+base_url = "https://ai.example.cn/v1"
+wire_api = "responses"
+requires_openai_auth = true
 
 # 第 18 节: MCP 服务器配置
 [mcp_servers.exa]
