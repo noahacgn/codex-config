@@ -377,6 +377,28 @@ notify = ["powershell.exe", "-NoProfile", "-Command", "[console]::beep(880,120)"
 #       - "使用 TypeScript 而不是 JavaScript"
 developer_instructions = "Please answer in clear and accurate Chinese."
 
+# ── include_permissions_instructions ───────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: true
+# 作用: 是否注入内置的 <permissions instructions> developer 指令块
+# 说明: 关闭后, 模型将看不到 Codex 关于权限、审批与沙箱约束的默认说明;
+#       仅建议在你明确知道影响时才关闭
+include_permissions_instructions = true
+
+# ── include_apps_instructions ──────────────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: true
+# 作用: 是否注入内置的 <apps_instructions> developer 指令块
+# 说明: 关闭后, 模型将看不到 ChatGPT Apps/Connectors 的默认使用说明
+include_apps_instructions = true
+
+# ── include_environment_context ────────────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: true
+# 作用: 是否注入 <environment_context> 用户上下文块
+# 说明: 这个上下文会告诉模型当前工作目录、shell、时间、时区等运行环境信息
+include_environment_context = true
+
 # ── instructions ───────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
 # 默认: 无 (使用 Codex 内置指令)
@@ -508,7 +530,7 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # 类型: 字符串 (可选)
 # 默认: 无
 # 作用: 指定实时语音对话使用的模型
-# experimental_realtime_ws_model = "gpt-4o-realtime-preview"
+# experimental_realtime_ws_model = "gpt-realtime-1.5"
 
 # ── experimental_realtime_ws_startup_context ───────────────────────────────
 # 类型: 字符串 (可选)
@@ -522,20 +544,35 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # 作用: 替换 realtime 激活时注入到 developer 消息中的内置启动指令
 # experimental_realtime_start_instructions = ""
 
-# ── [realtime] — 实时 WebSocket 会话配置 ─────────────────────────────────
-# 作用: 统一配置实时语音 WebSocket 的会话版本和类型
-# 说明: 合并了之前分散的 realtime 相关配置
+# ── [realtime] — 实时语音会话配置 ────────────────────────────────────────
+# 作用: 统一配置 realtime 会话的协议版本、会话类型、传输方式与语音
+# 说明: 从 v0.119.0 起, 默认体验切换为 v2 + WebRTC
 
 # [realtime]
-# version — 类型: 字符串 | 默认: "v1"
+# version — 类型: 字符串 | 默认: "v2"
 # 可选值: "v1" | "v2"
-# 选择 realtime WebSocket 协议版本
-# version = "v1"
+# 选择 realtime 会话协议版本
+# version = "v2"
 
 # type — 类型: 字符串 | 默认: "conversational"
 # 可选值: "conversational" | "transcription"
 # 选择会话类型: 对话模式或转录模式
 # type = "conversational"
+
+# transport — 类型: 字符串 | 默认: "webrtc"
+# 可选值: "webrtc" | "websocket"
+# 选择实时语音会话的底层传输方式;
+#   webrtc 是 v0.119.0 起的默认体验, 更适合原生双向语音交互
+# transport = "webrtc"
+
+# voice — 类型: 字符串 (可选)
+# 默认: 无 (使用内置默认语音)
+# 可选值:
+#   "alloy" | "arbor" | "ash" | "ballad" | "breeze" | "cedar" | "coral"
+#   "cove" | "echo" | "ember" | "juniper" | "maple" | "marin" | "sage"
+#   "shimmer" | "sol" | "spruce" | "vale" | "verse"
+# 选择实时语音输出的人声
+# voice = "cedar"
 
 
 # ── 实验性: 遗留开关 ────────────────────────────────────────────────────────
@@ -899,19 +936,28 @@ alternate_screen = "auto"
 # 是否启用 TUI 动画效果 (欢迎画面、闪烁效果、加载动画等)
 animations = true
 
+# notification_condition — 类型: 字符串 | 默认: "unfocused"
+# 可选值:
+#   "unfocused" — 仅当终端失去焦点时发送通知
+#   "always"    — 无论终端是否聚焦都发送通知
+# 作用: 控制 TUI 通知在什么焦点状态下触发
+notification_condition = "unfocused"
+
 # notification_method — 类型: 字符串 | 默认: "auto"
 # 可选值:
 #   "auto" — 自动检测最佳方式
-#   "osc9" — 使用 OSC-9 转义序列 (iTerm2 等终端支持)
+#   "osc9" — 使用 OSC-9 转义序列 (Warp、iTerm2 等终端支持)
 #   "bel"  — 使用终端响铃符 (\a)
-# 作用: 当 Codex 在后台完成任务时, 用什么方式通知你
+# 作用: 配置 TUI 使用什么方式发出终端通知
 notification_method = "auto"
 
 # notifications — 类型: 布尔值 或 字符串数组 | 默认: true
 # 可选值:
-#   true   — 启用桌面通知 (当终端失去焦点时)
+#   true   — 启用通知
 #   false  — 禁用通知
 #   ["cmd", "arg"] — 使用自定义命令发送通知
+# 说明: 是否真正发出通知还取决于上面的 notification_condition;
+#       如果设为命令数组, Codex 会执行该命令来完成通知
 notifications = true
 
 # show_tooltips — 类型: 布尔值 | 默认: true
@@ -919,7 +965,7 @@ notifications = true
 show_tooltips = true
 
 # status_line — 类型: 字符串数组 (可选)
-# 默认: ["model-with-reasoning", "context-remaining", "current-dir"]
+# 默认: ["model-with-reasoning", "current-dir"]
 # 作用: TUI 底部状态栏显示的信息项 (按顺序排列)
 # 可用项:
 #   "model-name"           — 当前模型名称
@@ -927,8 +973,9 @@ show_tooltips = true
 #   "current-dir"          — 当前工作目录
 #   "project-root"         — 项目根目录 (仅在项目中显示)
 #   "git-branch"           — 当前 Git 分支 (仅在 Git 仓库中显示)
-#   "context-remaining"    — 上下文剩余空间
-#   "context-used"         — 已使用的上下文百分比
+#   "context-usage"        — 上下文使用情况仪表
+#   "context-remaining"    — 旧别名, 等同于 context-usage
+#   "context-used"         — 旧别名, 等同于 context-usage
 #   "context-window-size"  — 上下文窗口总大小
 #   "used-tokens"          — 已使用的 token 数
 #   "total-input-tokens"   — 总输入 token 数
@@ -938,7 +985,8 @@ show_tooltips = true
 #   "codex-version"        — Codex CLI 版本号
 #   "session-id"           — 当前会话 ID
 #   "fast-mode"            — Fast 模式状态
-status_line = ["model-with-reasoning", "context-remaining", "current-dir"]
+#   "thread-title"         — 当前线程标题 (仅在用户改名后显示)
+status_line = ["model-with-reasoning", "context-usage", "current-dir"]
 
 # terminal_title — 类型: 字符串数组 (可选)
 # 默认: ["spinner", "project"]
@@ -1163,6 +1211,11 @@ js_repl = true
 # 防止系统在 Codex 活跃时进入休眠
 prevent_idle_sleep = true
 
+# image_detail_original — 默认: false | 实验
+# 允许图片输出使用 detail: "original" (支持的模型才有效)
+# 说明: 适合需要读取小字、精确定位 UI、或做高分辨率图像分析的场景
+# image_detail_original = false
+
 # ── 开发中功能 (Under Development) ─────────────────────────────────────────
 
 # code_mode — 默认: false | 开发中
@@ -1187,15 +1240,30 @@ memories = true
 
 # multi_agent_v2 — 默认: false | 开发中
 # 启用新一代多 Agent 协作实现
+# 说明: 除了布尔值, 也可以写成 [features.multi_agent_v2] 对象,
+#       细化 spawn_agent 的提示文案与返回元信息
 # multi_agent_v2 = false
+#
+# [features.multi_agent_v2]
+# enabled — 类型: 布尔值 | 默认: false
+# 是否启用 Multi-Agent V2
+# enabled = true
+#
+# usage_hint_enabled — 类型: 布尔值 | 默认: true
+# 是否在 spawn_agent / send_message 等工具说明中展示用法提示
+# usage_hint_enabled = true
+#
+# usage_hint_text — 类型: 字符串 (可选)
+# 自定义追加到子 Agent 相关工具说明中的提示文本
+# usage_hint_text = "优先把可并行、非阻塞主路径的子任务委派给子 Agent。"
+#
+# hide_spawn_agent_metadata — 类型: 布尔值 | 默认: false
+# 是否隐藏 spawn_agent 返回中的 agent 类型 / 模型 / reasoning 元信息
+# hide_spawn_agent_metadata = false
 
 # child_agents_md — 默认: false | 开发中
 # 为子 Agent 注入额外的 AGENTS.md 指导
 # child_agents_md = false
-
-# image_detail_original — 默认: false | 开发中
-# 允许图片输出使用 detail: "original" (支持的模型才有效)
-# image_detail_original = false
 
 # apply_patch_freeform — 默认: false | 开发中 (别名: include_apply_patch_tool, experimental_use_freeform_apply_patch)
 # 包含自由格式的 apply_patch 工具
@@ -1230,12 +1298,22 @@ apply_patch_freeform = true
 # tool_search = false
 
 # realtime_conversation — 默认: false | 开发中
-# 启用实验性实时语音对话模式
+# 启用实验性实时语音对话模式 (默认走 v2 + WebRTC)
 # realtime_conversation = false
+
+# remote_control — 默认: false | 开发中
+# 启用 app-server 的远程控制通道
+# 说明: 主要用于远程 / 集成场景, 允许运行中的 app-server 接受远程控制连接
+# remote_control = false
 
 # runtime_metrics — 默认: false | 开发中
 # 启用运行时性能指标快照
 # runtime_metrics = false
+
+# general_analytics — 默认: false | 开发中
+# 启用新一代通用分析事件
+# 说明: 主要影响线程、压缩、子 Agent 等统一分析埋点; 通常需配合 [analytics] enabled = true
+# general_analytics = false
 
 # js_repl_tools_only — 默认: false | 开发中
 # 仅向模型暴露 js_repl 工具 (需要 js_repl 已启用)
@@ -1436,8 +1514,9 @@ query_params = { "api-version" = "2026-01-01" }
 # 等待命令执行完成的最大时间
 # timeout_ms = 5000
 #
-# refresh_interval_ms — 类型: 正整数 (毫秒) | 默认: 300000 (5 分钟)
+# refresh_interval_ms — 类型: 非负整数 (毫秒) | 默认: 300000 (5 分钟)
 # 缓存 token 的最大有效时间; 超过后重新执行命令刷新
+# 特殊值: 设为 0 可禁用主动刷新, 仅在收到 401 后按重试路径重新获取 token
 # refresh_interval_ms = 300000
 #
 # cwd — 类型: 路径 (可选) | 默认: 当前工作目录
@@ -1686,10 +1765,11 @@ trust_level = "trusted"
 #   model_reasoning_summary, model_verbosity, model_catalog_json, personality,
 #   chatgpt_base_url, model_instructions_file, js_repl_node_path,
 #   js_repl_node_module_dirs, zsh_path, experimental_compact_prompt_file,
-#   include_apply_patch_tool, experimental_use_unified_exec_tool,
-#   experimental_use_freeform_apply_patch, tools_view_image, tools (工具配置),
-#   web_search, oss_provider, analytics (子对象), windows (子对象),
-#   features (功能标志子对象)
+#   include_apply_patch_tool, include_permissions_instructions,
+#   include_apps_instructions, include_environment_context,
+#   experimental_use_unified_exec_tool, experimental_use_freeform_apply_patch,
+#   tools_view_image, tools (工具配置), web_search, oss_provider,
+#   analytics (子对象), windows (子对象), features (功能标志子对象)
 
 # ── 预设: default (日常使用) ───────────────────────────────────────────────
 [profiles.default]
