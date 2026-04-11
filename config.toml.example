@@ -917,6 +917,27 @@ view_image = true
 # timezone = "America/Los_Angeles"
 
 
+# ── [tool_suggest] — 可建议安装的工具来源 ──────────────────────────────────
+# 类型: 对象 (可选) | 对应结构体: ToolSuggestConfig
+# 作用: 为 tool_suggest 工具追加“允许被建议安装”的 Connector / Plugin 候选项
+# 前提: 需要 [features] tool_suggest = true; 若 [features] apps / plugins 被关闭,
+#       对应类型的候选项不会生效
+
+# [tool_suggest]
+# discoverables — 类型: 对象数组 | 默认: []
+# 每个条目:
+#   type — "connector" | "plugin"
+#   id   — 候选项 ID
+# 说明:
+#   - connector 类型的 id 使用连接器 ID, 如 "google_drive"
+#   - plugin 类型的 id 使用插件 ID, 如 "sample@openai-curated"
+#   - 纯空白 id 在加载配置时会被忽略
+# discoverables = [
+#   { type = "connector", id = "google_drive" },
+#   { type = "plugin", id = "sample@openai-curated" },
+# ]
+
+
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║                     第 11 节: TUI (终端界面) 配置                       ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
