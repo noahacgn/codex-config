@@ -41,7 +41,6 @@ status_line = ["model-with-reasoning", "context-usage", "context-window-size", "
 [features]
 unified_exec = true
 prevent_idle_sleep = true
-image_detail_original = true
 apply_patch_freeform = true
 default_mode_request_user_input = true
 

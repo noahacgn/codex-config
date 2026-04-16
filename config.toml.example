@@ -295,13 +295,14 @@ file_opener = "cursor"
 
 # ── cli_auth_credentials_store ─────────────────────────────────────────────
 # 类型: 字符串 (可选)
-# 默认: "auto"
+# 默认: "file"
 # 可选值:
 #   "file"      — 将认证凭证存储在 $CODEX_HOME/auth.json 文件中
 #   "keyring"   — 存储在操作系统密钥链中 (更安全); 如果密钥链不可用则报错
 #   "auto"      — 优先用密钥链, 不可用时退回到文件存储 (推荐)
 #   "ephemeral" — 只存储在内存中, 进程退出后凭证丢失 (最安全但每次都要重新登录)
 # 作用: 控制 CLI 认证凭证 (如 API Key) 的存储方式
+# 说明: 示例这里显式设为 "auto"; 若完全省略此项, 实际默认值仍是 "file"
 cli_auth_credentials_store = "auto"
 
 # ── mcp_oauth_credentials_store ────────────────────────────────────────────
@@ -1159,6 +1160,7 @@ theme = "catppuccin-latte"
 shell_tool = true
 
 # unified_exec — 默认: true (非Windows) / false (Windows) | 稳定
+# 别名: experimental_use_unified_exec_tool
 # 使用统一的 PTY-backed 执行工具来替代多个 shell 工具
 # 说明: 提供更好的终端模拟, 支持交互式命令
 unified_exec = true
@@ -1215,6 +1217,16 @@ plugins = true
 # 通过 MCP elicitation 路径路由 MCP 工具审批提示
 tool_call_mcp_elicitation = true
 
+# workspace_dependencies — 默认: true | 稳定
+# 启用 workspace 级依赖支持
+# 说明: 允许 Codex 感知并使用工作区声明的依赖关系
+workspace_dependencies = true
+
+# general_analytics — 默认: true | 稳定
+# 启用新一代通用分析事件
+# 说明: 主要影响线程、压缩、子 Agent 等统一分析埋点; 通常需配合 [analytics] enabled = true
+# general_analytics = true
+
 # ── 实验功能 (Experimental) ────────────────────────────────────────────────
 
 # js_repl — 默认: false | 实验
@@ -1231,11 +1243,6 @@ js_repl = true
 # prevent_idle_sleep — 默认: false | 实验 (macOS/Linux/Windows)
 # 防止系统在 Codex 活跃时进入休眠
 prevent_idle_sleep = true
-
-# image_detail_original — 默认: false | 实验
-# 允许图片输出使用 detail: "original" (支持的模型才有效)
-# 说明: 适合需要读取小字、精确定位 UI、或做高分辨率图像分析的场景
-# image_detail_original = false
 
 # ── 开发中功能 (Under Development) ─────────────────────────────────────────
 
@@ -1258,6 +1265,10 @@ codex_git_commit = true
 # memories — 默认: false | 开发中 (别名: memory_tool)
 # 启用记忆系统 (从会话中提取经验, 在未来会话中注入)
 memories = true
+
+# telepathy — 默认: false | 开发中
+# 启用 Telepathy sidecar, 以被动屏幕上下文的形式扩展记忆能力
+# telepathy = false
 
 # multi_agent_v2 — 默认: false | 开发中
 # 启用新一代多 Agent 协作实现
@@ -1285,6 +1296,10 @@ memories = true
 # child_agents_md — 默认: false | 开发中
 # 为子 Agent 注入额外的 AGENTS.md 指导
 # child_agents_md = false
+
+# use_agent_identity — 默认: false | 开发中
+# 在 ChatGPT 登录会话中启用 Agent identity 注册流程
+# use_agent_identity = false
 
 # apply_patch_freeform — 默认: false | 开发中 (别名: include_apply_patch_tool, experimental_use_freeform_apply_patch)
 # 包含自由格式的 apply_patch 工具
@@ -1331,11 +1346,6 @@ apply_patch_freeform = true
 # 启用运行时性能指标快照
 # runtime_metrics = false
 
-# general_analytics — 默认: false | 开发中
-# 启用新一代通用分析事件
-# 说明: 主要影响线程、压缩、子 Agent 等统一分析埋点; 通常需配合 [analytics] enabled = true
-# general_analytics = false
-
 # js_repl_tools_only — 默认: false | 开发中
 # 仅向模型暴露 js_repl 工具 (需要 js_repl 已启用)
 # js_repl_tools_only = false
@@ -1347,6 +1357,8 @@ apply_patch_freeform = true
 # ── 已弃用功能 (Deprecated) ────────────────────────────────────────────────
 # 以下功能已被其他机制替代, 不建议使用
 
+# web_search         — 历史别名, 等同于 [features].web_search_request;
+#                      现已弃用, 请使用顶层 web_search = "live" 代替
 # web_search_request — 已弃用, 请使用顶层 web_search = "live" 代替
 # web_search_cached  — 已弃用, 请使用顶层 web_search = "cached" 代替
 
@@ -1364,6 +1376,7 @@ apply_patch_freeform = true
 # remote_models                 — 已移除
 # use_linux_sandbox_bwrap       — 已移除
 # tui_app_server                — 已移除 (始终启用)
+# image_detail_original         — 已移除 (兼容旧包装器的空操作标志)
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -1444,7 +1457,36 @@ config = [
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 17 节: 模型提供商定义                            ║
+# ║                     第 17 节: Marketplaces (插件市场) 配置              ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 记录已添加的插件市场来源与刷新元数据
+# 说明: 通常由 `codex marketplace add` / 刷新流程自动维护, 一般不需要手动编辑
+
+[marketplaces.openai-curated]
+# last_updated — 类型: 字符串 (可选)
+# 最后一次成功添加或刷新此 marketplace 的时间戳
+last_updated = "2026-04-16T09:30:00Z"
+
+# source_type — 类型: 字符串 (可选) | 可选值: "git" | "local"
+# marketplace 的来源类型
+source_type = "git"
+
+# source — 类型: 字符串 (可选)
+# 添加 marketplace 时使用的来源位置
+# source_type = "git" 时通常为 Git URL; source_type = "local" 时通常为本地目录
+source = "https://github.com/openai/codex-marketplace.git"
+
+# ref — 类型: 字符串 (可选)
+# 当 source_type = "git" 时检出的分支 / tag / commit
+ref = "main"
+
+# sparse_paths — 类型: 字符串数组 (可选)
+# 当 source_type = "git" 时使用的稀疏检出路径
+sparse_paths = ["marketplaces/openai-curated"]
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 18 节: 模型提供商定义                            ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 定义自定义的模型 API 提供商
 # 说明: 内置提供商有 openai / ollama / lmstudio
@@ -1546,7 +1588,7 @@ query_params = { "api-version" = "2026-01-01" }
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 18 节: MCP 服务器配置                            ║
+# ║                     第 19 节: MCP 服务器配置                            ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 配置 MCP (Model Context Protocol) 服务器, 让模型调用外部工具
 # 说明: 有两种传输方式:
@@ -1584,6 +1626,11 @@ enabled = true
 # 当设为 true 时, 如果此服务器初始化失败, codex exec 会直接退出报错
 # 适合关键依赖: 如果这个服务器不可用, 任务就无法进行
 required = false
+
+# supports_parallel_tool_calls — 类型: 布尔值 | 默认: false
+# 是否将此服务器暴露的所有工具都标记为“可安全并行调用”
+# 说明: 只有当这些工具并发运行不会读写冲突或破坏外部状态时才建议启用
+# supports_parallel_tool_calls = true
 
 # startup_timeout_ms — 类型: 整数 (毫秒) (可选)
 # 服务器初始化 + 工具列表获取的超时时间 (毫秒版本)
@@ -1648,7 +1695,7 @@ tool_timeout_sec = 120
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 19 节: Apps 控制                                 ║
+# ║                     第 20 节: Apps 控制                                 ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 控制 ChatGPT Apps/Connectors 的行为
 # 前提: Apps 功能默认已启用; 若显式设置 [features] apps = false, 本节不会生效
@@ -1698,7 +1745,7 @@ approval_mode = "prompt"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 20 节: OpenTelemetry 可观测性配置                ║
+# ║                     第 21 节: OpenTelemetry 可观测性配置                ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 配置 Codex 的 OpenTelemetry 遥测数据导出 (Traces / Metrics / Logs)
 # 说明: 适合需要对 Codex 进行性能监控或集成到公司可观测性平台的场景
@@ -1757,7 +1804,7 @@ headers = {}
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 21 节: 项目信任映射                              ║
+# ║                     第 22 节: 项目信任映射                              ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 为不同的项目目录设置信任级别
 # 说明:
@@ -1774,7 +1821,7 @@ trust_level = "trusted"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 22 节: 配置预设 (Profiles)                       ║
+# ║                     第 23 节: 配置预设 (Profiles)                       ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 将多个配置打包成 "预设", 通过切换 profile 一键切换使用场景
 # 激活: 在顶层设置 profile = "名称" 即可激活对应的预设
@@ -1861,7 +1908,7 @@ model_verbosity = "medium"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 23 节: 审批策略对象形式 (高级)                   ║
+# ║                     第 24 节: 审批策略对象形式 (高级)                   ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 除了字符串形式的 approval_policy, 还支持对象形式, 可以细粒度控制审批
 # 说明: 使用此形式时, 必须删除顶层的字符串形式 approval_policy
