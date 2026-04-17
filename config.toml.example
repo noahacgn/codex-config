@@ -419,13 +419,14 @@ include_environment_context = true
 # ── commit_attribution ─────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
 # 默认: "Codex <noreply@openai.com>"
-# 作用: 模型创建 git commit 时自动追加的 Co-authored-by 署名
+# 作用: 模型创建 git commit 时自动追加的 Co-authored-by 署名值
 # 说明:
 #   - 不设置: 使用默认值 "Codex <noreply@openai.com>"
 #   - 设为空字符串 "": 禁用自动署名
-#   - 设为自定义值: 使用你指定的署名
+#   - 设为自定义值: 使用你指定的署名 (仅填 "姓名 <邮箱>" 部分;
+#     "Co-authored-by:" 前缀由 Codex 自动添加, 请勿重复包含)
 # 注意: 需要 codex_git_commit 功能开启才有效
-commit_attribution = "Co-authored-by: Your Name <you@example.com>"
+commit_attribution = "Your Name <you@example.com>"
 
 
 # ── 路径配置 ────────────────────────────────────────────────────────────────
