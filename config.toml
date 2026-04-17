@@ -52,6 +52,14 @@ description = "Senior code reviewer that evaluates changes across five dimension
 [skills.bundled]
 enabled = false
 
+[[skills.config]]
+path = 'C:\Users\Administrator\.codex\skills\codex-primary-runtime\slides\SKILL.md'
+enabled = false
+
+[[skills.config]]
+path = 'C:\Users\Administrator\.codex\skills\codex-primary-runtime\spreadsheets\SKILL.md'
+enabled = false
+
 # 第 17 节: 模型提供商定义
 [model_providers.custom]
 name = "OpenAI"
