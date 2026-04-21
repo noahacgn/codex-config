@@ -725,6 +725,29 @@ hide_world_writable_warning = true
 # 已确认的模型迁移映射 (旧模型名 → 新模型名)
 model_migrations = { "gpt-5.3-codex" = "gpt-5.4" }
 
+# ── [notice.external_config_migration_prompts] — 外部配置迁移提示状态 ───────
+# 作用: 记录“是否显示将外部 Agent 配置迁移到 Codex”的提示状态
+# 说明: 这部分通常由 Codex 自动维护, 一般不需要手动编辑
+#
+# [notice.external_config_migration_prompts]
+# home — 类型: 布尔值 (可选)
+# 是否隐藏 home 级别的外部配置迁移提示
+# home = true
+#
+# home_last_prompted_at — 类型: 整数 (Unix 秒级时间戳) (可选)
+# 上次显示 home 级别迁移提示的时间
+# home_last_prompted_at = 1760000000
+#
+# [notice.external_config_migration_prompts.projects]
+# 类型: 键值对 | key 为项目路径, value 为布尔值
+# 是否对特定项目隐藏迁移提示
+# 'C:\Users\you\workspace\demo' = true
+#
+# [notice.external_config_migration_prompts.project_last_prompted_at]
+# 类型: 键值对 | key 为项目路径, value 为 Unix 秒级时间戳
+# 记录特定项目上次显示迁移提示的时间
+# 'C:\Users\you\workspace\demo' = 1760000000
+
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║                     第 6 节: Windows 沙箱                               ║
@@ -847,11 +870,11 @@ generate_memories = true
 # 设为 false 后 Codex 不会使用任何记忆来辅助回答
 use_memories = true
 
-# no_memories_if_mcp_or_web_search — 类型: 布尔值 | 默认: false
+# disable_on_external_context — 类型: 布尔值 | 默认: false
 # 当设为 true 时, 如果会话中使用了 MCP 工具或网络搜索,
 # 该会话会被标记为 "污染", 不会从中提取记忆
 # 原因: 外部数据可能引入噪音或不准确的信息
-no_memories_if_mcp_or_web_search = false
+disable_on_external_context = false
 
 # extract_model — 类型: 字符串 (可选) | 默认: 使用系统默认模型
 # 指定用于从会话中提取记忆的模型
@@ -1088,6 +1111,18 @@ theme = "catppuccin-latte"
 # [permissions.scoped.filesystem.":project_roots"]
 # "." = "write"
 # "build" = "write"
+#
+# glob_scan_max_depth — 类型: 正整数 (可选) | 最小: 1
+#   限制 deny-read glob 在非 macOS 平台上的预展开深度
+#   说明: 当你使用 `"**/*.env" = "none"` 这类规则时, 可设置此值来限制扫描开销,
+#         并避免 Linux 因无界 `**` 展开而给出警告
+#
+# [permissions.globbed]
+# [permissions.globbed.filesystem]
+# glob_scan_max_depth = 3
+# [permissions.globbed.filesystem.":project_roots"]
+# "." = "write"
+# "**/*.env" = "none"
 
 # ── network 子表的完整字段参考 ────────────────────────────────────────────
 # 以下字段可以在任何 [permissions.<profile>.network] 中设置:
@@ -1192,10 +1227,6 @@ enable_request_compression = true
 # 当 Skill 需要的 MCP 依赖缺失时, 提示安装
 skill_mcp_dependency_install = true
 
-# use_legacy_landlock — 默认: false | 稳定
-# 使用旧版 Landlock 沙箱实现 (仅 Linux)
-# use_legacy_landlock = false
-
 # multi_agent — 默认: true | 稳定
 # 启用多 Agent 并行协作 (别名: collab)
 # 说明: 允许模型派生子 Agent 来并行处理复杂任务
@@ -1206,6 +1237,10 @@ multi_agent = true
 # 说明: 允许通过 $ 符号引用外部应用
 apps = true
 
+# tool_search — 默认: true | 稳定
+# 为 Apps 暴露 tool_search 工具, 让模型按需发现和延迟加载可用工具
+tool_search = true
+
 # tool_suggest — 默认: true | 稳定
 # 启用工具建议功能, 当模型缺少所需工具时自动推荐
 tool_suggest = true
@@ -1213,6 +1248,10 @@ tool_suggest = true
 # plugins — 默认: true | 稳定
 # 启用插件系统
 plugins = true
+
+# image_generation — 默认: true | 稳定
+# 启用内置图片生成工具
+image_generation = true
 
 # tool_call_mcp_elicitation — 默认: true | 稳定
 # 通过 MCP elicitation 路径路由 MCP 工具审批提示
@@ -1235,7 +1274,15 @@ workspace_dependencies = true
 # 前提: 需要 Node.js >= v22.22.0
 js_repl = true
 
-# guardian_approval — 默认: false | 实验 (菜单名: "Guardian Approvals")
+# memories — 默认: false | 实验 (别名: memory_tool)
+# 启用记忆系统 (从会话中提取经验, 在未来会话中注入)
+memories = true
+
+# external_migration — 默认: false | 实验
+# 当检测到可迁移的外部 Agent 配置时, 在启动时显示迁移提示
+# external_migration = false
+
+# guardian_approval — 默认: false | 实验 (菜单名: "Auto-review")
 # 启用 Guardian 子 Agent 审批 (替代人工审批)
 # 说明: 开启后, on-request 策略下的审批提示 (包括沙箱升级和被阻止的网络访问)
 #       会路由给 Guardian 子 Agent 评估, 而不是显示给用户
@@ -1263,13 +1310,9 @@ prevent_idle_sleep = true
 # 启用 git 提交署名指导 (配合 commit_attribution 使用)
 codex_git_commit = true
 
-# memories — 默认: false | 开发中 (别名: memory_tool)
-# 启用记忆系统 (从会话中提取经验, 在未来会话中注入)
-memories = true
-
-# telepathy — 默认: false | 开发中
-# 启用 Telepathy sidecar, 以被动屏幕上下文的形式扩展记忆能力
-# telepathy = false
+# chronicle — 默认: false | 开发中 (历史别名: telepathy)
+# 启用 Chronicle sidecar, 以被动屏幕上下文的形式扩展记忆能力
+# chronicle = false
 
 # multi_agent_v2 — 默认: false | 开发中
 # 启用新一代多 Agent 协作实现
@@ -1306,6 +1349,10 @@ memories = true
 # 包含自由格式的 apply_patch 工具
 apply_patch_freeform = true
 
+# apply_patch_streaming_events — 默认: false | 开发中
+# 在生成 apply_patch 输入时流式展示结构化进度
+# apply_patch_streaming_events = false
+
 # exec_permission_approvals — 默认: false | 开发中 (别名: request_permissions)
 # 允许在沙箱中动态请求额外的文件系统权限审批
 # exec_permission_approvals = false
@@ -1318,10 +1365,6 @@ apply_patch_freeform = true
 # 暴露内置的 request_permissions 工具, 让模型可以主动请求文件系统权限
 # request_permissions_tool = false
 
-# image_generation — 默认: false | 开发中
-# 启用内置图片生成工具
-# image_generation = false
-
 # skill_env_var_dependency_prompt — 默认: false | 开发中
 # 当 Skill 需要的环境变量缺失时, 提示用户设置
 # skill_env_var_dependency_prompt = false
@@ -1330,9 +1373,13 @@ apply_patch_freeform = true
 # 在 Default 模式 (非 Plan 模式) 中允许 request_user_input
 # default_mode_request_user_input = false
 
-# tool_search — 默认: false | 开发中
-# 为 Apps 暴露 tool_search 工具, 按需延迟加载可用工具
-# tool_search = false
+# tool_search_always_defer_mcp_tools — 默认: false | 开发中
+# 始终将 MCP 工具放到 tool_search 后按需发现, 不直接暴露小规模工具集
+# tool_search_always_defer_mcp_tools = false
+
+# unavailable_dummy_tools — 默认: false | 开发中
+# 为历史对话中已不存在的工具调用暴露占位工具, 便于恢复旧上下文
+# unavailable_dummy_tools = false
 
 # realtime_conversation — 默认: false | 开发中
 # 启用实验性实时语音对话模式 (默认走 v2 + WebRTC)
@@ -1355,6 +1402,14 @@ apply_patch_freeform = true
 # 启用 SpawnCsv 扇出能力, 允许 Agent 批量派生子任务
 # enable_fanout = false
 
+# artifact — 默认: false | 开发中
+# 启用原生 artifact 工具
+# artifact = false
+
+# workspace_owner_usage_nudge — 默认: false | 开发中
+# 在 TUI 中显示工作区归属 / 用量提示文案
+# workspace_owner_usage_nudge = false
+
 # ── 已弃用功能 (Deprecated) ────────────────────────────────────────────────
 # 以下功能已被其他机制替代, 不建议使用
 
@@ -1362,6 +1417,8 @@ apply_patch_freeform = true
 #                      现已弃用, 请使用顶层 web_search = "live" 代替
 # web_search_request — 已弃用, 请使用顶层 web_search = "live" 代替
 # web_search_cached  — 已弃用, 请使用顶层 web_search = "cached" 代替
+# use_legacy_landlock — 已弃用: 旧版 Linux 沙箱实现开关;
+#                        如无特殊需要, 请删除此项
 
 # ── 已移除功能 (Removed) — 标志保留但无效 ──────────────────────────────────
 # steer                   — 始终启用
@@ -1425,6 +1482,11 @@ max_depth = 2
 # 作用: 注册自定义技能 (SKILL.md 文件), 扩展 Codex 的能力
 
 [skills]
+# include_instructions — 类型: 布尔值 (可选) | 默认: true
+# 是否在每轮对话中注入自动生成的 Skills 指导块
+# 设为 false 后, 已注册技能仍可存在, 但不会自动把技能使用规则加入提示词
+# include_instructions = true
+#
 # config — 类型: 对象数组
 # 每个条目:
 #   path    — 按 SKILL.md 文件绝对路径选择
@@ -1467,6 +1529,11 @@ config = [
 # last_updated — 类型: 字符串 (可选)
 # 最后一次成功添加或刷新此 marketplace 的时间戳
 last_updated = "2026-04-16T09:30:00Z"
+
+# last_revision — 类型: 字符串 (可选)
+# 最近一次成功激活的 Git revision
+# 通常由 Codex 自动写入, 例如 commit SHA
+# last_revision = "0123456789abcdef"
 
 # source_type — 类型: 字符串 (可选) | 可选值: "git" | "local"
 # marketplace 的来源类型
@@ -1618,6 +1685,15 @@ env = { MCP_LOG_LEVEL = "info" }
 # env_vars — 类型: 字符串数组 | 默认: []
 # 从父进程透传到子进程的环境变量名列表
 # env_vars = ["HOME", "PATH"]
+#
+# 也支持对象形式来显式指定变量来源:
+# env_vars = [
+#   { name = "PATH", source = "local" },
+#   { name = "REMOTE_TOKEN", source = "remote" },
+# ]
+# source 可选值:
+#   "local"  — 从本地 Codex 进程环境读取
+#   "remote" — 从远端运行环境读取 (通常与 experimental_environment = "remote" 配合)
 
 # enabled — 类型: 布尔值 | 默认: true
 # 是否启用此 MCP 服务器; 设为 false 则跳过初始化
@@ -1627,6 +1703,13 @@ enabled = true
 # 当设为 true 时, 如果此服务器初始化失败, codex exec 会直接退出报错
 # 适合关键依赖: 如果这个服务器不可用, 任务就无法进行
 required = false
+
+# experimental_environment — 类型: 字符串 (可选)
+# 可选值:
+#   "local"  — 默认行为, 在当前本地环境启动/连接
+#   "remote" — 在远端运行环境中启动 stdio MCP 服务
+# 说明: 当前主要用于远端执行场景; 不支持的值会直接报错
+# experimental_environment = "remote"
 
 # supports_parallel_tool_calls — 类型: 布尔值 | 默认: false
 # 是否将此服务器暴露的所有工具都标记为“可安全并行调用”
@@ -1644,6 +1727,13 @@ startup_timeout_ms = 20000
 # tool_timeout_sec — 类型: 浮点数 (秒) (可选)
 # 单次工具调用的默认超时
 tool_timeout_sec = 120
+
+# default_tools_approval_mode — 类型: 字符串 (可选) | 默认: 无
+# 可选值: "auto" | "prompt" | "approve"
+# 为该服务器暴露的全部工具设置默认审批方式
+# 若某个工具在 [mcp_servers.<name>.tools.<tool>] 中单独配置 approval_mode,
+# 则单工具配置优先
+# default_tools_approval_mode = "approve"
 
 # enabled_tools — 类型: 字符串数组 (可选) | 默认: 无 (注册所有工具)
 # 工具白名单: 如果设置, 只注册这些名称的工具
