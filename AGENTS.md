@@ -71,11 +71,11 @@ When adding dependencies, CI actions, or tool versions, always look up the curre
 | `ast-grep` | - | `ast-grep --pattern '$FUNC($$$)' --lang py` - AST-based code search |
 | `jq` | grep / awk (for JSON) | `jq '.key[]' file.json` - command-line JSON processor |
 
-Prefer `ast-grep` over ripgrep when searching for code structure (function calls, class definitions, imports, pattern matching across arguments). Use ripgrep for literal strings and log messages.
+- Prefer `ast-grep` over ripgrep when searching for code structure (function calls, class definitions, imports, pattern matching across arguments). Use ripgrep for literal strings and log messages.
+- If some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially. For instance, if one operation must complete before another starts (e.g., executing `git add` before `git commit`), run these operations sequentially instead.
 
 ## Miscellaneous
 
 - Think in English, respond in Simplified Chinese.
 - On Windows PowerShell (never cmd): avoid Bash syntax, do not pass unexpanded wildcards, prefer fixed-string searches (`rg -F` / `Select-String -SimpleMatch`), and always enclose string values in single quotes (do not use backslashes to escape inside; use `''` for a literal `'`).
 - Write Conventional Commits every time you have something stable — do not wait to be asked. Never bundle multiple changes into a single commit. Do not commit any documentation files (for example, `*.md`, `*.txt`, etc.) unless they are already tracked by git.
-- If some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially. For instance, if one operation must complete before another starts (e.g., executing `git add` before `git commit`), run these operations sequentially instead.
