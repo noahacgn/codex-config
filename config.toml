@@ -35,7 +35,7 @@ sandbox = "unelevated"
 # 第 11 节: TUI 配置
 [tui]
 alternate_screen = "never"
-status_line = ["model-with-reasoning", "context-usage", "context-window-size", "five-hour-limit", "weekly-limit"]
+status_line = ["model-with-reasoning", "context-remaining", "context-used", "context-window-size", "five-hour-limit", "weekly-limit"]
 
 # 第 13 节: 功能标志
 [features]

@@ -1019,11 +1019,10 @@ show_tooltips = true
 #   "current-dir"          — 当前工作目录
 #   "project-root"         — 项目根目录 (仅在项目中显示)
 #   "git-branch"           — 当前 Git 分支 (仅在 Git 仓库中显示)
-#   "context-usage"        — 上下文使用情况仪表
-#   "context-remaining"    — 旧别名, 等同于 context-usage
-#   "context-used"         — 旧别名, 等同于 context-usage
+#   "context-used"         — 已使用的上下文百分比 (兼容旧别名 context-usage)
+#   "context-remaining"    — 剩余的上下文百分比
 #   "context-window-size"  — 上下文窗口总大小
-#   "used-tokens"          — 已使用的 token 数
+#   "used-tokens"          — 当前会话累计使用的 token 数
 #   "total-input-tokens"   — 总输入 token 数
 #   "total-output-tokens"  — 总输出 token 数
 #   "five-hour-limit"      — 5 小时配额限制 (仅在可用时显示)
@@ -1032,7 +1031,7 @@ show_tooltips = true
 #   "session-id"           — 当前会话 ID
 #   "fast-mode"            — Fast 模式状态
 #   "thread-title"         — 当前线程标题 (仅在用户改名后显示)
-status_line = ["model-with-reasoning", "context-usage", "current-dir"]
+status_line = ["model-with-reasoning", "context-used", "current-dir"]
 
 # terminal_title — 类型: 字符串数组 (可选)
 # 默认: ["spinner", "project"]
