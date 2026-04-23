@@ -71,11 +71,37 @@ When adding dependencies, CI actions, or tool versions, always look up the curre
 | `ast-grep` | - | `ast-grep --pattern '$FUNC($$$)' --lang py` - AST-based code search |
 | `jq` | grep / awk (for JSON) | `jq '.key[]' file.json` - command-line JSON processor |
 
-- Prefer `ast-grep` over ripgrep when searching for code structure (function calls, class definitions, imports, pattern matching across arguments). Use ripgrep for literal strings and log messages.
-- If some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially. For instance, if one operation must complete before another starts (e.g., executing `git add` before `git commit`), run these operations sequentially instead.
+Prefer `ast-grep` over ripgrep when searching for code structure (function calls, class definitions, imports, pattern matching across arguments). Use ripgrep for literal strings and log messages.
+
+### Node/TypeScript
+
+**Runtime:** Node 24 LTS, ESM only (`"type": "module"`)
+
+| purpose | tool |
+|---------|------|
+| lint | `oxlint` |
+| format | `oxfmt` |
+| test | `vitest` |
+| types | `tsc --noEmit` |
+
+**Always use oxlint and oxfmt** over eslint/prettier — they're faster and stricter. Enable `typescript`, `import`, `unicorn` plugins.
+
+**tsconfig.json strictness** — enable all of these:
+```jsonc
+"strict": true,
+"noUncheckedIndexedAccess": true,
+"exactOptionalPropertyTypes": true,
+"noImplicitOverride": true,
+"noPropertyAccessFromIndexSignature": true,
+"verbatimModuleSyntax": true,
+"isolatedModules": true
+```
+
+Colocated `*.test.ts` files. Supply chain: `pnpm audit --audit-level=moderate` before installing, pin exact versions (no `^` or `~`), enforce 24-hour publish delay (`pnpm config set minimumReleaseAge 1440`), block postinstall scripts (`pnpm config set ignore-scripts true`).
 
 ## Miscellaneous
 
 - Think in English, respond in Simplified Chinese.
-- On Windows PowerShell (never cmd): avoid Bash syntax, do not pass unexpanded wildcards, prefer fixed-string searches (`rg -F` / `Select-String -SimpleMatch`), and always enclose string values in single quotes (do not use backslashes to escape inside; use `''` for a literal `'`).
+- When running commands, always enclose string values in single quotes. Do not use backslashes for escaping inside single-quoted strings. To express a literal single quote, use two consecutive single quotes (e.g., when using `rg`). Never use cmd.
 - Write Conventional Commits every time you have something stable — do not wait to be asked. Never bundle multiple changes into a single commit. Do not commit any documentation files (for example, `*.md`, `*.txt`, etc.) unless they are already tracked by git.
+- If some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially. For instance, if one operation must complete before another starts (e.g., executing `git add` before `git commit`), run these operations sequentially instead.
