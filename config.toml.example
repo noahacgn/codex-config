@@ -40,9 +40,11 @@ review_model = "gpt-5.4"
 # 类型: 字符串 (可选)
 # 默认: 无 (使用内置 "openai" 提供商)
 # 作用: 指定使用哪个模型提供商 (对应下方 [model_providers.xxx] 中定义的 key)
-# 示例: "openai"、"custom"、"ollama"、"lmstudio"
-# 说明: 内置提供商有 openai / ollama / lmstudio; 你也可以在 [model_providers]
-#       小节中自定义提供商, 然后把名字填在这里
+# 示例: "openai"、"amazon-bedrock"、"custom"、"ollama"、"lmstudio"
+# 说明: 内置提供商有 openai / amazon-bedrock / ollama / lmstudio;
+#       其中 amazon-bedrock 为 v0.123.0 新增, 认证走 AWS SigV4, 可通过
+#       [model_providers.amazon-bedrock.aws] 覆盖 aws.profile
+#       你也可以在 [model_providers] 小节中自定义提供商, 然后把名字填在这里
 model_provider = "custom"
 
 # ── approval_policy ────────────────────────────────────────────────────────
@@ -456,6 +458,7 @@ commit_attribution = "Your Name <you@example.com>"
 # 默认: 无
 # 作用: 指定一个文件, 其内容将覆盖 Codex 内置的模型指令
 # ⚠️ 警告: 强烈不建议使用, 可能导致模型性能下降
+# 迁移说明: 旧键 experimental_instructions_file 已弃用, 请改用本键
 # model_instructions_file = 'C:\Users\you\.codex\model_instructions.md'
 
 # ── experimental_compact_prompt_file ───────────────────────────────────────
@@ -545,6 +548,14 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # 默认: 无
 # 作用: 替换 realtime 激活时注入到 developer 消息中的内置启动指令
 # experimental_realtime_start_instructions = ""
+
+# ── experimental_thread_store_endpoint ─────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 为 app-server 指定远端线程存储服务的地址
+# 说明: 这是实验性配置, 主要用于 app-server 在远端存储 thread 数据时接管
+#       本地文件系统 / SQLite 存储; 普通 CLI / TUI 使用场景通常不需要设置
+# experimental_thread_store_endpoint = "https://threads.example.internal"
 
 # ── [realtime] — 实时语音会话配置 ────────────────────────────────────────
 # 作用: 统一配置 realtime 会话的协议版本、会话类型、传输方式与语音
@@ -1555,9 +1566,24 @@ sparse_paths = ["marketplaces/openai-curated"]
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║                     第 18 节: 模型提供商定义                            ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
-# 作用: 定义自定义的模型 API 提供商
-# 说明: 内置提供商有 openai / ollama / lmstudio
-#       你可以在这里添加自定义提供商 (如本地代理、Azure OpenAI 等)
+# 作用: 定义自定义模型 API 提供商, 或对少数内置提供商做受限覆盖
+# 说明: 内置提供商有 openai / amazon-bedrock / ollama / lmstudio
+#       openai / ollama / lmstudio 不能在这里重定义;
+#       amazon-bedrock 当前也只支持覆盖 aws.profile
+#       你也可以在这里添加自定义提供商 (如本地代理、Azure OpenAI 等)
+
+# ── [model_providers.amazon-bedrock.aws] — Amazon Bedrock (v0.123.0 新增) ─
+# 作用: 覆盖内置 amazon-bedrock 提供商使用的 AWS profile
+# 说明: 无需自行填写 name / base_url / wire_api 等字段, CLI 已内置这些默认值
+#       当前只支持修改 aws.profile; 其他字段会报错
+#
+# 要使用它, 请在顶层设置:
+# model_provider = "amazon-bedrock"
+#
+# [model_providers.amazon-bedrock.aws]
+# profile — 类型: 字符串 (可选)
+# 指定要使用的 AWS profile 名称; 不设置则走 AWS SDK 默认凭证链
+# profile = "codex-bedrock"
 
 [model_providers.custom]
 # name — 类型: 字符串 (必填)
