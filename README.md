@@ -48,11 +48,12 @@ Copies allowlisted files to their configured destinations:
 
 ```bash
 # Install skills
-npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -a codex -a claude-code -a gemini-cli -y
+# npx skills add https://github.com/vercel-labs/agent-browser --skill agent-browser -g -a codex -a claude-code -a gemini-cli -y
 npx skills add https://github.com/trailofbits/skills --skill ask-questions-if-underspecified -g -a codex -a claude-code -a gemini-cli -y
-npx skills add https://github.com/noahacgn/codex-config --skill exec-plans -g -a codex -a claude-code -a gemini-cli -y
-npx skills add https://github.com/dimillian/skills --skill review-swarm -g -a codex -a claude-code -a gemini-cli -y
-npx skills add https://github.com/dimillian/skills --skill review-and-simplify-changes -g -a codex -a claude-code -a gemini-cli -y
+npx skills add https://github.com/noahacgn/codex-config --skill exec-plans -g -a codex -y
+npx skills add https://github.com/dimillian/skills --skill review-swarm -g -a codex -y
+npx skills add https://github.com/dimillian/skills --skill review-and-simplify-changes -g -a codex -y
+npx skills add https://github.com/openai/skills --skill playwright-interactive -g -a codex -y
 
 # List global skills
 npx skills ls -g
