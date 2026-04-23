@@ -40,6 +40,8 @@ status_line = ["model-with-reasoning", "context-remaining", "context-used", "con
 # 第 13 节: 功能标志
 [features]
 unified_exec = true
+js_repl = true
+memories = true
 prevent_idle_sleep = true
 apply_patch_freeform = true
 default_mode_request_user_input = true
