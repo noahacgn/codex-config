@@ -1,10 +1,10 @@
 # 第 1 节: 核心模型与运行策略
-model = "gpt-5.4"
+model = "gpt-5.5"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 web_search = "live"
 personality = "pragmatic"
-model_provider = "custom"
+# model_provider = "custom"
 
 # 推理能力相关
 model_reasoning_effort = "xhigh"
@@ -40,8 +40,6 @@ status_line = ["model-with-reasoning", "context-remaining", "context-used", "con
 # 第 13 节: 功能标志
 [features]
 unified_exec = true
-js_repl = true
-memories = true
 prevent_idle_sleep = true
 apply_patch_freeform = true
 default_mode_request_user_input = true
