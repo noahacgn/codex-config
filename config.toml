@@ -38,7 +38,6 @@ status_line = ["model-with-reasoning", "context-remaining", "context-used", "con
 [features]
 unified_exec = true
 js_repl = true
-memories = true
 prevent_idle_sleep = true
 apply_patch_freeform = true
 default_mode_request_user_input = true
@@ -60,7 +59,20 @@ requires_openai_auth = true
 # 第 18 节: MCP 服务器配置
 [mcp_servers.exa]
 url = "https://mcp.exa.ai/mcp?exaApiKey=your-exa-api-key-here"
+enabled = true
 
 [mcp_servers.figma]
 url = "https://mcp.figma.com/mcp"
+enabled = false
+
+[plugins."browser-use@openai-bundled"]
+enabled = true
+
+[plugins."documents@openai-primary-runtime"]
+enabled = false
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = false
+
+[plugins."presentations@openai-primary-runtime"]
 enabled = false

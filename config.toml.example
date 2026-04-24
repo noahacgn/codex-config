@@ -42,8 +42,8 @@ review_model = "gpt-5.4"
 # 作用: 指定使用哪个模型提供商 (对应下方 [model_providers.xxx] 中定义的 key)
 # 示例: "openai"、"amazon-bedrock"、"custom"、"ollama"、"lmstudio"
 # 说明: 内置提供商有 openai / amazon-bedrock / ollama / lmstudio;
-#       其中 amazon-bedrock 为 v0.123.0 新增, 认证走 AWS SigV4, 可通过
-#       [model_providers.amazon-bedrock.aws] 覆盖 aws.profile
+#       其中 amazon-bedrock 为 v0.124.0 新增, 认证走 AWS SigV4, 可通过
+#       [model_providers.amazon-bedrock.aws] 覆盖 aws.profile / aws.region
 #       你也可以在 [model_providers] 小节中自定义提供商, 然后把名字填在这里
 model_provider = "custom"
 
@@ -69,10 +69,11 @@ approval_policy = "on-request"
 # 默认: "user"
 # 可选值:
 #   "user"               — 审批请求显示给用户, 由你手动决定 (默认)
-#   "guardian_subagent"   — 审批请求路由给 Guardian 子 Agent 自动评估
+#   "auto_review"        — 审批请求路由给 Auto-review 子 Agent 自动评估
+#   "guardian_subagent"  — 旧名称, 仍可解析, 但建议改用 "auto_review"
 # 作用: 配置审批请求一旦触发后, 由谁来审查
-# 说明: 这不会禁用 ARC 等安全检查; 需要启用 guardian_approval 功能标志才能使用
-#       guardian_subagent 选项
+# 说明: 这不会禁用 ARC 等安全检查; guardian_approval 功能标志在 v0.124.0 起
+#       已稳定并默认启用, 只有显式关闭时才会隐藏 Auto-review 入口
 # approvals_reviewer = "user"
 
 # ── sandbox_mode ───────────────────────────────────────────────────────────
@@ -101,11 +102,12 @@ web_search = "cached"
 
 # ── service_tier ───────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
-# 默认: 无 (由服务端决定)
+# 默认: 无 (由服务端 / Codex 托管默认值决定)
 # 可选值:
 #   "fast" — 优先速度: 响应更快, 但可能消耗更多配额
 #   "flex" — 优先节省: 使用弹性队列, 价格更低, 但响应可能较慢
-# 说明: 在速度和成本之间做权衡; 如果你赶时间就选 fast, 想省钱就选 flex
+# 说明: 在速度和成本之间做权衡; 符合条件的 ChatGPT 计划在 v0.124.0 起
+#       默认使用 fast, 除非你显式设置 service_tier 或退出托管默认值
 service_tier = "fast"
 
 # ── personality ────────────────────────────────────────────────────────────
@@ -635,7 +637,20 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 2 节: 分析、反馈与音频                           ║
+# ║                     第 2 节: Auto-review 审批审查策略                  ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 为 approvals_reviewer = "auto_review" 提供额外策略说明
+# 说明: 这些文字会注入 Auto-reviewer 的审查提示中; 企业托管的 requirements
+#       policy 会覆盖这里的用户级 policy
+
+[auto_review]
+# policy — 类型: 字符串 (可选)
+# 追加给 Auto-reviewer 的审查策略; 只影响自动审批审查, 不影响人工审批
+# policy = "仅在命令意图清晰、风险可控且不会泄露敏感数据时批准。"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 3 节: 分析、反馈与音频                           ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
 # ── [analytics] — 数据分析 ──────────────────────────────────────────────────
@@ -667,7 +682,7 @@ speaker = "default"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 3 节: 会话历史                                   ║
+# ║                     第 4 节: 会话历史                                   ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
 [history]
@@ -684,7 +699,7 @@ max_bytes = 10485760
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 4 节: Ghost Snapshot (撤销功能)                  ║
+# ║                     第 5 节: Ghost Snapshot (撤销功能)                  ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: Ghost Snapshot 在每一轮操作后创建隐藏的 git commit, 用于支持撤销(undo)
 # 前提: 需要启用 undo 功能标志 ([features] undo = true)
@@ -706,7 +721,7 @@ ignore_large_untracked_files = 10485760
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 5 节: 通知与迁移记录                             ║
+# ║                     第 6 节: 通知与迁移记录                             ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 记录各种一次性提示是否已显示, 以及模型迁移的确认状态
 # 说明: 这些值通常由 Codex 自动写入, 一般不需要手动修改
@@ -731,6 +746,11 @@ hide_rate_limit_model_nudge = false
 # hide_world_writable_warning — 类型: 布尔值 | 默认: false
 # 是否已确认 Windows 上目录权限过于开放的警告
 hide_world_writable_warning = true
+
+# fast_default_opt_out — 类型: 布尔值 | 默认: false
+# 是否已退出 Codex 托管的 fast 默认服务层
+# 说明: 通常由产品内提示自动写入; 需要手动固定服务层时优先设置顶层 service_tier
+fast_default_opt_out = false
 
 # model_migrations — 类型: 键值对 | 默认: {} (空)
 # 已确认的模型迁移映射 (旧模型名 → 新模型名)
@@ -761,7 +781,7 @@ model_migrations = { "gpt-5.3-codex" = "gpt-5.4" }
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 6 节: Windows 沙箱                               ║
+# ║                     第 7 节: Windows 沙箱                               ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 配置 Windows 平台上的沙箱实现方式
 
@@ -782,7 +802,7 @@ sandbox = "elevated"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 7 节: 工作区写入沙箱配置                         ║
+# ║                     第 8 节: 工作区写入沙箱配置                         ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 当 sandbox_mode = "workspace-write" 时, 定制沙箱的详细行为
 # 说明: 仅在 workspace-write 模式下生效; 其他沙箱模式忽略此配置
@@ -794,7 +814,7 @@ sandbox = "elevated"
 # 说明: 这是顶层键, 必须写在表外; 当设置此字段时, Codex 将使用指定 profile 的
 #       文件系统和网络权限规则, 替代 sandbox_mode 的默认行为。profile 中必须
 #       定义 filesystem 子表。
-# 示例: 引用第 12 节中定义的 "dev" profile
+# 示例: 引用第 13 节中定义的 "dev" profile
 # default_permissions = "dev"
 
 [sandbox_workspace_write]
@@ -821,7 +841,7 @@ exclude_tmpdir_env_var = false
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 8 节: Shell 环境变量策略                         ║
+# ║                     第 9 节: Shell 环境变量策略                         ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 控制模型执行 shell 命令时可以 "看到" 哪些环境变量
 # 说明: 这对安全性很重要 — 你不希望模型看到包含密码或 API Key 的环境变量
@@ -864,7 +884,7 @@ experimental_use_profile = false
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 9 节: 记忆系统                                   ║
+# ║                     第 10 节: 记忆系统                                  ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: Codex 的 "记忆" 功能可以从过去的会话中提取经验, 并在未来的会话中注入
 # 说明: 类似于 "长期记忆", 让 Codex 记住你的偏好和项目知识
@@ -920,7 +940,7 @@ min_rollout_idle_hours = 6
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 10 节: 工具配置                                  ║
+# ║                     第 11 节: 工具配置                                  ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 控制模型可使用的内置工具
 
@@ -975,7 +995,7 @@ view_image = true
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 11 节: TUI (终端界面) 配置                       ║
+# ║                     第 12 节: TUI (终端界面) 配置                       ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
 [tui]
@@ -1071,7 +1091,7 @@ theme = "catppuccin-latte"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 12 节: 命名权限配置文件与网络代理                 ║
+# ║                     第 13 节: 命名权限配置文件与网络代理                 ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 定义命名权限配置文件 (permission profiles), 通过 default_permissions 引用
 # 说明: [permissions] 表使用扁平映射结构 — 每个 key 都是一个 profile 名称,
@@ -1187,7 +1207,7 @@ theme = "catppuccin-latte"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 13 节: 功能标志 (Feature Flags)                  ║
+# ║                     第 14 节: 功能标志 (Feature Flags)                  ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 开启或关闭 Codex 的各项功能
 # 说明: 每个标志的状态有 5 种生命周期阶段:
@@ -1259,6 +1279,18 @@ tool_suggest = true
 # 启用插件系统
 plugins = true
 
+# in_app_browser — 默认: true | 稳定
+# 启用 Codex 内置浏览器能力
+in_app_browser = true
+
+# browser_use — 默认: true | 稳定
+# 启用 browser-use 浏览器自动化工具
+browser_use = true
+
+# computer_use — 默认: true | 稳定
+# 启用计算机使用类工具的发现与调用支持
+computer_use = true
+
 # image_generation — 默认: true | 稳定
 # 启用内置图片生成工具
 image_generation = true
@@ -1266,6 +1298,14 @@ image_generation = true
 # tool_call_mcp_elicitation — 默认: true | 稳定
 # 通过 MCP elicitation 路径路由 MCP 工具审批提示
 tool_call_mcp_elicitation = true
+
+# codex_hooks — 默认: true | 稳定
+# 启用生命周期 hooks, 支持 config.toml 内联配置和 hooks.json 文件
+codex_hooks = true
+
+# guardian_approval — 默认: true | 稳定
+# 启用 Auto-review 审批审查能力; approvals_reviewer = "auto_review" 会使用它
+guardian_approval = true
 
 # workspace_dependencies — 默认: true | 稳定
 # 启用 workspace 级依赖支持
@@ -1291,12 +1331,6 @@ memories = true
 # external_migration — 默认: false | 实验
 # 当检测到可迁移的外部 Agent 配置时, 在启动时显示迁移提示
 # external_migration = false
-
-# guardian_approval — 默认: false | 实验 (菜单名: "Auto-review")
-# 启用 Guardian 子 Agent 审批 (替代人工审批)
-# 说明: 开启后, on-request 策略下的审批提示 (包括沙箱升级和被阻止的网络访问)
-#       会路由给 Guardian 子 Agent 评估, 而不是显示给用户
-# guardian_approval = false
 
 # prevent_idle_sleep — 默认: false | 实验 (macOS/Linux/Windows)
 # 防止系统在 Codex 活跃时进入休眠
@@ -1351,10 +1385,6 @@ codex_git_commit = true
 # 为子 Agent 注入额外的 AGENTS.md 指导
 # child_agents_md = false
 
-# use_agent_identity — 默认: false | 开发中
-# 在 ChatGPT 登录会话中启用 Agent identity 注册流程
-# use_agent_identity = false
-
 # apply_patch_freeform — 默认: false | 开发中 (别名: include_apply_patch_tool, experimental_use_freeform_apply_patch)
 # 包含自由格式的 apply_patch 工具
 apply_patch_freeform = true
@@ -1366,10 +1396,6 @@ apply_patch_freeform = true
 # exec_permission_approvals — 默认: false | 开发中 (别名: request_permissions)
 # 允许在沙箱中动态请求额外的文件系统权限审批
 # exec_permission_approvals = false
-
-# codex_hooks — 默认: false | 开发中
-# 启用从 hooks.json 文件加载的生命周期钩子 (类似 Claude Code 的 hooks 机制)
-# codex_hooks = false
 
 # request_permissions_tool — 默认: false | 开发中
 # 暴露内置的 request_permissions 工具, 让模型可以主动请求文件系统权限
@@ -1386,6 +1412,10 @@ apply_patch_freeform = true
 # tool_search_always_defer_mcp_tools — 默认: false | 开发中
 # 始终将 MCP 工具放到 tool_search 后按需发现, 不直接暴露小规模工具集
 # tool_search_always_defer_mcp_tools = false
+
+# remote_plugin — 默认: false | 开发中
+# 启用远程插件市场的列表与详情读取能力
+# remote_plugin = false
 
 # unavailable_dummy_tools — 默认: false | 开发中
 # 为历史对话中已不存在的工具调用暴露占位工具, 便于恢复旧上下文
@@ -1448,7 +1478,60 @@ apply_patch_freeform = true
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 14 节: Agent (子智能体) 配置                     ║
+# ║                     第 15 节: Lifecycle Hooks                           ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 在会话、工具调用、审批请求、用户提交和停止等生命周期事件中运行命令
+# 说明: v0.124.0 起 hooks 已稳定; 也可以继续使用 ~/.codex/hooks.json
+# 支持事件: PreToolUse / PermissionRequest / PostToolUse / SessionStart /
+#           UserPromptSubmit / Stop
+# matcher:
+#   - PreToolUse / PermissionRequest / PostToolUse: 匹配工具名或兼容别名
+#   - SessionStart: 匹配 "startup" / "resume" / "clear"
+#   - UserPromptSubmit / Stop: 当前忽略 matcher
+# handler:
+#   - 目前仅 command 类型会执行; prompt / agent 类型可解析但尚未执行
+#   - timeout 单位为秒, 默认 600; async = true 目前会被跳过
+
+[hooks]
+# ── PreToolUse: 在工具调用前运行 ───────────────────────────────────────────
+# [[hooks.PreToolUse]]
+# matcher = "Bash|local_shell|apply_patch"
+#
+# [[hooks.PreToolUse.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/pre_tool.py"
+# timeout = 10
+# statusMessage = "检查工具调用"
+# async = false
+
+# ── PermissionRequest: 在审批请求出现时运行 ────────────────────────────────
+# [[hooks.PermissionRequest]]
+# matcher = "*"
+#
+# [[hooks.PermissionRequest.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/permission_request.py"
+# timeout = 30
+# statusMessage = "检查审批请求"
+
+# ── SessionStart: 会话启动 / 恢复 / 清空后运行 ─────────────────────────────
+# [[hooks.SessionStart]]
+# matcher = "startup|resume|clear"
+#
+# [[hooks.SessionStart.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/session_start.py"
+
+# ── PostToolUse / UserPromptSubmit / Stop 也使用同样的数组表结构 ───────────
+# [[hooks.PostToolUse]]
+# matcher = "*"
+# [[hooks.PostToolUse.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/post_tool.py"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 16 节: Agent (子智能体) 配置                     ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 配置多 Agent 协作时的线程数、嵌套深度和超时
 # 前提: 需要启用 multi_agent 功能标志
@@ -1487,7 +1570,7 @@ max_depth = 2
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 15 节: Skills (技能) 配置                        ║
+# ║                     第 17 节: Skills (技能) 配置                        ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 注册自定义技能 (SKILL.md 文件), 扩展 Codex 的能力
 
@@ -1518,7 +1601,7 @@ config = [
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 16 节: Plugins (插件) 配置                       ║
+# ║                     第 18 节: Plugins (插件) 配置                       ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 启用或禁用已安装的插件
 # 前提: 插件功能默认已启用; 若显式设置 [features] plugins = false, 本节不会生效
@@ -1530,7 +1613,7 @@ config = [
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 17 节: Marketplaces (插件市场) 配置              ║
+# ║                     第 19 节: Marketplaces (插件市场) 配置              ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 记录已添加的插件市场来源与刷新元数据
 # 说明: 通常由 `codex marketplace add` / 刷新流程自动维护, 一般不需要手动编辑
@@ -1564,18 +1647,18 @@ sparse_paths = ["marketplaces/openai-curated"]
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 18 节: 模型提供商定义                            ║
+# ║                     第 20 节: 模型提供商定义                            ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 定义自定义模型 API 提供商, 或对少数内置提供商做受限覆盖
 # 说明: 内置提供商有 openai / amazon-bedrock / ollama / lmstudio
 #       openai / ollama / lmstudio 不能在这里重定义;
-#       amazon-bedrock 当前也只支持覆盖 aws.profile
+#       amazon-bedrock 当前只支持覆盖 aws.profile / aws.region
 #       你也可以在这里添加自定义提供商 (如本地代理、Azure OpenAI 等)
 
-# ── [model_providers.amazon-bedrock.aws] — Amazon Bedrock (v0.123.0 新增) ─
-# 作用: 覆盖内置 amazon-bedrock 提供商使用的 AWS profile
+# ── [model_providers.amazon-bedrock.aws] — Amazon Bedrock (v0.124.0 新增) ─
+# 作用: 覆盖内置 amazon-bedrock 提供商使用的 AWS profile / region
 # 说明: 无需自行填写 name / base_url / wire_api 等字段, CLI 已内置这些默认值
-#       当前只支持修改 aws.profile; 其他字段会报错
+#       当前只支持修改 aws.profile / aws.region; 其他 provider 字段会报错
 #
 # 要使用它, 请在顶层设置:
 # model_provider = "amazon-bedrock"
@@ -1584,6 +1667,10 @@ sparse_paths = ["marketplaces/openai-curated"]
 # profile — 类型: 字符串 (可选)
 # 指定要使用的 AWS profile 名称; 不设置则走 AWS SDK 默认凭证链
 # profile = "codex-bedrock"
+#
+# region — 类型: 字符串 (可选)
+# 指定 AWS region; 不设置则走 AWS SDK 默认 region 解析链
+# region = "us-west-2"
 
 [model_providers.custom]
 # name — 类型: 字符串 (必填)
@@ -1681,7 +1768,7 @@ query_params = { "api-version" = "2026-01-01" }
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 19 节: MCP 服务器配置                            ║
+# ║                     第 21 节: MCP 服务器配置                            ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 配置 MCP (Model Context Protocol) 服务器, 让模型调用外部工具
 # 说明: 有两种传输方式:
@@ -1811,7 +1898,7 @@ tool_timeout_sec = 120
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 20 节: Apps 控制                                 ║
+# ║                     第 22 节: Apps 控制                                 ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 控制 ChatGPT Apps/Connectors 的行为
 # 前提: Apps 功能默认已启用; 若显式设置 [features] apps = false, 本节不会生效
@@ -1861,7 +1948,7 @@ approval_mode = "prompt"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 21 节: OpenTelemetry 可观测性配置                ║
+# ║                     第 23 节: OpenTelemetry 可观测性配置                ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 配置 Codex 的 OpenTelemetry 遥测数据导出 (Traces / Metrics / Logs)
 # 说明: 适合需要对 Codex 进行性能监控或集成到公司可观测性平台的场景
@@ -1920,7 +2007,7 @@ headers = {}
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 22 节: 项目信任映射                              ║
+# ║                     第 24 节: 项目信任映射                              ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 为不同的项目目录设置信任级别
 # 说明:
@@ -1937,7 +2024,7 @@ trust_level = "trusted"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 23 节: 配置预设 (Profiles)                       ║
+# ║                     第 25 节: 配置预设 (Profiles)                       ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 将多个配置打包成 "预设", 通过切换 profile 一键切换使用场景
 # 激活: 在顶层设置 profile = "名称" 即可激活对应的预设
@@ -2024,7 +2111,7 @@ model_verbosity = "medium"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 24 节: 审批策略对象形式 (高级)                   ║
+# ║                     第 26 节: 审批策略对象形式 (高级)                   ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 除了字符串形式的 approval_policy, 还支持对象形式, 可以细粒度控制审批
 # 说明: 使用此形式时, 必须删除顶层的字符串形式 approval_policy
