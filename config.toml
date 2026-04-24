@@ -76,3 +76,5 @@ enabled = false
 
 [plugins."presentations@openai-primary-runtime"]
 enabled = false
+
+project_doc_fallback_filenames = ["CLAUDE.md"]
