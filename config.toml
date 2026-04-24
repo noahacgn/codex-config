@@ -16,25 +16,26 @@ model_verbosity = "high"
 # 杂项开关
 suppress_unstable_features_warning = true
 windows_wsl_setup_acknowledged = true
+project_doc_fallback_filenames = ["CLAUDE.md"]
 
-# 第 2 节: 分析、反馈与音频
+# 第 3 节: 分析、反馈与音频
 [analytics]
 enabled = false
 
-# 第 5 节: 通知与迁移记录
+# 第 6 节: 通知与迁移记录
 [notice]
 hide_rate_limit_model_nudge = true
 
-# 第 6 节: Windows 沙箱
+# 第 7 节: Windows 沙箱
 [windows]
 sandbox = "unelevated"
 
-# 第 11 节: TUI 配置
+# 第 12 节: TUI (终端界面) 配置
 [tui]
 alternate_screen = "never"
 status_line = ["model-with-reasoning", "context-remaining", "context-used", "context-window-size", "five-hour-limit", "weekly-limit"]
 
-# 第 13 节: 功能标志
+# 第 14 节: 功能标志 (Feature Flags)
 [features]
 unified_exec = true
 js_repl = true
@@ -42,29 +43,15 @@ prevent_idle_sleep = true
 apply_patch_freeform = true
 default_mode_request_user_input = true
 
-# 第 14 节: Agent 配置
+# 第 16 节: Agent (子智能体) 配置
 [agents.reviewer]
 description = "Senior code reviewer that evaluates changes across five dimensions — correctness, readability, architecture, security, and performance. Use for thorough code review before merge."
 
-# 第 15 节: Skills 配置
+# 第 17 节: Skills (技能) 配置
 [skills.bundled]
 enabled = false
 
-# 第 17 节: 模型提供商定义
-[model_providers.custom]
-name = "OpenAI"
-base_url = "https://ai.example.cn/v1"
-requires_openai_auth = true
-
-# 第 18 节: MCP 服务器配置
-[mcp_servers.exa]
-url = "https://mcp.exa.ai/mcp?exaApiKey=your-exa-api-key-here"
-enabled = true
-
-[mcp_servers.figma]
-url = "https://mcp.figma.com/mcp"
-enabled = false
-
+# 第 18 节: Plugins (插件) 配置
 [plugins."browser-use@openai-bundled"]
 enabled = true
 
@@ -77,4 +64,17 @@ enabled = false
 [plugins."presentations@openai-primary-runtime"]
 enabled = false
 
-project_doc_fallback_filenames = ["CLAUDE.md"]
+# 第 20 节: 模型提供商定义
+[model_providers.custom]
+name = "OpenAI"
+base_url = "https://ai.example.cn/v1"
+requires_openai_auth = true
+
+# 第 21 节: MCP 服务器配置
+[mcp_servers.exa]
+url = "https://mcp.exa.ai/mcp?exaApiKey=your-exa-api-key-here"
+enabled = true
+
+[mcp_servers.figma]
+url = "https://mcp.figma.com/mcp"
+enabled = false
