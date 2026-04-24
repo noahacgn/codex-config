@@ -17,9 +17,6 @@ model_verbosity = "high"
 suppress_unstable_features_warning = true
 windows_wsl_setup_acknowledged = true
 
-# 数值限制
-model_auto_compact_token_limit = 272000
-
 # 第 2 节: 分析、反馈与音频
 [analytics]
 enabled = false
