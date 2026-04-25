@@ -2,6 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
+#  适用版本: Codex CLI rust-v0.125.0 (发布于 2026-04-24)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -559,6 +560,14 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 #       本地文件系统 / SQLite 存储; 普通 CLI / TUI 使用场景通常不需要设置
 # experimental_thread_store_endpoint = "https://threads.example.internal"
 
+# ── experimental_thread_config_endpoint ────────────────────────────────────
+# 类型: 字符串 (可选) | v0.125.0 新增
+# 默认: 无
+# 作用: 为 app-server 指定远端线程级配置加载服务的地址
+# 说明: 这是实验性配置, 主要用于集成方按 thread 返回模型、权限、profile、
+#       provider 等会话配置; 普通 CLI / TUI 使用场景通常不需要设置
+# experimental_thread_config_endpoint = "https://threads.example.internal/config"
+
 # ── [realtime] — 实时语音会话配置 ────────────────────────────────────────
 # 作用: 统一配置 realtime 会话的协议版本、会话类型、传输方式与语音
 # 说明: 从 v0.119.0 起, 默认体验切换为 v2 + WebRTC
@@ -686,7 +695,8 @@ speaker = "default"
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
 [history]
-# persistence — 类型: 字符串 | 默认: "save-all"
+# persistence — 类型: 字符串 | 默认: "save-all" (省略整个 [history] 表时)
+# 说明: 如果写出 [history] 表, 源码要求显式设置本字段
 # 可选值:
 #   "save-all" — 保存所有会话历史到 ~/.codex/history.jsonl
 #   "none"     — 不保存任何历史记录 (关闭后之前的历史不会被自动删除)
@@ -814,6 +824,8 @@ sandbox = "elevated"
 # 说明: 这是顶层键, 必须写在表外; 当设置此字段时, Codex 将使用指定 profile 的
 #       文件系统和网络权限规则, 替代 sandbox_mode 的默认行为。profile 中必须
 #       定义 filesystem 子表。
+#       v0.125.0 起, 运行时会把当前权限 profile 作为规范权限视图传递给
+#       TUI 会话、子回合、MCP sandbox state 和 app-server API。
 # 示例: 引用第 13 节中定义的 "dev" profile
 # default_permissions = "dev"
 
@@ -1045,11 +1057,12 @@ show_tooltips = true
 # 默认: ["model-with-reasoning", "current-dir"]
 # 作用: TUI 底部状态栏显示的信息项 (按顺序排列)
 # 可用项:
-#   "model-name"           — 当前模型名称
+#   "model"                — 当前模型名称 (也接受旧别名 model-name)
 #   "model-with-reasoning" — 模型名称 + 推理等级
 #   "current-dir"          — 当前工作目录
-#   "project-root"         — 项目根目录 (仅在项目中显示)
+#   "project-name"         — 项目名 (也接受旧别名 project / project-root)
 #   "git-branch"           — 当前 Git 分支 (仅在 Git 仓库中显示)
+#   "run-state"            — 紧凑状态文本 (也接受旧别名 status)
 #   "context-used"         — 已使用的上下文百分比 (兼容旧别名 context-usage)
 #   "context-remaining"    — 剩余的上下文百分比
 #   "context-window-size"  — 上下文窗口总大小
@@ -1062,21 +1075,34 @@ show_tooltips = true
 #   "session-id"           — 当前会话 ID
 #   "fast-mode"            — Fast 模式状态
 #   "thread-title"         — 当前线程标题 (仅在用户改名后显示)
+#   "task-progress"        — 最近一次 update_plan 的任务进度 (可用时显示)
 status_line = ["model-with-reasoning", "context-used", "current-dir"]
 
 # terminal_title — 类型: 字符串数组 (可选)
-# 默认: ["spinner", "project"]
+# 默认: ["spinner", "project-name"]
 # 作用: 配置终端窗口/标签页标题中显示的信息项 (按顺序排列)
 # 可用项:
-#   "app-name"      — Codex 应用名
-#   "project"       — 项目名 (若无法识别项目则回退为当前目录名)
-#   "spinner"       — 任务运行时的动画指示器
-#   "status"        — 紧凑状态文本 (如 Ready / Working / Thinking)
-#   "thread"        — 当前线程标题 (可用时显示)
-#   "git-branch"    — 当前 Git 分支 (可用时显示)
-#   "model"         — 当前模型名
-#   "task-progress" — 最近一次 update_plan 的任务进度 (可用时显示)
-terminal_title = ["spinner", "project"]
+#   "app-name"             — Codex 应用名
+#   "project-name"         — 项目名 (也接受旧别名 project)
+#   "current-dir"          — 当前工作目录
+#   "spinner"              — 任务运行时的动画指示器
+#   "run-state"            — 紧凑状态文本 (也接受旧别名 status)
+#   "thread-title"         — 当前线程标题 (也接受旧别名 thread)
+#   "git-branch"           — 当前 Git 分支 (可用时显示)
+#   "context-used"         — 已使用的上下文百分比 (兼容旧别名 context-usage)
+#   "context-remaining"    — 剩余的上下文百分比
+#   "five-hour-limit"      — 5 小时配额限制 (仅在可用时显示)
+#   "weekly-limit"         — 每周配额限制 (仅在可用时显示)
+#   "codex-version"        — Codex CLI 版本号
+#   "used-tokens"          — 当前会话累计使用的 token 数
+#   "total-input-tokens"   — 总输入 token 数
+#   "total-output-tokens"  — 总输出 token 数
+#   "session-id"           — 当前会话 ID
+#   "fast-mode"            — Fast 模式状态
+#   "model"                — 当前模型名 (也接受旧别名 model-name)
+#   "model-with-reasoning" — 模型名称 + 推理等级
+#   "task-progress"        — 最近一次 update_plan 的任务进度 (可用时显示)
+terminal_title = ["spinner", "project-name"]
 
 # theme — 类型: 字符串 (可选) | 默认: 无 (自动检测明/暗主题)
 # 代码高亮的配色主题 (kebab-case 格式)
@@ -1096,6 +1122,8 @@ theme = "catppuccin-latte"
 # 作用: 定义命名权限配置文件 (permission profiles), 通过 default_permissions 引用
 # 说明: [permissions] 表使用扁平映射结构 — 每个 key 都是一个 profile 名称,
 #       对应一个包含 filesystem 和 network 子表的权限配置。
+#       v0.125.0 起, 这些 profile 不只用于本地沙箱构建, 也会在 TUI 会话恢复、
+#       用户回合、MCP sandbox state、shell 提权和 app-server API 中往返传递。
 #
 # 结构:
 #   [permissions.<profile-name>]
@@ -1540,6 +1568,8 @@ apply_patch_freeform = true
 # max_threads — 类型: 整数 | 默认: 6 | 最小: 1
 # 同时运行的最大 Agent 线程数
 # 越大可以并行处理越多任务, 但消耗资源也越多
+# 注意: v0.125.0 起, 如果启用 [features].multi_agent_v2, 不能再设置此字段;
+#       请删除或注释掉 max_threads, 否则启动时会报错。
 max_threads = 6
 
 # max_depth — 类型: 整数 | 默认: 1 | 最小: 1
@@ -1554,6 +1584,8 @@ max_depth = 2
 
 # ── 自定义 Agent 角色 ──────────────────────────────────────────────────────
 # 你可以定义多个 Agent 角色, 每个角色有独立的配置
+# v0.125.0 起, 配置层中的相对 config_file 路径会按声明它的 config.toml
+# 所在目录解析; 绝对路径仍按原样使用。
 
 # [agents.explorer]
 # description — 类型: 字符串 | 对这个角色的描述, 帮助主 Agent 理解该角色的职责
@@ -1659,6 +1691,8 @@ sparse_paths = ["marketplaces/openai-curated"]
 # 作用: 覆盖内置 amazon-bedrock 提供商使用的 AWS profile / region
 # 说明: 无需自行填写 name / base_url / wire_api 等字段, CLI 已内置这些默认值
 #       当前只支持修改 aws.profile / aws.region; 其他 provider 字段会报错
+#       v0.125.0 起, 模型发现由具体 model provider 负责, Bedrock 账户状态也会
+#       暴露给 app 客户端; 使用 Bedrock 时通常只需要选择 provider 和 AWS 设置
 #
 # 要使用它, 请在顶层设置:
 # model_provider = "amazon-bedrock"
@@ -1716,6 +1750,7 @@ stream_max_retries = 10
 stream_idle_timeout_ms = 300000
 
 # websocket_connect_timeout_ms — 类型: 整数 (毫秒) (可选)
+# 默认: 15000
 # WebSocket 连接尝试的最大等待时间; 超时则视为连接失败
 # websocket_connect_timeout_ms = 10000
 
@@ -1859,9 +1894,7 @@ disabled_tools = ["delete_file"]
 # MCP OAuth 登录时请求的 OAuth 权限范围
 # scopes = ["repo", "read:org"]
 
-# oauth_resource — 类型: 字符串 (可选)
-# OAuth 资源参数 (RFC 8707), 用于 MCP OAuth 登录
-# oauth_resource = "https://github.com/"
+# 注意: oauth_resource 仅支持 streamable_http 传输; stdio 服务器设置它会报错
 
 # ── 单个 MCP 工具审批覆盖 (可选) ──────────────────────────────────────────
 # [mcp_servers.filesystem.tools.read_file]
@@ -1881,6 +1914,8 @@ required = false
 # bearer_token_env_var — 类型: 字符串 (可选)
 # 存储 bearer token 的环境变量名;
 # 请求时自动添加 Authorization: Bearer <token> 头
+# 注意: v0.125.0 的公开配置 schema 不再暴露内联 bearer_token;
+#       请使用 bearer_token_env_var, 避免把密钥明文写入 config.toml。
 bearer_token_env_var = "GITHUB_TOKEN"
 
 # http_headers — 类型: 键值对 (可选)
@@ -1975,8 +2010,9 @@ log_user_prompt = false
 
 # ── 自定义 OTLP-HTTP 链路追踪导出器 ────────────────────────────────────────
 [otel.trace_exporter.otlp-http]
+# endpoint — 类型: 字符串 (必填)
 endpoint = "http://127.0.0.1:4318/v1/traces"
-# protocol — "binary" (protobuf) 或 "json"
+# protocol — 类型: 字符串 (必填) | 可选值: "binary" (protobuf) 或 "json"
 protocol = "json"
 headers = { "x-otel-key" = "replace-me" }
 
@@ -1988,18 +2024,23 @@ client-private-key = 'C:\certs\otel-client-key.pem'
 
 # ── 自定义 OTLP-HTTP 指标导出器 ────────────────────────────────────────────
 [otel.metrics_exporter.otlp-http]
+# endpoint — 类型: 字符串 (必填)
 endpoint = "http://127.0.0.1:4318/v1/metrics"
+# protocol — 类型: 字符串 (必填) | 可选值: "binary" (protobuf) 或 "json"
 protocol = "json"
 headers = {}
 
 # ── 自定义 OTLP-HTTP 日志导出器 ────────────────────────────────────────────
 [otel.exporter.otlp-http]
+# endpoint — 类型: 字符串 (必填)
 endpoint = "http://127.0.0.1:4318/v1/logs"
+# protocol — 类型: 字符串 (必填) | 可选值: "binary" (protobuf) 或 "json"
 protocol = "json"
 headers = {}
 
 # ── OTLP-gRPC 示例 (替代 otlp-http) ───────────────────────────────────────
 # [otel.trace_exporter.otlp-grpc]
+# endpoint — 类型: 字符串 (必填)
 # endpoint = "http://127.0.0.1:4317"
 # headers = { "x-otel-key" = "replace-me" }
 # [otel.trace_exporter.otlp-grpc.tls]
@@ -2117,17 +2158,17 @@ model_verbosity = "medium"
 # 说明: 使用此形式时, 必须删除顶层的字符串形式 approval_policy
 #
 # [approval_policy.granular]
-# sandbox_approval — 类型: 布尔值 | 默认: false
+# sandbox_approval — 类型: 布尔值 | 必填
 #   设为 true: 允许 shell 提权/沙箱升级类审批请求
 #   设为 false: 直接拒绝这类请求, 不再弹提示
-# rules — 类型: 布尔值 | 默认: false
+# rules — 类型: 布尔值 | 必填
 #   设为 true: 允许执行策略规则触发的审批提示
 #   设为 false: 直接拒绝这类请求
 # skill_approval — 类型: 布尔值 | 默认: false
 #   设为 true: 允许 Skill 脚本执行触发的审批提示
 # request_permissions — 类型: 布尔值 | 默认: false
 #   设为 true: 允许 request_permissions 工具触发的审批提示
-# mcp_elicitations — 类型: 布尔值 | 默认: false
+# mcp_elicitations — 类型: 布尔值 | 必填
 #   设为 true: 允许 MCP elicitation 审批提示
 #
 # 示例:

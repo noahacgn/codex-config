@@ -104,4 +104,4 @@ Colocated `*.test.ts` files. Supply chain: `pnpm audit --audit-level=moderate` b
 - Think in English, respond in Simplified Chinese.
 - If some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially. For instance, if one operation must complete before another starts (e.g., executing `git add` before `git commit`), run these operations sequentially instead.
 - On Windows PowerShell (never use cmd): Always enclose string values in single quotes. Do not use backslashes for escaping inside single-quoted strings. To express a literal single quote, use two consecutive single quotes (e.g., when using `rg`).
-- Write Conventional Commits every time you have something stable — do not wait to be asked. Never bundle multiple changes into a single commit.
+- Write Conventional Commits (`type(scope): <description in Simplified Chinese>`) every time you have something stable — do not wait to be asked. Never bundle multiple changes into a single commit.
