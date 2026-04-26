@@ -40,6 +40,7 @@ status_line = ["model-with-reasoning", "context-remaining", "context-used", "con
 unified_exec = true
 js_repl = true
 prevent_idle_sleep = true
+multi_agent_v2 = true
 apply_patch_freeform = true
 default_mode_request_user_input = true
 
