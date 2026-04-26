@@ -40,13 +40,8 @@ status_line = ["model-with-reasoning", "context-remaining", "context-used", "con
 unified_exec = true
 js_repl = true
 prevent_idle_sleep = true
-multi_agent_v2 = true
 apply_patch_freeform = true
 default_mode_request_user_input = true
-
-# 第 16 节: Agent (子智能体) 配置
-[agents.reviewer]
-description = "Senior code reviewer that evaluates changes across five dimensions — correctness, readability, architecture, security, and performance. Use for thorough code review before merge."
 
 # 第 17 节: Skills (技能) 配置
 [skills.bundled]
