@@ -43,6 +43,16 @@ prevent_idle_sleep = true
 apply_patch_freeform = true
 default_mode_request_user_input = true
 
+[features.multi_agent_v2]
+enabled = true
+usage_hint_text = """
+When calling spawn_agent:
+- If you set agent_type, model, or reasoning_effort, you must also set fork_turns to "none" or a positive integer string such as "1" or "3".
+- If fork_turns is "all" or omitted, do not set agent_type, model, or reasoning_effort.
+- Prefer omitting model and reasoning_effort unless the user explicitly asks for them.
+- Prefer fork_turns="none" for isolated subtasks, and use "all" only when the child truly needs full conversation history.
+"""
+
 # 第 17 节: Skills (技能) 配置
 [skills.bundled]
 enabled = false
@@ -50,15 +60,6 @@ enabled = false
 # 第 18 节: Plugins (插件) 配置
 [plugins."browser-use@openai-bundled"]
 enabled = true
-
-[plugins."documents@openai-primary-runtime"]
-enabled = false
-
-[plugins."spreadsheets@openai-primary-runtime"]
-enabled = false
-
-[plugins."presentations@openai-primary-runtime"]
-enabled = false
 
 # 第 20 节: 模型提供商定义
 [model_providers.custom]
