@@ -73,6 +73,22 @@ When adding dependencies, CI actions, or tool versions, always look up the curre
 
 Prefer `ast-grep` over ripgrep when searching for code structure (function calls, class definitions, imports, pattern matching across arguments). Use ripgrep for literal strings and log messages.
 
+### Java
+
+**Runtime:** Java 21 with Spring Boot 3 and Maven Wrapper
+
+| purpose | tool |
+|---------|------|
+| deps & build | `.\mvnw.cmd` |
+| lint & format | `spotless:check` · `spotless:apply` |
+| static types | `compile` |
+| tests | `test` · `verify` |
+| coverage | `jacoco:report` |
+
+**Always use Maven Wrapper and Spotless** over system Maven and ad-hoc formatters. Prefer `.\mvnw.cmd -B -ntp -q spotless:check verify` on Windows.
+
+Tests in `src/test/java` mirror package structure. Keep Flyway migrations, generated mapper processors, coverage, and packaging checks wired through Maven.
+
 ### Node/TypeScript
 
 **Runtime:** Node 24 LTS, ESM only (`"type": "module"`)
