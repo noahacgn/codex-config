@@ -43,6 +43,10 @@ prevent_idle_sleep = true
 apply_patch_freeform = true
 default_mode_request_user_input = true
 
+# 第 16 节: Agent (子智能体) 配置
+[agents]
+max_threads = 24
+
 # 第 17 节: Skills (技能) 配置
 [skills.bundled]
 enabled = false
@@ -50,6 +54,15 @@ enabled = false
 # 第 18 节: Plugins (插件) 配置
 [plugins."browser-use@openai-bundled"]
 enabled = true
+
+[plugins."documents@openai-primary-runtime"]
+enabled = false
+
+[plugins."spreadsheets@openai-primary-runtime"]
+enabled = false
+
+[plugins."presentations@openai-primary-runtime"]
+enabled = false
 
 # 第 20 节: 模型提供商定义
 [model_providers.custom]
