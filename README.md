@@ -55,6 +55,7 @@ npx skills add https://github.com/noahacgn/codex-config --skill exec-plans -g -a
 npx skills add https://github.com/dimillian/skills --skill review-swarm -g -a codex -y
 npx skills add https://github.com/dimillian/skills --skill review-and-simplify-changes -g -a codex -y
 npx skills add https://github.com/openai/skills --skill playwright-interactive -g -a codex -y
+npx skills add https://github.com/cexll/myclaude --skill test-cases -g -a codex -y 
 
 # List global skills
 npx skills ls -g
