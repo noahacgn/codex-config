@@ -67,6 +67,6 @@ Prefer `ast-grep` over ripgrep when searching for code structure (function calls
 
 ## Miscellaneous
 
-- Think in English, respond in Simplified Chinese.
+- Think in English, respond in Simplified Chinese (including docs).
 - On Windows PowerShell (never use cmd): Always enclose string values in single quotes. Do not use backslashes for escaping inside single-quoted strings. To express a literal single quote, use two consecutive single quotes (e.g., when using `rg`).
 - Write Conventional Commits (`type(scope): <description in Simplified Chinese>`) every time you have something stable — do not wait to be asked. Never bundle multiple changes into a single commit.
