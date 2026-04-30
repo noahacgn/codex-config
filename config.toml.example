@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.125.0 (发布于 2026-04-24)                     #
+#  适用版本: Codex CLI rust-v0.128.0 (发布于 2026-04-30)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -79,7 +79,7 @@ approval_policy = "on-request"
 
 # ── sandbox_mode ───────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
-# 默认: "read-only"
+# 默认: 根据项目 trust 状态派生; 无派生时回落到 "read-only"
 # 可选值:
 #   "read-only"          — 只读模式: 只能读取文件, 不能写入或修改任何文件
 #                          网络访问默认关闭; 这是最安全的选项
@@ -88,7 +88,8 @@ approval_policy = "on-request"
 #                          .git / .agents / .codex 目录自动设为只读保护
 #   "danger-full-access" — 完全访问: 没有任何限制, 可以读写所有文件、访问网络
 #                          ⚠️ 有风险! 仅在你完全信任模型输出时使用
-# 说明: 沙箱决定了模型可以对你的电脑做什么; 建议至少使用 workspace-write
+# 说明: 沙箱决定了模型可以对你的电脑做什么; 未显式设置时, trusted/untrusted
+#       项目通常会派生为 workspace-write, Windows 沙箱不可用时会回落到 read-only
 sandbox_mode = "workspace-write"
 
 # ── web_search ─────────────────────────────────────────────────────────────
@@ -149,7 +150,7 @@ plan_mode_reasoning_effort = "high"
 
 # ── model_reasoning_summary ────────────────────────────────────────────────
 # 类型: 字符串 (可选)
-# 默认: "auto"
+# 默认: 无 (未设置时使用模型目录中的 default_reasoning_summary)
 # 可选值:
 #   "auto"     — 自动决定是否显示推理摘要 (推荐)
 #   "concise"  — 显示简短的推理过程摘要
@@ -167,7 +168,7 @@ model_reasoning_summary = "auto"
 
 # ── model_verbosity ────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
-# 默认: "medium"
+# 默认: 无 (未设置时使用模型目录中的 default_verbosity)
 # 可选值:
 #   "low"    — 简洁模式: 回答尽量简短
 #   "medium" — 正常模式: 适度详细 (推荐)
@@ -251,7 +252,7 @@ windows_wsl_setup_acknowledged = true
 # ── background_terminal_max_timeout ────────────────────────────────────────
 # 类型: 整数 (毫秒) (可选)
 # 默认: 300000 (即 5 分钟)
-# 最小: 5000 (5 秒)
+# 运行时下限: 5000 (5 秒; 配置更小的值会按 5000 处理)
 # 作用: 后台终端输出的最大等待时间
 # 说明: 当模型在后台运行命令时, 最多等待这么长时间来收集输出;
 #       超时后会停止等待; 如果你经常跑需要很长时间的命令, 可以调大
@@ -470,20 +471,6 @@ commit_attribution = "Your Name <you@example.com>"
 # 作用: 指定一个文件, 其内容覆盖历史压缩时使用的提示词
 # experimental_compact_prompt_file = 'C:\Users\you\.codex\compact_prompt.md'
 
-# ── js_repl_node_path ─────────────────────────────────────────────────────
-# 类型: 路径 (可选)
-# 默认: 无 (使用系统 PATH 中的 node)
-# 作用: JS REPL 工具使用的 Node.js 可执行文件路径
-# 说明: 需要 Node >= v22.22.0; 如果你的 node 不在 PATH 中, 在这里指定完整路径
-# js_repl_node_path = 'C:\Program Files\nodejs\node.exe'
-
-# ── js_repl_node_module_dirs ──────────────────────────────────────────────
-# 类型: 路径数组 (可选)
-# 默认: [] (空数组)
-# 作用: JS REPL 工具搜索 Node 模块的目录列表
-# 说明: 如果你的 JS REPL 需要 require 某些模块, 在这里添加 node_modules 目录
-# js_repl_node_module_dirs = ['C:\Users\you\workspace\node_modules']
-
 # ── zsh_path ───────────────────────────────────────────────────────────────
 # 类型: 路径 (可选)
 # 默认: 无
@@ -552,16 +539,25 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # 作用: 替换 realtime 激活时注入到 developer 消息中的内置启动指令
 # experimental_realtime_start_instructions = ""
 
+# ── experimental_thread_store ──────────────────────────────────────────────
+# 类型: 对象 (可选)
+# 默认: { type = "local" }
+# 作用: 选择 app-server/thread-manager 使用的 thread store 实现
+# 可选值:
+#   { type = "local" } — 使用本地文件系统 / SQLite 存储
+#   { type = "remote", endpoint = "https://..." } — 使用远端 thread store 服务
+# 说明: 实验性配置; 普通 CLI / TUI 使用场景通常不需要设置
+# experimental_thread_store = { type = "remote", endpoint = "https://threads.example.internal" }
+
 # ── experimental_thread_store_endpoint ─────────────────────────────────────
 # 类型: 字符串 (可选)
 # 默认: 无
 # 作用: 为 app-server 指定远端线程存储服务的地址
-# 说明: 这是实验性配置, 主要用于 app-server 在远端存储 thread 数据时接管
-#       本地文件系统 / SQLite 存储; 普通 CLI / TUI 使用场景通常不需要设置
+# 说明: 兼容旧配置; 新配置优先使用上面的 experimental_thread_store 对象
 # experimental_thread_store_endpoint = "https://threads.example.internal"
 
 # ── experimental_thread_config_endpoint ────────────────────────────────────
-# 类型: 字符串 (可选) | v0.125.0 新增
+# 类型: 字符串 (可选)
 # 默认: 无
 # 作用: 为 app-server 指定远端线程级配置加载服务的地址
 # 说明: 这是实验性配置, 主要用于集成方按 thread 返回模型、权限、profile、
@@ -711,8 +707,9 @@ max_bytes = 10485760
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║                     第 5 节: Ghost Snapshot (撤销功能)                  ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
-# 作用: Ghost Snapshot 在每一轮操作后创建隐藏的 git commit, 用于支持撤销(undo)
-# 前提: 需要启用 undo 功能标志 ([features] undo = true)
+# 作用: 兼容旧版 ghost_snapshot 配置, 让旧 config.toml 仍可被加载
+# 说明: rust-v0.128.0 中撤销功能已不可用, 不再产生新的 Ghost Snapshot;
+#       本节配置只保留兼容读取能力, 通常不需要再设置。
 
 [ghost_snapshot]
 # disable_warnings — 类型: 布尔值 | 默认: false
@@ -820,13 +817,18 @@ sandbox = "elevated"
 # ── default_permissions ──────────────────────────────────────────────────
 # 类型: 字符串 (可选)
 # 默认: 无
-# 作用: 指定默认启用的命名权限配置文件 (对应 [permissions.<名称>] 中定义的 profile)
-# 说明: 这是顶层键, 必须写在表外; 当设置此字段时, Codex 将使用指定 profile 的
-#       文件系统和网络权限规则, 替代 sandbox_mode 的默认行为。profile 中必须
-#       定义 filesystem 子表。
-#       v0.125.0 起, 运行时会把当前权限 profile 作为规范权限视图传递给
-#       TUI 会话、子回合、MCP sandbox state 和 app-server API。
-# 示例: 引用第 13 节中定义的 "dev" profile
+# 作用: 指定默认启用的权限 profile
+# 说明: 这是顶层键, 必须写在表外; 名称以 ":" 开头时引用内置 profile,
+#       其他名称引用第 13 节 [permissions.<名称>] 中定义的 profile。
+# 常用内置值:
+#   ":workspace"         — workspace-write 权限
+#   ":read-only"         — 只读权限
+#   ":danger-no-sandbox" — 无沙箱限制, 风险最高
+# 运行时会把当前权限 profile 作为规范权限视图传递给 TUI 会话、子回合、
+# MCP sandbox state、shell 提权和 app-server API。
+# 示例:
+# default_permissions = ":workspace"
+# 或引用第 13 节中定义的 "dev" profile:
 # default_permissions = "dev"
 
 [sandbox_workspace_write]
@@ -932,14 +934,14 @@ disable_on_external_context = false
 # 越大意味着整理时考虑的记忆越多, 但消耗也越大
 max_raw_memories_for_consolidation = 256
 
-# max_rollout_age_days — 类型: 整数 | 默认: 30 | 范围: 0-90
+# max_rollout_age_days — 类型: 整数 | 默认: 10 | 范围: 0-90
 # 用于提取记忆的会话最大年龄 (天)
 # 超过此天数的会话不再被用来提取新记忆
-max_rollout_age_days = 30
+max_rollout_age_days = 10
 
-# max_rollouts_per_startup — 类型: 整数 | 默认: 16 | 最大: 128
+# max_rollouts_per_startup — 类型: 整数 | 默认: 2 | 最大: 128
 # 每次启动时最多处理的会话候选数 (用于提取记忆)
-max_rollouts_per_startup = 16
+max_rollouts_per_startup = 2
 
 # max_unused_days — 类型: 整数 | 默认: 30 | 范围: 0-365
 # 记忆最后使用距今超过此天数后, 不再被优先选中
@@ -949,6 +951,11 @@ max_unused_days = 30
 # 会话结束后至少等待多少小时才开始提取记忆
 # 建议 >= 12, 避免提取进行中的会话
 min_rollout_idle_hours = 6
+
+# min_rate_limit_remaining_percent — 类型: 整数 | 默认: 25 | 范围: 0-100
+# 启动时运行记忆提取前, Codex 速率限制窗口必须至少剩余的百分比
+# 设置较高可避免记忆任务消耗紧张的额度; 设置 0 表示不因剩余额度跳过
+min_rate_limit_remaining_percent = 25
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -1003,6 +1010,14 @@ view_image = true
 # discoverables = [
 #   { type = "connector", id = "google_drive" },
 #   { type = "plugin", id = "sample@openai-curated" },
+# ]
+#
+# disabled_tools — 类型: 对象数组 | 默认: []
+# 作用: 记录“不要再建议安装”的 Connector / Plugin; 通常由 Codex 在用户选择
+#       永久拒绝工具建议时自动写入, 也可以手动维护
+# disabled_tools = [
+#   { type = "connector", id = "connector_calendar" },
+#   { type = "plugin", id = "slack@openai-curated" },
 # ]
 
 
@@ -1079,13 +1094,14 @@ show_tooltips = true
 status_line = ["model-with-reasoning", "context-used", "current-dir"]
 
 # terminal_title — 类型: 字符串数组 (可选)
-# 默认: ["spinner", "project-name"]
+# 默认: ["activity", "project-name"]
 # 作用: 配置终端窗口/标签页标题中显示的信息项 (按顺序排列)
 # 可用项:
 #   "app-name"             — Codex 应用名
 #   "project-name"         — 项目名 (也接受旧别名 project)
 #   "current-dir"          — 当前工作目录
-#   "spinner"              — 任务运行时的动画指示器
+#   "activity"             — 运行时动画指示器; 阻塞等待用户时显示 action-required
+#                             也接受旧别名 spinner
 #   "run-state"            — 紧凑状态文本 (也接受旧别名 status)
 #   "thread-title"         — 当前线程标题 (也接受旧别名 thread)
 #   "git-branch"           — 当前 Git 分支 (可用时显示)
@@ -1102,7 +1118,7 @@ status_line = ["model-with-reasoning", "context-used", "current-dir"]
 #   "model"                — 当前模型名 (也接受旧别名 model-name)
 #   "model-with-reasoning" — 模型名称 + 推理等级
 #   "task-progress"        — 最近一次 update_plan 的任务进度 (可用时显示)
-terminal_title = ["spinner", "project-name"]
+terminal_title = ["activity", "project-name"]
 
 # theme — 类型: 字符串 (可选) | 默认: 无 (自动检测明/暗主题)
 # 代码高亮的配色主题 (kebab-case 格式)
@@ -1111,19 +1127,63 @@ terminal_title = ["spinner", "project-name"]
 # 常用主题: "catppuccin-latte", "catppuccin-mocha", "github-dark", "github-light"
 theme = "catppuccin-latte"
 
+# terminal_resize_reflow_max_rows — 类型: 整数 (可选) | 默认: 无
+# 作用: 当终端尺寸变化并重新排版 transcript 时, 限制最多回放的已渲染行数
+# 说明: 省略时使用 Codex 的终端相关默认值; 设置为 0 表示保留所有已渲染行
+terminal_resize_reflow_max_rows = 9000
+
 # model_availability_nux — 类型: 键值对 (可选) | 默认: {} (空)
 # 记录模型可用性引导已显示的次数 (由 Codex 自动管理, 一般不需要手动修改)
 # model_availability_nux = {}
+
+# ── [tui.keymap] — TUI 快捷键覆盖 ─────────────────────────────────────────
+# 作用: 覆盖 TUI 内置快捷键; 缺失项继承内置默认值
+# 写法:
+#   - 单个按键: action = "ctrl-a"
+#   - 多个按键: action = ["ctrl-a", "alt-a"]
+#   - 空数组: action = [] 表示显式解绑, 不再回退到全局或内置默认值
+# 支持按键:
+#   普通 ASCII 字符、f1-f12、enter、tab、backspace、esc、delete、up/down/left/right、
+#   home/end、page-up/page-down、space; 修饰键写在前面: ctrl-、alt-、shift-
+#
+# 常用上下文:
+#   global   — 全局动作: open_transcript, open_external_editor, copy,
+#              clear_terminal, submit, queue, toggle_shortcuts
+#   chat     — 聊天区动作: increase_reasoning_effort, decrease_reasoning_effort,
+#              edit_queued_message
+#   composer — 输入框动作: submit, queue, toggle_shortcuts,
+#              history_search_previous, history_search_next
+#   editor   — 文本编辑动作: insert_newline, move_left/right/up/down,
+#              move_word_left/right, move_line_start/end, delete_backward/forward,
+#              delete_backward_word/forward_word, kill_line_start/end, yank
+#   pager    — 覆盖层滚动动作: scroll_up/down, page_up/down, half_page_up/down,
+#              jump_top/bottom, close, close_transcript
+#   list     — 列表选择动作: move_up, move_down, accept, cancel
+#   approval — 审批弹窗动作: open_fullscreen, open_thread, approve,
+#              approve_for_session, approve_for_prefix, deny, decline, cancel
+#
+# [tui.keymap.global]
+# open_transcript = "ctrl-t"
+# copy = ["ctrl-y", "alt-y"]
+#
+# [tui.keymap.composer]
+# submit = "enter"
+# queue = "alt-enter"
+# toggle_shortcuts = "ctrl-/"
+#
+# [tui.keymap.editor]
+# insert_newline = "shift-enter"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║                     第 13 节: 命名权限配置文件与网络代理                 ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 定义命名权限配置文件 (permission profiles), 通过 default_permissions 引用
-# 说明: [permissions] 表使用扁平映射结构 — 每个 key 都是一个 profile 名称,
-#       对应一个包含 filesystem 和 network 子表的权限配置。
-#       v0.125.0 起, 这些 profile 不只用于本地沙箱构建, 也会在 TUI 会话恢复、
-#       用户回合、MCP sandbox state、shell 提权和 app-server API 中往返传递。
+# 说明: [permissions] 表使用扁平映射结构 — 每个 key 都是一个自定义 profile 名称,
+#       对应一个包含 filesystem 和 network 子表的权限配置。内置 profile 使用
+#       ":workspace"、":read-only"、":danger-no-sandbox" 等名称, 不需要在这里定义。
+#       权限 profile 不只用于本地沙箱构建, 也会在 TUI 会话恢复、用户回合、
+#       MCP sandbox state、shell 提权和 app-server API 中往返传递。
 #
 # 结构:
 #   [permissions.<profile-name>]
@@ -1264,11 +1324,6 @@ unified_exec = true
 # 说明: 在命令执行后捕获 shell 环境状态, 下次执行时恢复
 shell_snapshot = true
 
-# undo — 默认: false | 稳定
-# 启用撤销功能: 每一轮操作后创建隐藏 git 提交, 可撤销模型的修改
-# 说明: 需要在 git 仓库中使用; 配合 [ghost_snapshot] 配置
-undo = true
-
 # personality — 默认: true | 稳定
 # 启用性格选择功能, 在 TUI 中可选择 none/friendly/pragmatic
 personality = true
@@ -1340,17 +1395,11 @@ guardian_approval = true
 # 说明: 允许 Codex 感知并使用工作区声明的依赖关系
 workspace_dependencies = true
 
-# general_analytics — 默认: true | 稳定
-# 启用新一代通用分析事件
-# 说明: 主要影响线程、压缩、子 Agent 等统一分析埋点; 通常需配合 [analytics] enabled = true
-# general_analytics = true
+# unavailable_dummy_tools — 默认: true | 稳定
+# 为历史对话中已不存在的工具调用暴露占位工具, 便于恢复旧上下文
+unavailable_dummy_tools = true
 
 # ── 实验功能 (Experimental) ────────────────────────────────────────────────
-
-# js_repl — 默认: false | 实验
-# 启用持久化的 JavaScript REPL 工具
-# 前提: 需要 Node.js >= v22.22.0
-js_repl = true
 
 # memories — 默认: false | 实验 (别名: memory_tool)
 # 启用记忆系统 (从会话中提取经验, 在未来会话中注入)
@@ -1363,6 +1412,11 @@ memories = true
 # prevent_idle_sleep — 默认: false | 实验 (macOS/Linux/Windows)
 # 防止系统在 Codex 活跃时进入休眠
 prevent_idle_sleep = true
+
+# terminal_resize_reflow — 默认: true | 实验
+# 当终端宽度变化时重新排版 Codex 管理的 transcript scrollback
+# 细节可用 [tui] terminal_resize_reflow_max_rows 控制
+terminal_resize_reflow = true
 
 # ── 开发中功能 (Under Development) ─────────────────────────────────────────
 
@@ -1377,6 +1431,10 @@ prevent_idle_sleep = true
 # shell_zsh_fork — 默认: false | 开发中
 # 将 shell 执行路由到 zsh exec bridge
 # shell_zsh_fork = false
+
+# artifact — 默认: false | 开发中
+# 启用原生 artifact 工具
+# artifact = false
 
 # codex_git_commit — 默认: false | 开发中
 # 启用 git 提交署名指导 (配合 commit_attribution 使用)
@@ -1397,6 +1455,15 @@ codex_git_commit = true
 # 是否启用 Multi-Agent V2
 # enabled = true
 #
+# max_concurrent_threads_per_session — 类型: 整数 | 默认: 4 | 最小: 1
+# 单个会话中允许同时打开的 Agent 线程总数; 启用 multi_agent_v2 时,
+# [agents] max_threads 不能再设置, 会由此值推导
+# max_concurrent_threads_per_session = 4
+#
+# min_wait_timeout_ms — 类型: 整数 | 默认: 10000 | 范围: 1-3600000
+# wait_agent 等待子 Agent 时允许的最小超时时间 (毫秒)
+# min_wait_timeout_ms = 10000
+#
 # usage_hint_enabled — 类型: 布尔值 | 默认: true
 # 是否在 spawn_agent / send_message 等工具说明中展示用法提示
 # usage_hint_enabled = true
@@ -1404,6 +1471,14 @@ codex_git_commit = true
 # usage_hint_text — 类型: 字符串 (可选)
 # 自定义追加到子 Agent 相关工具说明中的提示文本
 # usage_hint_text = "优先把可并行、非阻塞主路径的子任务委派给子 Agent。"
+#
+# root_agent_usage_hint_text — 类型: 字符串 (可选)
+# 仅追加到根 Agent 看到的 Multi-Agent V2 用法提示
+# root_agent_usage_hint_text = "根 Agent 保持主路径推进, 只委派清晰边界的并行任务。"
+#
+# subagent_usage_hint_text — 类型: 字符串 (可选)
+# 仅追加到子 Agent 看到的 Multi-Agent V2 用法提示
+# subagent_usage_hint_text = "子 Agent 只处理被分配的范围, 不要改动其他人的文件。"
 #
 # hide_spawn_agent_metadata — 类型: 布尔值 | 默认: false
 # 是否隐藏 spawn_agent 返回中的 agent 类型 / 模型 / reasoning 元信息
@@ -1445,9 +1520,25 @@ apply_patch_freeform = true
 # 启用远程插件市场的列表与详情读取能力
 # remote_plugin = false
 
-# unavailable_dummy_tools — 默认: false | 开发中
-# 为历史对话中已不存在的工具调用暴露占位工具, 便于恢复旧上下文
-# unavailable_dummy_tools = false
+# enable_mcp_apps — 默认: false | 开发中
+# 启用 MCP Apps 路径
+# enable_mcp_apps = false
+
+# apps_mcp_path_override — 默认: false | 开发中
+# 覆盖内置 Apps MCP server 的路径; 可以写布尔值, 也可以写对象形式
+# apps_mcp_path_override = false
+#
+# [features.apps_mcp_path_override]
+# enabled = true
+# path = 'C:\Users\you\.codex\apps-mcp-server.exe'
+
+# plugin_hooks — 默认: false | 开发中
+# 加载插件包中声明的生命周期 hooks
+# plugin_hooks = false
+
+# goals — 默认: false | 开发中
+# 启用持久化 /goal 工作流、自动延续与 TUI 控件
+# goals = false
 
 # realtime_conversation — 默认: false | 开发中
 # 启用实验性实时语音对话模式 (默认走 v2 + WebRTC)
@@ -1462,17 +1553,9 @@ apply_patch_freeform = true
 # 启用运行时性能指标快照
 # runtime_metrics = false
 
-# js_repl_tools_only — 默认: false | 开发中
-# 仅向模型暴露 js_repl 工具 (需要 js_repl 已启用)
-# js_repl_tools_only = false
-
 # enable_fanout — 默认: false | 开发中
 # 启用 SpawnCsv 扇出能力, 允许 Agent 批量派生子任务
 # enable_fanout = false
-
-# artifact — 默认: false | 开发中
-# 启用原生 artifact 工具
-# artifact = false
 
 # workspace_owner_usage_nudge — 默认: false | 开发中
 # 在 TUI 中显示工作区归属 / 用量提示文案
@@ -1488,7 +1571,11 @@ apply_patch_freeform = true
 # use_legacy_landlock — 已弃用: 旧版 Linux 沙箱实现开关;
 #                        如无特殊需要, 请删除此项
 
-# ── 已移除功能 (Removed) — 标志保留但无效 ──────────────────────────────────
+# ── 已移除功能 (Removed) — 不要在新配置中使用 ──────────────────────────────
+# undo                   — 已移除, /undo 现在会报告不可用
+# js_repl                — 已移除, 相关 Node 路径配置也已忽略
+# js_repl_tools_only     — 已移除
+# general_analytics      — 已移除, 不再是可配置 feature
 # steer                   — 始终启用
 # collaboration_modes     — 始终启用
 # sqlite                  — 始终启用
@@ -1556,6 +1643,12 @@ apply_patch_freeform = true
 # [[hooks.PostToolUse.hooks]]
 # type = "command"
 # command = "python3 ~/.codex/hooks/post_tool.py"
+#
+# ── hook state: 用户级启用/禁用状态 ────────────────────────────────────────
+# 作用: 记录单个 hook 是否启用; 通常由 UI / app-server 写入
+# key 是 Codex 生成的 hook 标识, 例如 file:<path>:<event>:<group>:<hook>
+# [hooks.state."file:C:/Users/you/.codex/hooks.json:PreToolUse:0:0"]
+# enabled = false
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -1568,7 +1661,7 @@ apply_patch_freeform = true
 # max_threads — 类型: 整数 | 默认: 6 | 最小: 1
 # 同时运行的最大 Agent 线程数
 # 越大可以并行处理越多任务, 但消耗资源也越多
-# 注意: v0.125.0 起, 如果启用 [features].multi_agent_v2, 不能再设置此字段;
+# 注意: 如果启用 [features].multi_agent_v2, 不能再设置此字段;
 #       请删除或注释掉 max_threads, 否则启动时会报错。
 max_threads = 6
 
@@ -1582,10 +1675,14 @@ max_depth = 2
 # 设置此值可以防止 Agent 无限运行
 # job_max_runtime_seconds = 1800
 
+# interrupt_message — 类型: 布尔值 | 默认: true
+# 子 Agent 回合被中断时, 是否记录一条模型可见的中断说明
+interrupt_message = true
+
 # ── 自定义 Agent 角色 ──────────────────────────────────────────────────────
 # 你可以定义多个 Agent 角色, 每个角色有独立的配置
-# v0.125.0 起, 配置层中的相对 config_file 路径会按声明它的 config.toml
-# 所在目录解析; 绝对路径仍按原样使用。
+# 配置层中的相对 config_file 路径会按声明它的 config.toml 所在目录解析;
+# 绝对路径仍按原样使用。
 
 # [agents.explorer]
 # description — 类型: 字符串 | 对这个角色的描述, 帮助主 Agent 理解该角色的职责
@@ -1642,6 +1739,17 @@ config = [
 # enabled — 类型: 布尔值 | 默认: true
 # 是否加载这个插件
 # enabled = true
+#
+# ── 插件内 MCP server 策略覆盖 ─────────────────────────────────────────────
+# 说明: 插件 manifest 决定 MCP server 如何启动; 这里只覆盖启用状态与工具策略
+# [plugins.example-plugin.mcp_servers.docs]
+# enabled = true
+# default_tools_approval_mode = "prompt"
+# enabled_tools = ["search", "read"]
+# disabled_tools = ["delete"]
+#
+# [plugins.example-plugin.mcp_servers.docs.tools.search]
+# approval_mode = "approve"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -1691,7 +1799,7 @@ sparse_paths = ["marketplaces/openai-curated"]
 # 作用: 覆盖内置 amazon-bedrock 提供商使用的 AWS profile / region
 # 说明: 无需自行填写 name / base_url / wire_api 等字段, CLI 已内置这些默认值
 #       当前只支持修改 aws.profile / aws.region; 其他 provider 字段会报错
-#       v0.125.0 起, 模型发现由具体 model provider 负责, Bedrock 账户状态也会
+#       当前模型发现由具体 model provider 负责, Bedrock 账户状态也会
 #       暴露给 app 客户端; 使用 Bedrock 时通常只需要选择 provider 和 AWS 设置
 #
 # 要使用它, 请在顶层设置:
@@ -1914,7 +2022,7 @@ required = false
 # bearer_token_env_var — 类型: 字符串 (可选)
 # 存储 bearer token 的环境变量名;
 # 请求时自动添加 Authorization: Bearer <token> 头
-# 注意: v0.125.0 的公开配置 schema 不再暴露内联 bearer_token;
+# 注意: 当前公开配置 schema 不再暴露内联 bearer_token;
 #       请使用 bearer_token_env_var, 避免把密钥明文写入 config.toml。
 bearer_token_env_var = "GITHUB_TOKEN"
 
@@ -2075,8 +2183,7 @@ trust_level = "trusted"
 #   model, model_provider, service_tier, approval_policy, approvals_reviewer,
 #   sandbox_mode, model_reasoning_effort, plan_mode_reasoning_effort,
 #   model_reasoning_summary, model_verbosity, model_catalog_json, personality,
-#   chatgpt_base_url, model_instructions_file, js_repl_node_path,
-#   js_repl_node_module_dirs, zsh_path, experimental_compact_prompt_file,
+#   chatgpt_base_url, model_instructions_file, zsh_path, experimental_compact_prompt_file,
 #   include_apply_patch_tool, include_permissions_instructions,
 #   include_apps_instructions, include_environment_context,
 #   experimental_use_unified_exec_tool, experimental_use_freeform_apply_patch,
