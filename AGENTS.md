@@ -20,14 +20,6 @@ Global instructions for all projects.
 
 ## Code Quality
 
-### Hard limits
-
-1. ≤80 lines/function, cyclomatic complexity ≤8
-2. ≤5 positional params
-3. 100-char line length
-4. Absolute imports only — no relative (`..`) paths
-5. Google-style docstrings on non-trivial public APIs
-
 ### Zero warnings policy
 
 Fix every warning from every tool — linters, type checkers, compilers, tests. If a warning truly can't be fixed, add an inline ignore with a justification comment. Never leave warnings unaddressed; a clean output is the baseline, not the goal.
@@ -71,53 +63,8 @@ When adding dependencies, CI actions, or tool versions, always look up the curre
 | `ast-grep` | - | `ast-grep --pattern '$FUNC($$$)' --lang py` - AST-based code search |
 | `jq` | grep / awk (for JSON) | `jq '.key[]' file.json` - command-line JSON processor |
 
-Prefer `ast-grep` over ripgrep when searching for code structure (function calls, class definitions, imports, pattern matching across arguments). Use ripgrep for literal strings and log messages.
-
-### Java
-
-**Runtime:** Java 21 with Spring Boot 3 and Maven Wrapper
-
-| purpose | tool |
-|---------|------|
-| deps & build | `.\mvnw.cmd` |
-| lint & format | `spotless:check` · `spotless:apply` |
-| static types | `compile` |
-| tests | `test` · `verify` |
-| coverage | `jacoco:report` |
-
-**Always use Maven Wrapper and Spotless** over system Maven and ad-hoc formatters. Prefer `.\mvnw.cmd -B -ntp -q spotless:check verify` on Windows.
-
-Tests in `src/test/java` mirror package structure. Keep Flyway migrations, generated mapper processors, coverage, and packaging checks wired through Maven.
-
-### Node/TypeScript
-
-**Runtime:** Node 24 LTS, ESM only (`"type": "module"`)
-
-| purpose | tool |
-|---------|------|
-| lint | `oxlint` |
-| format | `oxfmt` |
-| test | `vitest` |
-| types | `tsc --noEmit` |
-
-**Always use oxlint and oxfmt** over eslint/prettier — they're faster and stricter. Enable `typescript`, `import`, `unicorn` plugins.
-
-**tsconfig.json strictness** — enable all of these:
-```jsonc
-"strict": true,
-"noUncheckedIndexedAccess": true,
-"exactOptionalPropertyTypes": true,
-"noImplicitOverride": true,
-"noPropertyAccessFromIndexSignature": true,
-"verbatimModuleSyntax": true,
-"isolatedModules": true
-```
-
-Colocated `*.test.ts` files. Supply chain: `pnpm audit --audit-level=moderate` before installing, pin exact versions (no `^` or `~`), enforce 24-hour publish delay (`pnpm config set minimumReleaseAge 1440`), block postinstall scripts (`pnpm config set ignore-scripts true`).
-
 ## Miscellaneous
 
 - Think in English, respond in Simplified Chinese.
-- If some tool calls depend on previous calls to inform dependent values, do NOT call these tools in parallel and instead call them sequentially. For instance, if one operation must complete before another starts (e.g., executing `git add` before `git commit`), run these operations sequentially instead.
 - On Windows PowerShell (never use cmd): Always enclose string values in single quotes. Do not use backslashes for escaping inside single-quoted strings. To express a literal single quote, use two consecutive single quotes (e.g., when using `rg`).
 - Write Conventional Commits (`type(scope): <description in Simplified Chinese>`) every time you have something stable — do not wait to be asked. Never bundle multiple changes into a single commit.
