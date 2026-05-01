@@ -4,7 +4,7 @@ approval_policy = "never"
 sandbox_mode = "danger-full-access"
 web_search = "live"
 personality = "pragmatic"
-# model_provider = "custom"
+# model_provider = "openai"
 
 # 推理能力相关
 model_reasoning_effort = "xhigh"
@@ -38,10 +38,10 @@ status_line = ["model-with-reasoning", "context-remaining", "context-used", "con
 # 第 14 节: 功能标志 (Feature Flags)
 [features]
 unified_exec = true
-js_repl = true
 prevent_idle_sleep = true
 apply_patch_freeform = true
 default_mode_request_user_input = true
+goals = true
 
 # 第 16 节: Agent (子智能体) 配置
 [agents]
@@ -65,7 +65,7 @@ enabled = false
 enabled = false
 
 # 第 20 节: 模型提供商定义
-[model_providers.custom]
+[model_providers.openai]
 name = "OpenAI"
 base_url = "https://ai.example.cn/v1"
 requires_openai_auth = true
