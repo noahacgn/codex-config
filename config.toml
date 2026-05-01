@@ -4,7 +4,7 @@ approval_policy = "never"
 sandbox_mode = "danger-full-access"
 web_search = "live"
 personality = "pragmatic"
-# model_provider = "openai"
+# model_provider = "custom"
 
 # 推理能力相关
 model_reasoning_effort = "xhigh"
@@ -65,7 +65,7 @@ enabled = false
 enabled = false
 
 # 第 20 节: 模型提供商定义
-[model_providers.openai]
+[model_providers.custom]
 name = "OpenAI"
 base_url = "https://ai.example.cn/v1"
 requires_openai_auth = true
