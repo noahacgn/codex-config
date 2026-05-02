@@ -43,9 +43,11 @@ apply_patch_freeform = true
 default_mode_request_user_input = true
 goals = true
 
-# 第 16 节: Agent (子智能体) 配置
-[agents]
-max_threads = 24
+[features.multi_agent_v2]
+enabled = true
+usage_hint_text = """
+ALWAYS wait for all subagents to complete before yielding.
+"""
 
 # 第 17 节: Skills (技能) 配置
 [skills.bundled]
@@ -53,7 +55,7 @@ enabled = false
 
 # 第 18 节: Plugins (插件) 配置
 [plugins."browser-use@openai-bundled"]
-enabled = true
+enabled = false
 
 [plugins."documents@openai-primary-runtime"]
 enabled = false
@@ -73,6 +75,11 @@ requires_openai_auth = true
 # 第 21 节: MCP 服务器配置
 [mcp_servers.exa]
 url = "https://mcp.exa.ai/mcp?exaApiKey=your-exa-api-key-here"
+enabled = true
+
+[mcp_servers.chrome-devtools]
+command = "npx"
+args = ["chrome-devtools-mcp@latest"]
 enabled = true
 
 [mcp_servers.figma]
