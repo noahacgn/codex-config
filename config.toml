@@ -45,9 +45,6 @@ goals = true
 
 [features.multi_agent_v2]
 enabled = true
-usage_hint_text = """
-ALWAYS wait for all subagents to complete before yielding.
-"""
 
 # 第 17 节: Skills (技能) 配置
 [skills.bundled]
