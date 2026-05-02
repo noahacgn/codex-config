@@ -56,7 +56,7 @@ Copies allowlisted files to their configured destinations:
 npx skills add https://github.com/ast-grep/agent-skill --skill ast-grep -g -a codex -a claude-code -a gemini-cli -y
 npx skills add https://github.com/trailofbits/skills --skill ask-questions-if-underspecified -g -a codex -a claude-code -a gemini-cli -y
 npx skills add https://github.com/mattpocock/skills --skill grill-me -g -a codex -a claude-code -a gemini-cli -y
-npx skills add https://github.com/noahacgn/codex-config --all -g -a codex -y
+npx skills add https://github.com/noahacgn/codex-config --skill '*' -g -a codex -y
 
 # List global skills
 npx skills ls -g
