@@ -1,0 +1,2287 @@
+###############################################################################
+#                    Codex CLI — config.toml 完整配置参考                      #
+#                                                                             #
+#  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
+#  适用版本: Codex CLI rust-v0.128.0 (发布于 2026-04-30)                     #
+#  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
+#            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
+#            直接复制本文件后按需修改即可使用                                  #
+#                                                                             #
+#  提    示:                                                                  #
+#    - 带 # 号的行是注释, 不会生效; 取消注释(删掉 #)即可启用                #
+#    - 字符串值用双引号 "..." 或单引号 '...' 包裹                             #
+#    - Windows 路径建议使用单引号: 'C:\Users\you\...'                         #
+#    - 布尔值: true / false (不带引号)                                       #
+#    - 数组用方括号: ["a", "b"]                                               #
+#    - TOML 官方语法参考: https://toml.io/cn                                  #
+###############################################################################
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 1 节: 核心模型与运行策略                          ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
+# ── model ──────────────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (由 Codex 自动选择)
+# 作用: 指定主力模型的名称 (即 model slug)
+# 示例: "gpt-5.4"、"o4-mini"、"gpt-4o" 等
+# 说明: 如果不设置, Codex 会使用内置模型目录中的默认模型
+model = "gpt-5.4"
+
+# ── review_model ───────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (使用主力 model)
+# 作用: 专门用于 /review 功能的模型
+# 说明: 当你使用 /review 命令进行代码审查时, 会调用此模型而不是主力模型
+#       如果不设置, /review 将使用上面的 model
+review_model = "gpt-5.4"
+
+# ── model_provider ─────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (使用内置 "openai" 提供商)
+# 作用: 指定使用哪个模型提供商 (对应下方 [model_providers.xxx] 中定义的 key)
+# 示例: "openai"、"amazon-bedrock"、"custom"、"ollama"、"lmstudio"
+# 说明: 内置提供商有 openai / amazon-bedrock / ollama / lmstudio;
+#       其中 amazon-bedrock 为 v0.124.0 新增, 认证走 AWS SigV4, 可通过
+#       [model_providers.amazon-bedrock.aws] 覆盖 aws.profile / aws.region
+#       你也可以在 [model_providers] 小节中自定义提供商, 然后把名字填在这里
+model_provider = "custom"
+
+# ── approval_policy ────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: "on-request"
+# 可选值:
+#   "untrusted"  — 最严格: 只有已知安全的只读命令(如 ls、cat)会自动执行,
+#                  其他所有命令都需要你手动批准才能运行
+#   "on-failure" — (已弃用) 所有命令先在沙箱中自动运行; 如果失败了才弹出提示
+#                  让你决定是否在沙箱外重新运行
+#   "on-request" — 推荐默认值: 模型自行判断何时需要你的许可
+#                  - 在 read-only/workspace-write 沙箱中, 非危险命令自动运行
+#                  - 危险命令(如 rm -rf)或需要提升权限时, 会弹出提示
+#   "never"      — 最宽松: 永远不弹出审批提示; 如果命令失败, 错误信息直接返回
+#                  给模型; 危险命令会被直接禁止(因为没有审批途径)
+# 说明: 这个选项控制的是 "Codex 执行 shell 命令前是否需要你点确认"
+#       安全程度: untrusted > on-request > on-failure > never
+approval_policy = "on-request"
+
+# ── approvals_reviewer ────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: "user"
+# 可选值:
+#   "user"               — 审批请求显示给用户, 由你手动决定 (默认)
+#   "auto_review"        — 审批请求路由给 Auto-review 子 Agent 自动评估
+#   "guardian_subagent"  — 旧名称, 仍可解析, 但建议改用 "auto_review"
+# 作用: 配置审批请求一旦触发后, 由谁来审查
+# 说明: 这不会禁用 ARC 等安全检查; guardian_approval 功能标志在 v0.124.0 起
+#       已稳定并默认启用, 只有显式关闭时才会隐藏 Auto-review 入口
+# approvals_reviewer = "user"
+
+# ── sandbox_mode ───────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 根据项目 trust 状态派生; 无派生时回落到 "read-only"
+# 可选值:
+#   "read-only"          — 只读模式: 只能读取文件, 不能写入或修改任何文件
+#                          网络访问默认关闭; 这是最安全的选项
+#   "workspace-write"    — 工作区可写: 可以读取整个磁盘, 但只能在当前工作目录
+#                          (以及 [sandbox_workspace_write] 中指定的额外目录) 写入
+#                          .git / .agents / .codex 目录自动设为只读保护
+#   "danger-full-access" — 完全访问: 没有任何限制, 可以读写所有文件、访问网络
+#                          ⚠️ 有风险! 仅在你完全信任模型输出时使用
+# 说明: 沙箱决定了模型可以对你的电脑做什么; 未显式设置时, trusted/untrusted
+#       项目通常会派生为 workspace-write, Windows 沙箱不可用时会回落到 read-only
+sandbox_mode = "workspace-write"
+
+# ── web_search ─────────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: "cached"
+# 可选值:
+#   "disabled" — 完全禁用网络搜索功能
+#   "cached"   — 允许模型使用网络搜索, 但返回缓存内容 (节省流量, 结果可能不是最新)
+#   "live"     — 允许模型进行实时网络搜索, 获取最新内容
+# 说明: 控制模型是否可以上网搜索信息来辅助回答
+web_search = "cached"
+
+# ── service_tier ───────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (由服务端 / Codex 托管默认值决定)
+# 可选值:
+#   "fast" — 优先速度: 响应更快, 但可能消耗更多配额
+#   "flex" — 优先节省: 使用弹性队列, 价格更低, 但响应可能较慢
+# 说明: 在速度和成本之间做权衡; 符合条件的 ChatGPT 计划在 v0.124.0 起
+#       默认使用 fast, 除非你显式设置 service_tier 或退出托管默认值
+service_tier = "fast"
+
+# ── personality ────────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: "pragmatic" (当 personality 功能启用时)
+# 可选值:
+#   "none"      — 不注入任何性格描述, 模型用最原始的风格回答
+#   "friendly"  — 友好风格: 回答更亲切、更口语化
+#   "pragmatic" — 务实风格: 回答直接、高效、专注于解决问题 (推荐)
+# 说明: 影响模型回答的语气和风格, 不影响技术能力
+personality = "pragmatic"
+
+
+# ── 推理能力相关 ────────────────────────────────────────────────────────────
+
+# ── model_reasoning_effort ─────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: "medium" (模型内部默认)
+# 可选值: "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
+# 作用: 控制模型的 "思考深度" (reasoning.effort 参数)
+#   "none"    — 不进行推理, 直接回答 (最快, 适合简单问题)
+#   "minimal" — 极少推理
+#   "low"     — 少量推理
+#   "medium"  — 中等推理 (平衡速度和质量)
+#   "high"    — 深度推理 (适合复杂编程/调试)
+#   "xhigh"   — 极致推理 (最慢但最周密, 适合疑难杂症)
+# 说明: 推理越深, 回答越周全, 但速度越慢、消耗越多
+model_reasoning_effort = "high"
+
+# ── plan_mode_reasoning_effort ─────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (Plan 模式使用内置预设, 通常为 "medium")
+# 可选值: 同 model_reasoning_effort
+# 作用: 单独为 Plan 模式(计划模式)设置推理深度
+# 说明: 如果不设置, Plan 模式会使用自己的内置默认值;
+#       如果你觉得计划阶段的分析不够深入, 可以在这里调高
+plan_mode_reasoning_effort = "high"
+
+# ── model_reasoning_summary ────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (未设置时使用模型目录中的 default_reasoning_summary)
+# 可选值:
+#   "auto"     — 自动决定是否显示推理摘要 (推荐)
+#   "concise"  — 显示简短的推理过程摘要
+#   "detailed" — 显示详细的推理过程摘要
+#   "none"     — 不显示任何推理摘要
+# 作用: 控制模型是否在回答前展示 "我是怎么想的" 这个摘要
+model_reasoning_summary = "auto"
+
+# ── model_supports_reasoning_summaries ─────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: 无 (由模型目录自动检测)
+# 作用: 强制启用/禁用推理摘要功能
+# 说明: 通常不需要设置; 只有当你使用自定义模型且确知它支持推理摘要时才设为 true
+# model_supports_reasoning_summaries = true
+
+# ── model_verbosity ────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (未设置时使用模型目录中的 default_verbosity)
+# 可选值:
+#   "low"    — 简洁模式: 回答尽量简短
+#   "medium" — 正常模式: 适度详细 (推荐)
+#   "high"   — 详细模式: 回答尽量完整、详尽
+# 作用: 控制模型输出的长度和详细程度 (GPT-5 系列模型的 text.verbosity 参数)
+model_verbosity = "medium"
+
+
+# ── 配置文件 (Profile) 选择 ─────────────────────────────────────────────────
+
+# ── profile ────────────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (不使用任何 profile)
+# 作用: 激活指定的配置预设 (对应下方 [profiles.xxx] 中定义的名称)
+# 说明: Profile 是一组配置的 "快照", 可以把多个设置打包在一起,
+#       通过切换 profile 快速切换使用场景(如 "快速模式"、"安全模式")
+#       profile 中的设置会覆盖同名的顶层设置
+# 示例: "default"、"fast"、"safe"
+profile = "default"
+
+
+# ── 杂项开关 ────────────────────────────────────────────────────────────────
+
+# ── allow_login_shell ──────────────────────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: true
+# 作用: 是否允许模型请求使用 "登录 shell" 来执行命令
+# 说明: 登录 shell 会加载你的 .bashrc/.zshrc 等配置, 环境更完整;
+#       设为 false 则强制使用非登录 shell (环境更干净但可能缺少某些配置)
+allow_login_shell = true
+
+# ── check_for_update_on_startup ────────────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: true
+# 作用: 启动时是否自动检查 Codex CLI 是否有新版本
+# 说明: 设为 false 可跳过检查, 适合企业统一管理更新的场景
+check_for_update_on_startup = true
+
+# ── suppress_unstable_features_warning ─────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: false
+# 作用: 是否隐藏 "你启用了不稳定功能" 的警告信息
+# 说明: 当你在 [features] 中开启了 "开发中" 阶段的功能时, Codex 会在启动时
+#       显示警告; 如果你知道风险并想隐藏警告, 设为 true
+suppress_unstable_features_warning = true
+
+# ── disable_paste_burst ────────────────────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: false
+# 作用: 是否禁用 TUI 的 "粘贴检测" 功能
+# 说明: 默认情况下, Codex 会检测你快速输入的字符序列(通常是粘贴操作)并做
+#       特殊处理以优化体验; 如果粘贴时出现异常, 可以设为 true 来禁用
+disable_paste_burst = false
+
+# ── hide_agent_reasoning ───────────────────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: false
+# 作用: 是否隐藏子 Agent 的推理过程
+# 说明: 设为 true 后, 多 Agent 协作时子 Agent 的思考过程不会显示在界面上,
+#       只显示最终结果; 可减少视觉噪音
+hide_agent_reasoning = false
+
+# ── show_raw_agent_reasoning ───────────────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: false
+# 作用: 是否显示子 Agent 的原始推理内容 (chain-of-thought)
+# 说明: 设为 true 会显示完整的原始思考链, 适合调试或学习模型推理过程
+show_raw_agent_reasoning = false
+
+# ── windows_wsl_setup_acknowledged ─────────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: false
+# 作用: 标记是否已完成 Windows WSL 初始设置引导
+# 说明: Codex 首次在 Windows 上运行时会弹出 WSL 设置引导;
+#       完成后此值自动设为 true, 下次不再显示; 一般不需要手动修改
+windows_wsl_setup_acknowledged = true
+
+
+# ── 数值限制 ────────────────────────────────────────────────────────────────
+
+# ── background_terminal_max_timeout ────────────────────────────────────────
+# 类型: 整数 (毫秒) (可选)
+# 默认: 300000 (即 5 分钟)
+# 运行时下限: 5000 (5 秒; 配置更小的值会按 5000 处理)
+# 作用: 后台终端输出的最大等待时间
+# 说明: 当模型在后台运行命令时, 最多等待这么长时间来收集输出;
+#       超时后会停止等待; 如果你经常跑需要很长时间的命令, 可以调大
+background_terminal_max_timeout = 300000
+
+# ── tool_output_token_limit ────────────────────────────────────────────────
+# 类型: 整数 (可选)
+# 默认: 无 (使用模型内置的截断策略)
+# 作用: 工具输出的 token 预算上限
+# 说明: 控制一个工具(如 shell 命令)的输出最多保留多少 token 在上下文中;
+#       设得太小可能丢失重要输出, 设得太大会占用上下文窗口空间
+# 示例: 12000 (约能容纳大量文本)
+tool_output_token_limit = 12000
+
+# ── model_auto_compact_token_limit ─────────────────────────────────────────
+# 类型: 整数 (可选)
+# 默认: 无 (使用模型目录中的内置值)
+# 作用: 触发 "自动压缩" 的 token 阈值
+# 说明: 当对话的 token 总量超过此值时, Codex 会自动压缩历史记录,
+#       将旧的对话摘要化以腾出上下文空间; 值越大, 压缩越晚触发
+model_auto_compact_token_limit = 180000
+
+# ── model_context_window ───────────────────────────────────────────────────
+# 类型: 整数 (可选)
+# 默认: 无 (使用模型目录中的内置值)
+# 作用: 模型的上下文窗口大小 (单位: token)
+# 说明: 上下文窗口决定了模型一次能 "看到" 多少内容 (包括对话历史 + 工具输出);
+#       通常不需要手动设置, 除非你使用自定义模型或需要覆盖默认值
+model_context_window = 256000
+
+
+# ── 编辑器与凭证存储 ────────────────────────────────────────────────────────
+
+# ── file_opener ────────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: "vscode"
+# 可选值:
+#   "vscode"          — 用 VS Code 打开文件链接
+#   "vscode-insiders" — 用 VS Code Insiders 打开
+#   "windsurf"        — 用 Windsurf 编辑器打开
+#   "cursor"          — 用 Cursor 编辑器打开
+#   "none"            — 不生成可点击的文件链接
+# 作用: 当模型输出中引用了文件路径时, Codex 会将其转为可点击的链接;
+#       这里设置点击后用哪个编辑器打开
+file_opener = "cursor"
+
+# ── cli_auth_credentials_store ─────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: "file"
+# 可选值:
+#   "file"      — 将认证凭证存储在 $CODEX_HOME/auth.json 文件中
+#   "keyring"   — 存储在操作系统密钥链中 (更安全); 如果密钥链不可用则报错
+#   "auto"      — 优先用密钥链, 不可用时退回到文件存储 (推荐)
+#   "ephemeral" — 只存储在内存中, 进程退出后凭证丢失 (最安全但每次都要重新登录)
+# 作用: 控制 CLI 认证凭证 (如 API Key) 的存储方式
+# 说明: 示例这里显式设为 "auto"; 若完全省略此项, 实际默认值仍是 "file"
+cli_auth_credentials_store = "auto"
+
+# ── mcp_oauth_credentials_store ────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: "auto"
+# 可选值:
+#   "auto"    — 优先用密钥链, 不可用时退回到文件存储 (推荐)
+#   "file"    — 存储在 $CODEX_HOME/.credentials.json 文件中
+#   "keyring" — 存储在操作系统密钥链中; 不可用则报错
+# 作用: 控制 MCP 服务器的 OAuth 凭证存储方式
+mcp_oauth_credentials_store = "auto"
+
+
+# ── 登录方式限制 ────────────────────────────────────────────────────────────
+
+# ── forced_login_method ────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (用户可自由选择登录方式)
+# 可选值:
+#   "chatgpt" — 只允许通过 ChatGPT 登录
+#   "api"     — 只允许通过 API Key 登录
+# 作用: 限制用户只能使用指定的登录方式 (适合企业部署)
+# forced_login_method = "chatgpt"
+
+# ── forced_chatgpt_workspace_id ────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 限制 ChatGPT 登录时只能使用指定的工作区 ID
+# 说明: 适合企业环境, 确保用户登录到正确的组织工作区
+# forced_chatgpt_workspace_id = "ws_xxx"
+
+# ── chatgpt_base_url ───────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: "https://chatgpt.com/backend-api/"
+# 作用: ChatGPT 后端 API 的基础 URL
+# 说明: 通常不需要修改; 仅在企业部署或使用代理时才需要调整
+chatgpt_base_url = "https://chatgpt.com/backend-api/"
+
+# ── openai_base_url ──────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (使用内置 openai 提供商的默认 URL)
+# 作用: 覆盖内置 "openai" 模型提供商的 base URL
+# 说明: 与 chatgpt_base_url 不同, 这个只影响 OpenAI API 请求;
+#       适合需要通过代理访问 OpenAI API 的场景
+# openai_base_url = "https://api.openai.com/v1"
+
+
+# ── 通知命令 ────────────────────────────────────────────────────────────────
+
+# ── notify ─────────────────────────────────────────────────────────────────
+# 类型: 字符串数组 (可选)
+# 默认: 无 (不发送通知)
+# 格式: ["命令", "参数1", "参数2", ...]
+# 作用: 每次模型完成一轮回答后, 执行此命令来通知你
+# 说明: Codex 会在命令末尾自动追加一个 JSON 参数描述事件详情;
+#       适合搭配系统通知工具使用, 比如:
+#       - Windows: ["powershell.exe", "-NoProfile", "-Command", "[console]::beep(880,120)"]
+#       - macOS:   ["osascript", "-e", "display notification \"Codex Done\""]
+#       - Linux:   ["notify-send", "Codex"]
+notify = ["powershell.exe", "-NoProfile", "-Command", "[console]::beep(880,120)"]
+
+
+# ── 指令与提示词 ────────────────────────────────────────────────────────────
+
+# ── developer_instructions ─────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 以 "developer" 角色注入到每一轮对话中的自定义指令
+# 说明: 这里写的内容会出现在模型的 developer 消息区域;
+#       可以用来设置全局的行为偏好, 比如:
+#       - "请用中文回答"
+#       - "回答时附带代码示例"
+#       - "使用 TypeScript 而不是 JavaScript"
+developer_instructions = "Please answer in clear and accurate Chinese."
+
+# ── include_permissions_instructions ───────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: true
+# 作用: 是否注入内置的 <permissions instructions> developer 指令块
+# 说明: 关闭后, 模型将看不到 Codex 关于权限、审批与沙箱约束的默认说明;
+#       仅建议在你明确知道影响时才关闭
+include_permissions_instructions = true
+
+# ── include_apps_instructions ──────────────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: true
+# 作用: 是否注入内置的 <apps_instructions> developer 指令块
+# 说明: 关闭后, 模型将看不到 ChatGPT Apps/Connectors 的默认使用说明
+include_apps_instructions = true
+
+# ── include_environment_context ────────────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: true
+# 作用: 是否注入 <environment_context> 用户上下文块
+# 说明: 这个上下文会告诉模型当前工作目录、shell、时间、时区等运行环境信息
+include_environment_context = true
+
+# ── instructions ───────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (使用 Codex 内置指令)
+# 作用: 覆盖系统指令
+# ⚠️ 警告: 强烈不建议修改, 偏离内置指令可能导致模型行为异常
+# 说明: 如需自定义, 建议用 model_instructions_file 指定文件路径
+# instructions = "Prioritize correctness and verifiability."
+
+# ── compact_prompt ─────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (使用 Codex 内置压缩提示)
+# 作用: 自定义历史记录压缩时使用的提示词
+# 说明: 当对话太长触发自动压缩时, 此提示词指导模型如何总结历史;
+#       也可以用 experimental_compact_prompt_file 指定文件路径
+# compact_prompt = "Compress history into actionable facts."
+
+# ── commit_attribution ─────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: "Codex <noreply@openai.com>"
+# 作用: 模型创建 git commit 时自动追加的 Co-authored-by 署名值
+# 说明:
+#   - 不设置: 使用默认值 "Codex <noreply@openai.com>"
+#   - 设为空字符串 "": 禁用自动署名
+#   - 设为自定义值: 使用你指定的署名 (仅填 "姓名 <邮箱>" 部分;
+#     "Co-authored-by:" 前缀由 Codex 自动添加, 请勿重复包含)
+# 注意: 需要 codex_git_commit 功能开启才有效
+commit_attribution = "Your Name <you@example.com>"
+
+
+# ── 路径配置 ────────────────────────────────────────────────────────────────
+
+# ── log_dir ────────────────────────────────────────────────────────────────
+# 类型: 路径 (可选)
+# 默认: $CODEX_HOME/log
+# 作用: 日志文件存储目录 (如 codex-tui.log)
+# log_dir = 'C:\Users\you\.codex\log'
+
+# ── sqlite_home ────────────────────────────────────────────────────────────
+# 类型: 路径 (可选)
+# 默认: $CODEX_SQLITE_HOME 环境变量; 若未设置则为 $CODEX_HOME
+# 作用: SQLite 状态数据库的存储目录
+# sqlite_home = 'C:\Users\you\.codex\sqlite'
+
+# ── model_catalog_json ─────────────────────────────────────────────────────
+# 类型: 路径 (可选)
+# 默认: 无 (使用 Codex 内置的模型目录)
+# 作用: 指定一个自定义的 JSON 模型目录文件, 替代内置目录
+# 说明: 文件格式需符合 ModelsResponse; 至少包含一个模型条目;
+#       仅在启动时加载一次; 适合需要自定义模型列表的场景
+# model_catalog_json = 'C:\Users\you\.codex\model_catalog.json'
+
+# ── model_instructions_file ────────────────────────────────────────────────
+# 类型: 路径 (可选)
+# 默认: 无
+# 作用: 指定一个文件, 其内容将覆盖 Codex 内置的模型指令
+# ⚠️ 警告: 强烈不建议使用, 可能导致模型性能下降
+# 迁移说明: 旧键 experimental_instructions_file 已弃用, 请改用本键
+# model_instructions_file = 'C:\Users\you\.codex\model_instructions.md'
+
+# ── experimental_compact_prompt_file ───────────────────────────────────────
+# 类型: 路径 (可选)
+# 默认: 无
+# 作用: 指定一个文件, 其内容覆盖历史压缩时使用的提示词
+# experimental_compact_prompt_file = 'C:\Users\you\.codex\compact_prompt.md'
+
+# ── zsh_path ───────────────────────────────────────────────────────────────
+# 类型: 路径 (可选)
+# 默认: 无
+# 作用: 指定 zsh 可执行文件的路径, 用于 zsh-exec-bridge 模式
+# 说明: 仅在 shell_zsh_fork 功能启用时有效
+# zsh_path = "/usr/bin/zsh"
+
+
+# ── 项目文档相关 ────────────────────────────────────────────────────────────
+
+# ── project_doc_max_bytes ──────────────────────────────────────────────────
+# 类型: 整数 (可选)
+# 默认: 32768 (32 KiB)
+# 作用: 嵌入到上下文中的项目文档 (AGENTS.md) 最大字节数
+# 说明: 如果你的 AGENTS.md 文件很大, 超过此限制的部分会被截断;
+#       增大此值可以让模型看到更多项目说明, 但会占用更多上下文空间
+project_doc_max_bytes = 262144
+
+# ── project_doc_fallback_filenames ─────────────────────────────────────────
+# 类型: 字符串数组 (可选)
+# 默认: [] (空数组)
+# 作用: 当找不到 AGENTS.md 时, 按顺序尝试的替代文件名
+# 说明: 搜索顺序: AGENTS.override.md → AGENTS.md → 这里列出的文件;
+#       适合项目没有 AGENTS.md 但有 README.md 的情况
+project_doc_fallback_filenames = ["AGENTS.md", "README.md", "CONTRIBUTING.md"]
+
+# ── project_root_markers ──────────────────────────────────────────────────
+# 类型: 字符串数组 (可选)
+# 默认: [".git"]
+# 作用: 用于识别 "项目根目录" 的标记文件/目录
+# 说明: Codex 会从当前目录向上遍历, 找到包含这些标记的目录作为项目根;
+#       项目根用于定位 .codex 文件夹、AGENTS.md 等
+project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
+
+
+# ── 实验性: 实时语音对话 ────────────────────────────────────────────────────
+
+# ── experimental_realtime_ws_backend_prompt ─────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 覆盖实时语音 WebSocket 会话的系统指令
+# 说明: 特殊值 "use-default" 表示使用内置默认指令
+# experimental_realtime_ws_backend_prompt = "use-default"
+
+# ── experimental_realtime_ws_base_url ──────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 覆盖实时语音 WebSocket 的连接地址 (不影响普通 HTTP 请求)
+# experimental_realtime_ws_base_url = "wss://api.openai.com/v1/realtime"
+
+# ── experimental_realtime_ws_model ─────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 指定实时语音对话使用的模型
+# experimental_realtime_ws_model = "gpt-realtime-1.5"
+
+# ── experimental_realtime_ws_startup_context ───────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 替换实时语音会话启动时注入的上下文; 设为空字符串 "" 可禁用
+# experimental_realtime_ws_startup_context = ""
+
+# ── experimental_realtime_start_instructions ──────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 替换 realtime 激活时注入到 developer 消息中的内置启动指令
+# experimental_realtime_start_instructions = ""
+
+# ── experimental_thread_store ──────────────────────────────────────────────
+# 类型: 对象 (可选)
+# 默认: { type = "local" }
+# 作用: 选择 app-server/thread-manager 使用的 thread store 实现
+# 可选值:
+#   { type = "local" } — 使用本地文件系统 / SQLite 存储
+#   { type = "remote", endpoint = "https://..." } — 使用远端 thread store 服务
+# 说明: 实验性配置; 普通 CLI / TUI 使用场景通常不需要设置
+# experimental_thread_store = { type = "remote", endpoint = "https://threads.example.internal" }
+
+# ── experimental_thread_store_endpoint ─────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 为 app-server 指定远端线程存储服务的地址
+# 说明: 兼容旧配置; 新配置优先使用上面的 experimental_thread_store 对象
+# experimental_thread_store_endpoint = "https://threads.example.internal"
+
+# ── experimental_thread_config_endpoint ────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 为 app-server 指定远端线程级配置加载服务的地址
+# 说明: 这是实验性配置, 主要用于集成方按 thread 返回模型、权限、profile、
+#       provider 等会话配置; 普通 CLI / TUI 使用场景通常不需要设置
+# experimental_thread_config_endpoint = "https://threads.example.internal/config"
+
+# ── [realtime] — 实时语音会话配置 ────────────────────────────────────────
+# 作用: 统一配置 realtime 会话的协议版本、会话类型、传输方式与语音
+# 说明: 从 v0.119.0 起, 默认体验切换为 v2 + WebRTC
+
+# [realtime]
+# version — 类型: 字符串 | 默认: "v2"
+# 可选值: "v1" | "v2"
+# 选择 realtime 会话协议版本
+# version = "v2"
+
+# type — 类型: 字符串 | 默认: "conversational"
+# 可选值: "conversational" | "transcription"
+# 选择会话类型: 对话模式或转录模式
+# type = "conversational"
+
+# transport — 类型: 字符串 | 默认: "webrtc"
+# 可选值: "webrtc" | "websocket"
+# 选择实时语音会话的底层传输方式;
+#   webrtc 是 v0.119.0 起的默认体验, 更适合原生双向语音交互
+# transport = "webrtc"
+
+# voice — 类型: 字符串 (可选)
+# 默认: 无 (使用内置默认语音)
+# 可选值:
+#   "alloy" | "arbor" | "ash" | "ballad" | "breeze" | "cedar" | "coral"
+#   "cove" | "echo" | "ember" | "juniper" | "maple" | "marin" | "sage"
+#   "shimmer" | "sol" | "spruce" | "vale" | "verse"
+# 选择实时语音输出的人声
+# voice = "cedar"
+
+
+# ── 实验性: 遗留开关 ────────────────────────────────────────────────────────
+
+# ── experimental_use_freeform_apply_patch ──────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: 无
+# 作用: 启用自由格式的 apply_patch 工具 (遗留开关, 现在建议用 [features] 代替)
+# experimental_use_freeform_apply_patch = true
+
+# ── experimental_use_unified_exec_tool ────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: 无
+# 作用: 启用统一的 exec 工具 (遗留开关, 现在建议用 [features] 代替)
+# experimental_use_unified_exec_tool = true
+
+
+# ── MCP OAuth 回调 ──────────────────────────────────────────────────────────
+
+# ── mcp_oauth_callback_port ────────────────────────────────────────────────
+# 类型: 整数 (0-65535) (可选)
+# 默认: 无 (使用操作系统分配的临时端口)
+# 作用: 为 MCP OAuth 登录的本地回调服务器指定固定端口
+# 说明: 某些环境下 (如防火墙限制) 可能需要固定端口
+# mcp_oauth_callback_port = 1455
+
+# ── mcp_oauth_callback_url ─────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无 (使用本地 127.0.0.1 地址)
+# 作用: 自定义 OAuth 授权请求中的 redirect_uri
+# 说明: 本地监听仍然绑定 127.0.0.1, 但 OAuth 流程会使用此 URL
+# mcp_oauth_callback_url = "http://127.0.0.1:1455/callback"
+
+
+# ── 本地/开源模型提供商 ─────────────────────────────────────────────────────
+
+# ── oss_provider ───────────────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 可选值:
+#   "ollama"   — 使用 Ollama 作为本地模型提供商
+#   "lmstudio" — 使用 LM Studio 作为本地模型提供商
+# 作用: 默认的开源/本地模型提供商
+# 说明: 配合 --local-provider CLI 参数或 TUI 中的 OSS 选择界面使用;
+#       选择后会自动保存到此配置中
+# oss_provider = "ollama"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 2 节: Auto-review 审批审查策略                  ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 为 approvals_reviewer = "auto_review" 提供额外策略说明
+# 说明: 这些文字会注入 Auto-reviewer 的审查提示中; 企业托管的 requirements
+#       policy 会覆盖这里的用户级 policy
+
+[auto_review]
+# policy — 类型: 字符串 (可选)
+# 追加给 Auto-reviewer 的审查策略; 只影响自动审批审查, 不影响人工审批
+# policy = "仅在命令意图清晰、风险可控且不会泄露敏感数据时批准。"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 3 节: 分析、反馈与音频                           ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
+# ── [analytics] — 数据分析 ──────────────────────────────────────────────────
+# 作用: 控制是否向 Codex 发送匿名使用数据, 帮助改进产品
+[analytics]
+# enabled — 类型: 布尔值 | 默认: true
+# 设为 false 可完全禁止发送任何分析数据
+enabled = true
+
+# ── [feedback] — 反馈收集 ──────────────────────────────────────────────────
+# 作用: 控制 Codex 是否弹出反馈收集界面
+[feedback]
+# enabled — 类型: 布尔值 | 默认: true
+# 设为 false 可禁用反馈收集流程
+enabled = true
+
+# ── [audio] — 实时语音设备 ──────────────────────────────────────────────────
+# 作用: 配置实时语音对话功能使用的音频设备
+# 前提: 需要启用 realtime_conversation 功能
+[audio]
+# microphone — 类型: 字符串 (可选) | 默认: 系统默认输入设备
+# 指定麦克风设备名称; 设为 "default" 表示使用系统默认;
+# 如果指定设备不存在, 会退回到系统默认设备并显示警告
+microphone = "default"
+
+# speaker — 类型: 字符串 (可选) | 默认: 系统默认输出设备
+# 指定扬声器/耳机设备名称; 行为同 microphone
+speaker = "default"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 4 节: 会话历史                                   ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
+[history]
+# persistence — 类型: 字符串 | 默认: "save-all" (省略整个 [history] 表时)
+# 说明: 如果写出 [history] 表, 源码要求显式设置本字段
+# 可选值:
+#   "save-all" — 保存所有会话历史到 ~/.codex/history.jsonl
+#   "none"     — 不保存任何历史记录 (关闭后之前的历史不会被自动删除)
+persistence = "save-all"
+
+# max_bytes — 类型: 整数 (可选) | 默认: 无 (无限)
+# 历史文件的最大大小 (字节); 超过后自动丢弃最早的条目
+# 10485760 = 10 MiB
+max_bytes = 10485760
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 5 节: Ghost Snapshot (撤销功能)                  ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 兼容旧版 ghost_snapshot 配置, 让旧 config.toml 仍可被加载
+# 说明: rust-v0.128.0 中撤销功能已不可用, 不再产生新的 Ghost Snapshot;
+#       本节配置只保留兼容读取能力, 通常不需要再设置。
+
+[ghost_snapshot]
+# disable_warnings — 类型: 布尔值 | 默认: false
+# 是否禁用所有 ghost snapshot 的警告信息 (如 "有大文件未被追踪")
+disable_warnings = false
+
+# ignore_large_untracked_dirs — 类型: 整数 | 默认: 200
+# 当未追踪目录中的文件数 >= 此值时, 跳过该目录不加入快照
+# 设为 0 可禁用此过滤 (不推荐, 可能导致快照很慢)
+ignore_large_untracked_dirs = 200
+
+# ignore_large_untracked_files — 类型: 整数 (字节) | 默认: 10485760 (10 MiB)
+# 未追踪文件大于此字节数时, 跳过不加入快照
+# 设为 0 可禁用此过滤
+ignore_large_untracked_files = 10485760
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 6 节: 通知与迁移记录                             ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 记录各种一次性提示是否已显示, 以及模型迁移的确认状态
+# 说明: 这些值通常由 Codex 自动写入, 一般不需要手动修改
+
+[notice]
+# hide_full_access_warning — 类型: 布尔值 | 默认: false
+# 是否已确认 danger-full-access 沙箱模式的风险警告
+hide_full_access_warning = false
+
+# hide_gpt-5.1-codex-max_migration_prompt — 类型: 布尔值 | 默认: false
+# 是否已确认 gpt-5.1-codex-max 模型迁移提示
+"hide_gpt-5.1-codex-max_migration_prompt" = true
+
+# hide_gpt5_1_migration_prompt — 类型: 布尔值 | 默认: false
+# 是否已确认 GPT-5.1 模型迁移提示
+hide_gpt5_1_migration_prompt = true
+
+# hide_rate_limit_model_nudge — 类型: 布尔值 | 默认: false
+# 是否隐藏 "遇到速率限制时建议切换模型" 的提示
+hide_rate_limit_model_nudge = false
+
+# hide_world_writable_warning — 类型: 布尔值 | 默认: false
+# 是否已确认 Windows 上目录权限过于开放的警告
+hide_world_writable_warning = true
+
+# fast_default_opt_out — 类型: 布尔值 | 默认: false
+# 是否已退出 Codex 托管的 fast 默认服务层
+# 说明: 通常由产品内提示自动写入; 需要手动固定服务层时优先设置顶层 service_tier
+fast_default_opt_out = false
+
+# model_migrations — 类型: 键值对 | 默认: {} (空)
+# 已确认的模型迁移映射 (旧模型名 → 新模型名)
+model_migrations = { "gpt-5.3-codex" = "gpt-5.4" }
+
+# ── [notice.external_config_migration_prompts] — 外部配置迁移提示状态 ───────
+# 作用: 记录“是否显示将外部 Agent 配置迁移到 Codex”的提示状态
+# 说明: 这部分通常由 Codex 自动维护, 一般不需要手动编辑
+#
+# [notice.external_config_migration_prompts]
+# home — 类型: 布尔值 (可选)
+# 是否隐藏 home 级别的外部配置迁移提示
+# home = true
+#
+# home_last_prompted_at — 类型: 整数 (Unix 秒级时间戳) (可选)
+# 上次显示 home 级别迁移提示的时间
+# home_last_prompted_at = 1760000000
+#
+# [notice.external_config_migration_prompts.projects]
+# 类型: 键值对 | key 为项目路径, value 为布尔值
+# 是否对特定项目隐藏迁移提示
+# 'C:\Users\you\workspace\demo' = true
+#
+# [notice.external_config_migration_prompts.project_last_prompted_at]
+# 类型: 键值对 | key 为项目路径, value 为 Unix 秒级时间戳
+# 记录特定项目上次显示迁移提示的时间
+# 'C:\Users\you\workspace\demo' = 1760000000
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 7 节: Windows 沙箱                               ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 配置 Windows 平台上的沙箱实现方式
+
+[windows]
+# sandbox — 类型: 字符串 | 默认: 无 (Disabled, 不启用 Windows 沙箱)
+# 可选值:
+#   "elevated"   — 提权沙箱: 首次运行时需要管理员权限来创建受限沙箱用户并配置
+#                  操作系统级 ACL; 安全性最高; 设置完成后自动记录在配置中
+#   "unelevated" — 非提权沙箱: 使用受限进程令牌 (restricted token) 实现沙箱,
+#                  无需管理员权限; 安全性稍低但更易部署
+# 说明: 仅在 Windows 上生效; macOS/Linux 使用其他沙箱机制
+sandbox = "elevated"
+
+# sandbox_private_desktop — 类型: 布尔值 | 默认: true
+# 是否在 Windows 提权沙箱中使用私有桌面
+# 设为 false 时, 沙箱进程将在 Winsta0\Default 桌面上运行而非私有桌面
+# sandbox_private_desktop = true
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 8 节: 工作区写入沙箱配置                         ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 当 sandbox_mode = "workspace-write" 时, 定制沙箱的详细行为
+# 说明: 仅在 workspace-write 模式下生效; 其他沙箱模式忽略此配置
+
+# ── default_permissions ──────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 指定默认启用的权限 profile
+# 说明: 这是顶层键, 必须写在表外; 名称以 ":" 开头时引用内置 profile,
+#       其他名称引用第 13 节 [permissions.<名称>] 中定义的 profile。
+# 常用内置值:
+#   ":workspace"         — workspace-write 权限
+#   ":read-only"         — 只读权限
+#   ":danger-no-sandbox" — 无沙箱限制, 风险最高
+# 运行时会把当前权限 profile 作为规范权限视图传递给 TUI 会话、子回合、
+# MCP sandbox state、shell 提权和 app-server API。
+# 示例:
+# default_permissions = ":workspace"
+# 或引用第 13 节中定义的 "dev" profile:
+# default_permissions = "dev"
+
+[sandbox_workspace_write]
+# network_access — 类型: 布尔值 | 默认: false
+# 是否允许在 workspace-write 沙箱中进行网络访问
+# 设为 true 后模型可以联网 (如 npm install, git clone 等)
+network_access = false
+
+# writable_roots — 类型: 路径数组 | 默认: [] (空数组)
+# 除当前工作目录外, 额外允许写入的目录路径
+# 说明: 当前工作目录 (cwd) 始终可写, 这里可以添加其他需要写入的目录
+# 例如: 如果你在 A 目录工作但需要写入 B 目录的文件
+writable_roots = ['C:\Users\you\workspace']
+
+# exclude_slash_tmp — 类型: 布尔值 | 默认: false
+# 是否将 /tmp 从可写路径中排除 (仅 UNIX 系统)
+# 默认 /tmp 是可写的; 设为 true 后 /tmp 变为只读
+exclude_slash_tmp = false
+
+# exclude_tmpdir_env_var — 类型: 布尔值 | 默认: false
+# 是否将 $TMPDIR 指向的目录从可写路径中排除
+# 默认用户临时目录是可写的; 设为 true 后变为只读
+exclude_tmpdir_env_var = false
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 9 节: Shell 环境变量策略                         ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 控制模型执行 shell 命令时可以 "看到" 哪些环境变量
+# 说明: 这对安全性很重要 — 你不希望模型看到包含密码或 API Key 的环境变量
+# 过滤算法按以下顺序执行: inherit → ignore_default_excludes → exclude → set → include_only
+
+[shell_environment_policy]
+# inherit — 类型: 字符串 | 默认: "all"
+# 可选值:
+#   "all"  — 起始点为完整的父进程环境 (包含所有环境变量)
+#   "core" — 起始点仅包含核心变量: HOME, LOGNAME, PATH, SHELL, USER, USERNAME,
+#            TMPDIR, TEMP, TMP (Windows 不区分大小写)
+#   "none" — 起始点为空环境 (最安全但可能导致命令找不到)
+inherit = "all"
+
+# ignore_default_excludes — 类型: 布尔值 | 默认: true
+# 当设为 false 时, 自动排除名称中包含 KEY、SECRET、TOKEN 的变量 (不区分大小写)
+# 当设为 true (默认) 时, 不做任何自动过滤
+# 说明: 建议设为 false 以获得更好的安全性
+ignore_default_excludes = false
+
+# exclude — 类型: 字符串数组 | 默认: [] (空数组)
+# 使用通配符模式排除匹配的环境变量 (不区分大小写)
+# 匹配的变量会被移除; 支持 * 和 ? 通配符
+exclude = ['*secret*', '*token*', '*password*', '*key*']
+
+# set — 类型: 键值对 | 默认: {} (空)
+# 强制设置的环境变量 (在 exclude 之后应用, 因此不会被过滤掉)
+set = { LANG = "en_US.UTF-8" }
+
+# include_only — 类型: 字符串数组 | 默认: [] (空数组)
+# 如果非空, 只保留匹配这些通配符模式的变量 (最终过滤)
+# 说明: 这是最严格的过滤, 只有名称匹配的变量才能留下;
+#       CODEX_THREAD_ID 始终会被注入, 不受此过滤影响
+# include_only = ['PATH', 'HOME', 'USERPROFILE', 'TMP', 'TEMP', 'SystemRoot']
+
+# experimental_use_profile — 类型: 布尔值 | 默认: false
+# 是否在执行命令时加载 shell profile (如 .bashrc, .zshrc)
+# 设为 true 相当于使用登录 shell 的方式运行命令
+experimental_use_profile = false
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 10 节: 记忆系统                                  ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: Codex 的 "记忆" 功能可以从过去的会话中提取经验, 并在未来的会话中注入
+# 说明: 类似于 "长期记忆", 让 Codex 记住你的偏好和项目知识
+# 前提: 需要启用 [features] memories = true
+
+[memories]
+# generate_memories — 类型: 布尔值 | 默认: true
+# 是否在新会话结束后自动提取记忆
+# 设为 false 后新的会话不会产生记忆 (但已有的记忆仍然可用)
+generate_memories = true
+
+# use_memories — 类型: 布尔值 | 默认: true
+# 是否在每次对话中注入已有的记忆
+# 设为 false 后 Codex 不会使用任何记忆来辅助回答
+use_memories = true
+
+# disable_on_external_context — 类型: 布尔值 | 默认: false
+# 当设为 true 时, 如果会话中使用了 MCP 工具或网络搜索,
+# 该会话会被标记为 "污染", 不会从中提取记忆
+# 原因: 外部数据可能引入噪音或不准确的信息
+disable_on_external_context = false
+
+# extract_model — 类型: 字符串 (可选) | 默认: 使用系统默认模型
+# 指定用于从会话中提取记忆的模型
+# extract_model = "gpt-5.4"
+
+# consolidation_model — 类型: 字符串 (可选) | 默认: 使用系统默认模型
+# 指定用于合并/整理记忆的模型
+# consolidation_model = "gpt-5.4"
+
+# max_raw_memories_for_consolidation — 类型: 整数 | 默认: 256 | 最大: 4096
+# 参与全局整理的原始记忆最大条数
+# 越大意味着整理时考虑的记忆越多, 但消耗也越大
+max_raw_memories_for_consolidation = 256
+
+# max_rollout_age_days — 类型: 整数 | 默认: 10 | 范围: 0-90
+# 用于提取记忆的会话最大年龄 (天)
+# 超过此天数的会话不再被用来提取新记忆
+max_rollout_age_days = 10
+
+# max_rollouts_per_startup — 类型: 整数 | 默认: 2 | 最大: 128
+# 每次启动时最多处理的会话候选数 (用于提取记忆)
+max_rollouts_per_startup = 2
+
+# max_unused_days — 类型: 整数 | 默认: 30 | 范围: 0-365
+# 记忆最后使用距今超过此天数后, 不再被优先选中
+max_unused_days = 30
+
+# min_rollout_idle_hours — 类型: 整数 | 默认: 6 | 范围: 1-48
+# 会话结束后至少等待多少小时才开始提取记忆
+# 建议 >= 12, 避免提取进行中的会话
+min_rollout_idle_hours = 6
+
+# min_rate_limit_remaining_percent — 类型: 整数 | 默认: 25 | 范围: 0-100
+# 启动时运行记忆提取前, Codex 速率限制窗口必须至少剩余的百分比
+# 设置较高可避免记忆任务消耗紧张的额度; 设置 0 表示不因剩余额度跳过
+min_rate_limit_remaining_percent = 25
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 11 节: 工具配置                                  ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 控制模型可使用的内置工具
+
+[tools]
+# view_image — 类型: 布尔值 (可选) | 默认: 无 (由系统决定)
+# 是否启用 "查看图片" 工具, 让模型能看到图片内容
+view_image = true
+
+# ── [tools.web_search] — 网络搜索工具配置 ──────────────────────────────────
+# 类型: 对象 (可选) | 对应结构体: WebSearchToolConfig
+# 作用: 配置搜索工具的行为细节 (搜索范围、地理位置等)
+# 说明: 这里的 web_search 是工具级别的配置对象,
+#       不要和顶层的 web_search = "cached" 混淆 —
+#       顶层的 web_search 控制"是否启用及模式", 这里控制"怎么搜"
+
+# [tools.web_search]
+# context_size — 类型: 字符串 (可选) | 可选值: "low" | "medium" | "high"
+# 搜索结果的上下文大小
+# context_size = "medium"
+
+# allowed_domains — 类型: 字符串数组 (可选) | 默认: 无 (不限)
+# 搜索时只返回这些域名的结果
+# allowed_domains = ["docs.python.org", "stackoverflow.com"]
+
+# [tools.web_search.location]
+# 搜索的地理位置偏好 (影响搜索结果的地域相关性)
+# country = "US"
+# region = "California"
+# city = "San Francisco"
+# timezone = "America/Los_Angeles"
+
+
+# ── [tool_suggest] — 可建议安装的工具来源 ──────────────────────────────────
+# 类型: 对象 (可选) | 对应结构体: ToolSuggestConfig
+# 作用: 为 tool_suggest 工具追加“允许被建议安装”的 Connector / Plugin 候选项
+# 前提: 需要 [features] tool_suggest = true; 若 [features] apps / plugins 被关闭,
+#       对应类型的候选项不会生效
+
+# [tool_suggest]
+# discoverables — 类型: 对象数组 | 默认: []
+# 每个条目:
+#   type — "connector" | "plugin"
+#   id   — 候选项 ID
+# 说明:
+#   - connector 类型的 id 使用连接器 ID, 如 "google_drive"
+#   - plugin 类型的 id 使用插件 ID, 如 "sample@openai-curated"
+#   - 纯空白 id 在加载配置时会被忽略
+# discoverables = [
+#   { type = "connector", id = "google_drive" },
+#   { type = "plugin", id = "sample@openai-curated" },
+# ]
+#
+# disabled_tools — 类型: 对象数组 | 默认: []
+# 作用: 记录“不要再建议安装”的 Connector / Plugin; 通常由 Codex 在用户选择
+#       永久拒绝工具建议时自动写入, 也可以手动维护
+# disabled_tools = [
+#   { type = "connector", id = "connector_calendar" },
+#   { type = "plugin", id = "slack@openai-curated" },
+# ]
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 12 节: TUI (终端界面) 配置                       ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+
+[tui]
+# alternate_screen — 类型: 字符串 | 默认: "auto"
+# 可选值:
+#   "auto"   — 自动判断: 在 Zellij 终端中禁用 (因为 Zellij 的备用屏幕不支持
+#              滚动回看), 其他终端中启用
+#   "always" — 始终使用备用屏幕 (经典行为)
+#   "never"  — 从不使用备用屏幕 (内联模式, 始终保留滚动历史)
+# 说明: 备用屏幕是终端的一个 "干净画布", 退出后恢复之前的内容;
+#       也可以用 --no-alt-screen 命令行参数来覆盖
+alternate_screen = "auto"
+
+# animations — 类型: 布尔值 | 默认: true
+# 是否启用 TUI 动画效果 (欢迎画面、闪烁效果、加载动画等)
+animations = true
+
+# notification_condition — 类型: 字符串 | 默认: "unfocused"
+# 可选值:
+#   "unfocused" — 仅当终端失去焦点时发送通知
+#   "always"    — 无论终端是否聚焦都发送通知
+# 作用: 控制 TUI 通知在什么焦点状态下触发
+notification_condition = "unfocused"
+
+# notification_method — 类型: 字符串 | 默认: "auto"
+# 可选值:
+#   "auto" — 自动检测最佳方式
+#   "osc9" — 使用 OSC-9 转义序列 (Warp、iTerm2 等终端支持)
+#   "bel"  — 使用终端响铃符 (\a)
+# 作用: 配置 TUI 使用什么方式发出终端通知
+notification_method = "auto"
+
+# notifications — 类型: 布尔值 或 字符串数组 | 默认: true
+# 可选值:
+#   true   — 启用通知
+#   false  — 禁用通知
+#   ["cmd", "arg"] — 使用自定义命令发送通知
+# 说明: 是否真正发出通知还取决于上面的 notification_condition;
+#       如果设为命令数组, Codex 会执行该命令来完成通知
+notifications = true
+
+# show_tooltips — 类型: 布尔值 | 默认: true
+# 是否在启动时显示快捷键提示
+show_tooltips = true
+
+# status_line — 类型: 字符串数组 (可选)
+# 默认: ["model-with-reasoning", "current-dir"]
+# 作用: TUI 底部状态栏显示的信息项 (按顺序排列)
+# 可用项:
+#   "model"                — 当前模型名称 (也接受旧别名 model-name)
+#   "model-with-reasoning" — 模型名称 + 推理等级
+#   "current-dir"          — 当前工作目录
+#   "project-name"         — 项目名 (也接受旧别名 project / project-root)
+#   "git-branch"           — 当前 Git 分支 (仅在 Git 仓库中显示)
+#   "run-state"            — 紧凑状态文本 (也接受旧别名 status)
+#   "context-used"         — 已使用的上下文百分比 (兼容旧别名 context-usage)
+#   "context-remaining"    — 剩余的上下文百分比
+#   "context-window-size"  — 上下文窗口总大小
+#   "used-tokens"          — 当前会话累计使用的 token 数
+#   "total-input-tokens"   — 总输入 token 数
+#   "total-output-tokens"  — 总输出 token 数
+#   "five-hour-limit"      — 5 小时配额限制 (仅在可用时显示)
+#   "weekly-limit"         — 每周配额限制 (仅在可用时显示)
+#   "codex-version"        — Codex CLI 版本号
+#   "session-id"           — 当前会话 ID
+#   "fast-mode"            — Fast 模式状态
+#   "thread-title"         — 当前线程标题 (仅在用户改名后显示)
+#   "task-progress"        — 最近一次 update_plan 的任务进度 (可用时显示)
+status_line = ["model-with-reasoning", "context-used", "current-dir"]
+
+# terminal_title — 类型: 字符串数组 (可选)
+# 默认: ["activity", "project-name"]
+# 作用: 配置终端窗口/标签页标题中显示的信息项 (按顺序排列)
+# 可用项:
+#   "app-name"             — Codex 应用名
+#   "project-name"         — 项目名 (也接受旧别名 project)
+#   "current-dir"          — 当前工作目录
+#   "activity"             — 运行时动画指示器; 阻塞等待用户时显示 action-required
+#                             也接受旧别名 spinner
+#   "run-state"            — 紧凑状态文本 (也接受旧别名 status)
+#   "thread-title"         — 当前线程标题 (也接受旧别名 thread)
+#   "git-branch"           — 当前 Git 分支 (可用时显示)
+#   "context-used"         — 已使用的上下文百分比 (兼容旧别名 context-usage)
+#   "context-remaining"    — 剩余的上下文百分比
+#   "five-hour-limit"      — 5 小时配额限制 (仅在可用时显示)
+#   "weekly-limit"         — 每周配额限制 (仅在可用时显示)
+#   "codex-version"        — Codex CLI 版本号
+#   "used-tokens"          — 当前会话累计使用的 token 数
+#   "total-input-tokens"   — 总输入 token 数
+#   "total-output-tokens"  — 总输出 token 数
+#   "session-id"           — 当前会话 ID
+#   "fast-mode"            — Fast 模式状态
+#   "model"                — 当前模型名 (也接受旧别名 model-name)
+#   "model-with-reasoning" — 模型名称 + 推理等级
+#   "task-progress"        — 最近一次 update_plan 的任务进度 (可用时显示)
+terminal_title = ["activity", "project-name"]
+
+# theme — 类型: 字符串 (可选) | 默认: 无 (自动检测明/暗主题)
+# 代码高亮的配色主题 (kebab-case 格式)
+# 说明: 不设置时 Codex 会自动检测终端的明暗模式;
+#       可以用 /theme 命令在 TUI 中切换, 或查看 $CODEX_HOME/themes 自定义主题
+# 常用主题: "catppuccin-latte", "catppuccin-mocha", "github-dark", "github-light"
+theme = "catppuccin-latte"
+
+# terminal_resize_reflow_max_rows — 类型: 整数 (可选) | 默认: 无
+# 作用: 当终端尺寸变化并重新排版 transcript 时, 限制最多回放的已渲染行数
+# 说明: 省略时使用 Codex 的终端相关默认值; 设置为 0 表示保留所有已渲染行
+terminal_resize_reflow_max_rows = 9000
+
+# model_availability_nux — 类型: 键值对 (可选) | 默认: {} (空)
+# 记录模型可用性引导已显示的次数 (由 Codex 自动管理, 一般不需要手动修改)
+# model_availability_nux = {}
+
+# ── [tui.keymap] — TUI 快捷键覆盖 ─────────────────────────────────────────
+# 作用: 覆盖 TUI 内置快捷键; 缺失项继承内置默认值
+# 写法:
+#   - 单个按键: action = "ctrl-a"
+#   - 多个按键: action = ["ctrl-a", "alt-a"]
+#   - 空数组: action = [] 表示显式解绑, 不再回退到全局或内置默认值
+# 支持按键:
+#   普通 ASCII 字符、f1-f12、enter、tab、backspace、esc、delete、up/down/left/right、
+#   home/end、page-up/page-down、space; 修饰键写在前面: ctrl-、alt-、shift-
+#
+# 常用上下文:
+#   global   — 全局动作: open_transcript, open_external_editor, copy,
+#              clear_terminal, submit, queue, toggle_shortcuts
+#   chat     — 聊天区动作: increase_reasoning_effort, decrease_reasoning_effort,
+#              edit_queued_message
+#   composer — 输入框动作: submit, queue, toggle_shortcuts,
+#              history_search_previous, history_search_next
+#   editor   — 文本编辑动作: insert_newline, move_left/right/up/down,
+#              move_word_left/right, move_line_start/end, delete_backward/forward,
+#              delete_backward_word/forward_word, kill_line_start/end, yank
+#   pager    — 覆盖层滚动动作: scroll_up/down, page_up/down, half_page_up/down,
+#              jump_top/bottom, close, close_transcript
+#   list     — 列表选择动作: move_up, move_down, accept, cancel
+#   approval — 审批弹窗动作: open_fullscreen, open_thread, approve,
+#              approve_for_session, approve_for_prefix, deny, decline, cancel
+#
+# [tui.keymap.global]
+# open_transcript = "ctrl-t"
+# copy = ["ctrl-y", "alt-y"]
+#
+# [tui.keymap.composer]
+# submit = "enter"
+# queue = "alt-enter"
+# toggle_shortcuts = "ctrl-/"
+#
+# [tui.keymap.editor]
+# insert_newline = "shift-enter"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 13 节: 命名权限配置文件与网络代理                 ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 定义命名权限配置文件 (permission profiles), 通过 default_permissions 引用
+# 说明: [permissions] 表使用扁平映射结构 — 每个 key 都是一个自定义 profile 名称,
+#       对应一个包含 filesystem 和 network 子表的权限配置。内置 profile 使用
+#       ":workspace"、":read-only"、":danger-no-sandbox" 等名称, 不需要在这里定义。
+#       权限 profile 不只用于本地沙箱构建, 也会在 TUI 会话恢复、用户回合、
+#       MCP sandbox state、shell 提权和 app-server API 中往返传递。
+#
+# 结构:
+#   [permissions.<profile-name>]
+#   [permissions.<profile-name>.filesystem]
+#     可以为每个路径设置: "read" | "write" | "none"
+#     特殊路径:
+#       ":root"          — 文件系统根目录
+#       ":minimal"       — 最小路径集
+#       ":project_roots" — 所有项目根目录 (支持子路径作用域)
+#       ":tmpdir"        — 临时目录
+#   [permissions.<profile-name>.network]
+#     控制网络代理行为 (字段见下方示例)
+#
+# 使用: 在顶层设置 default_permissions = "<profile-name>" 来激活
+
+# ── 示例: 标准开发权限配置 ────────────────────────────────────────────────
+# [permissions.dev]
+# [permissions.dev.filesystem]
+# ":root" = "read"
+# ":project_roots" = "write"
+# ":tmpdir" = "write"
+#
+# [permissions.dev.network]
+# enabled = true
+# mode = "limited"
+# [permissions.dev.network.domains]
+# "api.openai.com" = "allow"
+# "pypi.org" = "allow"
+
+# ── 示例: 只读审计权限 ───────────────────────────────────────────────────
+# [permissions.audit]
+# [permissions.audit.filesystem]
+# ":root" = "read"
+# ":project_roots" = "read"
+#
+# [permissions.audit.network]
+# enabled = false
+
+# ── 示例: 带子路径作用域的文件系统权限 ────────────────────────────────────
+# [permissions.scoped]
+# [permissions.scoped.filesystem]
+# ":minimal" = "read"
+# [permissions.scoped.filesystem.":project_roots"]
+# "." = "write"
+# "build" = "write"
+#
+# glob_scan_max_depth — 类型: 正整数 (可选) | 最小: 1
+#   限制 deny-read glob 在非 macOS 平台上的预展开深度
+#   说明: 当你使用 `"**/*.env" = "none"` 这类规则时, 可设置此值来限制扫描开销,
+#         并避免 Linux 因无界 `**` 展开而给出警告
+#
+# [permissions.globbed]
+# [permissions.globbed.filesystem]
+# glob_scan_max_depth = 3
+# [permissions.globbed.filesystem.":project_roots"]
+# "." = "write"
+# "**/*.env" = "none"
+
+# ── network 子表的完整字段参考 ────────────────────────────────────────────
+# 以下字段可以在任何 [permissions.<profile>.network] 中设置:
+#
+# enabled — 类型: 布尔值 | 默认: false
+#   总开关: 是否启动托管的网络代理
+#   设为 true 后沙箱中的进程可以通过代理进行网络访问
+#
+# mode — 类型: 字符串 | 默认: "full"
+#   可选值:
+#     "full"    — 允许所有 HTTP 方法; HTTPS CONNECT 请求直接隧道传输 (不做中间人)
+#     "limited" — 仅允许 GET/HEAD/OPTIONS; HTTPS CONNECT 被阻止; SOCKS5 被禁用
+#   说明: limited 模式更安全, 只允许只读的网络请求
+#
+# proxy_url — 类型: 字符串 | 默认: "http://127.0.0.1:3128"
+#   托管 HTTP 代理的监听地址
+#
+# socks_url — 类型: 字符串 | 默认: "http://127.0.0.1:8081"
+#   托管 SOCKS5 代理的监听地址
+#
+# enable_socks5 — 类型: 布尔值 | 默认: true
+#   是否启用 SOCKS5 代理支持
+#
+# enable_socks5_udp — 类型: 布尔值 | 默认: true
+#   是否启用 SOCKS5 UDP 中继
+#
+# allow_upstream_proxy — 类型: 布尔值 | 默认: true
+#   是否允许托管代理将请求转发到上游代理 (如企业代理)
+#
+# allow_local_binding — 类型: 布尔值 | 默认: false
+#   是否允许沙箱进程绑定本地端口 (监听连接)
+#
+# dangerously_allow_non_loopback_proxy — 类型: 布尔值 | 默认: false
+#   ⚠️ 危险: 允许 HTTP/SOCKS 代理绑定非 loopback 地址 (如 0.0.0.0)
+#   默认强制绑定 127.0.0.1; 开启后代理可被局域网访问
+#
+# dangerously_allow_all_unix_sockets — 类型: 布尔值 | 默认: false
+#   ⚠️ 危险: 允许连接所有 Unix 域套接字 (绕过 unix_sockets 白名单)
+#
+# [permissions.<profile>.network.domains]
+# 类型: 键值对 | key 为域名/模式, value 为 "allow" | "deny"
+# 示例:
+#   [permissions.dev.network.domains]
+#   "api.openai.com" = "allow"
+#   "*.internal.example.com" = "deny"
+#
+# [permissions.<profile>.network.unix_sockets]
+# 类型: 键值对 | key 为绝对路径, value 为 "allow" | "none"
+# 示例:
+#   [permissions.dev.network.unix_sockets]
+#   "/tmp/example.sock" = "allow"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 14 节: 功能标志 (Feature Flags)                  ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 开启或关闭 Codex 的各项功能
+# 说明: 每个标志的状态有 5 种生命周期阶段:
+#   - Stable (稳定)       — 可以放心使用
+#   - Experimental (实验) — 在 /experimental 菜单中可选, 基本可用但可能有变动
+#   - UnderDevelopment (开发中) — 功能尚未完成, 可能不稳定
+#   - Deprecated (已弃用) — 已被其他机制替代, 后续版本可能移除
+#   - Removed (已移除)    — 标志仍存在但已无效 (保留用于兼容性)
+
+[features]
+
+# ── 稳定功能 (Stable) ──────────────────────────────────────────────────────
+
+# shell_tool — 默认: true | 稳定
+# 启用默认的 shell 工具, 让模型能够执行命令
+shell_tool = true
+
+# unified_exec — 默认: true (非Windows) / false (Windows) | 稳定
+# 别名: experimental_use_unified_exec_tool
+# 使用统一的 PTY-backed 执行工具来替代多个 shell 工具
+# 说明: 提供更好的终端模拟, 支持交互式命令
+unified_exec = true
+
+# shell_snapshot — 默认: true | 稳定
+# 启用 shell 快照 (环境变量捕获)
+# 说明: 在命令执行后捕获 shell 环境状态, 下次执行时恢复
+shell_snapshot = true
+
+# personality — 默认: true | 稳定
+# 启用性格选择功能, 在 TUI 中可选择 none/friendly/pragmatic
+personality = true
+
+# fast_mode — 默认: true | 稳定
+# 启用 Fast 模式, 在 TUI 中可切换
+fast_mode = true
+
+# enable_request_compression — 默认: true | 稳定
+# 使用 zstd 压缩请求体, 减少网络传输
+enable_request_compression = true
+
+# skill_mcp_dependency_install — 默认: true | 稳定
+# 当 Skill 需要的 MCP 依赖缺失时, 提示安装
+skill_mcp_dependency_install = true
+
+# multi_agent — 默认: true | 稳定
+# 启用多 Agent 并行协作 (别名: collab)
+# 说明: 允许模型派生子 Agent 来并行处理复杂任务
+multi_agent = true
+
+# apps — 默认: true | 稳定
+# 启用 ChatGPT Apps/Connectors 集成 (别名: connectors)
+# 说明: 允许通过 $ 符号引用外部应用
+apps = true
+
+# tool_search — 默认: true | 稳定
+# 为 Apps 暴露 tool_search 工具, 让模型按需发现和延迟加载可用工具
+tool_search = true
+
+# tool_suggest — 默认: true | 稳定
+# 启用工具建议功能, 当模型缺少所需工具时自动推荐
+tool_suggest = true
+
+# plugins — 默认: true | 稳定
+# 启用插件系统
+plugins = true
+
+# in_app_browser — 默认: true | 稳定
+# 启用 Codex 内置浏览器能力
+in_app_browser = true
+
+# browser_use — 默认: true | 稳定
+# 启用 browser-use 浏览器自动化工具
+browser_use = true
+
+# computer_use — 默认: true | 稳定
+# 启用计算机使用类工具的发现与调用支持
+computer_use = true
+
+# image_generation — 默认: true | 稳定
+# 启用内置图片生成工具
+image_generation = true
+
+# tool_call_mcp_elicitation — 默认: true | 稳定
+# 通过 MCP elicitation 路径路由 MCP 工具审批提示
+tool_call_mcp_elicitation = true
+
+# codex_hooks — 默认: true | 稳定
+# 启用生命周期 hooks, 支持 config.toml 内联配置和 hooks.json 文件
+codex_hooks = true
+
+# guardian_approval — 默认: true | 稳定
+# 启用 Auto-review 审批审查能力; approvals_reviewer = "auto_review" 会使用它
+guardian_approval = true
+
+# workspace_dependencies — 默认: true | 稳定
+# 启用 workspace 级依赖支持
+# 说明: 允许 Codex 感知并使用工作区声明的依赖关系
+workspace_dependencies = true
+
+# unavailable_dummy_tools — 默认: true | 稳定
+# 为历史对话中已不存在的工具调用暴露占位工具, 便于恢复旧上下文
+unavailable_dummy_tools = true
+
+# ── 实验功能 (Experimental) ────────────────────────────────────────────────
+
+# memories — 默认: false | 实验 (别名: memory_tool)
+# 启用记忆系统 (从会话中提取经验, 在未来会话中注入)
+memories = true
+
+# external_migration — 默认: false | 实验
+# 当检测到可迁移的外部 Agent 配置时, 在启动时显示迁移提示
+# external_migration = false
+
+# prevent_idle_sleep — 默认: false | 实验 (macOS/Linux/Windows)
+# 防止系统在 Codex 活跃时进入休眠
+prevent_idle_sleep = true
+
+# terminal_resize_reflow — 默认: true | 实验
+# 当终端宽度变化时重新排版 Codex 管理的 transcript scrollback
+# 细节可用 [tui] terminal_resize_reflow_max_rows 控制
+terminal_resize_reflow = true
+
+# ── 开发中功能 (Under Development) ─────────────────────────────────────────
+
+# code_mode — 默认: false | 开发中
+# 启用基于 Node 内置 vm 运行时的最小 JavaScript 模式
+# code_mode = false
+
+# code_mode_only — 默认: false | 开发中
+# 仅向模型暴露 code_mode 工具 (需要 code_mode 已启用)
+# code_mode_only = false
+
+# shell_zsh_fork — 默认: false | 开发中
+# 将 shell 执行路由到 zsh exec bridge
+# shell_zsh_fork = false
+
+# artifact — 默认: false | 开发中
+# 启用原生 artifact 工具
+# artifact = false
+
+# codex_git_commit — 默认: false | 开发中
+# 启用 git 提交署名指导 (配合 commit_attribution 使用)
+codex_git_commit = true
+
+# chronicle — 默认: false | 开发中 (历史别名: telepathy)
+# 启用 Chronicle sidecar, 以被动屏幕上下文的形式扩展记忆能力
+# chronicle = false
+
+# multi_agent_v2 — 默认: false | 开发中
+# 启用新一代多 Agent 协作实现
+# 说明: 除了布尔值, 也可以写成 [features.multi_agent_v2] 对象,
+#       细化 spawn_agent 的提示文案与返回元信息
+# multi_agent_v2 = false
+#
+# [features.multi_agent_v2]
+# enabled — 类型: 布尔值 | 默认: false
+# 是否启用 Multi-Agent V2
+# enabled = true
+#
+# max_concurrent_threads_per_session — 类型: 整数 | 默认: 4 | 最小: 1
+# 单个会话中允许同时打开的 Agent 线程总数; 启用 multi_agent_v2 时,
+# [agents] max_threads 不能再设置, 会由此值推导
+# max_concurrent_threads_per_session = 4
+#
+# min_wait_timeout_ms — 类型: 整数 | 默认: 10000 | 范围: 1-3600000
+# wait_agent 等待子 Agent 时允许的最小超时时间 (毫秒)
+# min_wait_timeout_ms = 10000
+#
+# usage_hint_enabled — 类型: 布尔值 | 默认: true
+# 是否在 spawn_agent / send_message 等工具说明中展示用法提示
+# usage_hint_enabled = true
+#
+# usage_hint_text — 类型: 字符串 (可选)
+# 自定义追加到子 Agent 相关工具说明中的提示文本
+# usage_hint_text = "优先把可并行、非阻塞主路径的子任务委派给子 Agent。"
+#
+# root_agent_usage_hint_text — 类型: 字符串 (可选)
+# 仅追加到根 Agent 看到的 Multi-Agent V2 用法提示
+# root_agent_usage_hint_text = "根 Agent 保持主路径推进, 只委派清晰边界的并行任务。"
+#
+# subagent_usage_hint_text — 类型: 字符串 (可选)
+# 仅追加到子 Agent 看到的 Multi-Agent V2 用法提示
+# subagent_usage_hint_text = "子 Agent 只处理被分配的范围, 不要改动其他人的文件。"
+#
+# hide_spawn_agent_metadata — 类型: 布尔值 | 默认: false
+# 是否隐藏 spawn_agent 返回中的 agent 类型 / 模型 / reasoning 元信息
+# hide_spawn_agent_metadata = false
+
+# child_agents_md — 默认: false | 开发中
+# 为子 Agent 注入额外的 AGENTS.md 指导
+# child_agents_md = false
+
+# apply_patch_freeform — 默认: false | 开发中 (别名: include_apply_patch_tool, experimental_use_freeform_apply_patch)
+# 包含自由格式的 apply_patch 工具
+apply_patch_freeform = true
+
+# apply_patch_streaming_events — 默认: false | 开发中
+# 在生成 apply_patch 输入时流式展示结构化进度
+# apply_patch_streaming_events = false
+
+# exec_permission_approvals — 默认: false | 开发中 (别名: request_permissions)
+# 允许在沙箱中动态请求额外的文件系统权限审批
+# exec_permission_approvals = false
+
+# request_permissions_tool — 默认: false | 开发中
+# 暴露内置的 request_permissions 工具, 让模型可以主动请求文件系统权限
+# request_permissions_tool = false
+
+# skill_env_var_dependency_prompt — 默认: false | 开发中
+# 当 Skill 需要的环境变量缺失时, 提示用户设置
+# skill_env_var_dependency_prompt = false
+
+# default_mode_request_user_input — 默认: false | 开发中
+# 在 Default 模式 (非 Plan 模式) 中允许 request_user_input
+# default_mode_request_user_input = false
+
+# tool_search_always_defer_mcp_tools — 默认: false | 开发中
+# 始终将 MCP 工具放到 tool_search 后按需发现, 不直接暴露小规模工具集
+# tool_search_always_defer_mcp_tools = false
+
+# remote_plugin — 默认: false | 开发中
+# 启用远程插件市场的列表与详情读取能力
+# remote_plugin = false
+
+# enable_mcp_apps — 默认: false | 开发中
+# 启用 MCP Apps 路径
+# enable_mcp_apps = false
+
+# apps_mcp_path_override — 默认: false | 开发中
+# 覆盖内置 Apps MCP server 的路径; 可以写布尔值, 也可以写对象形式
+# apps_mcp_path_override = false
+#
+# [features.apps_mcp_path_override]
+# enabled = true
+# path = 'C:\Users\you\.codex\apps-mcp-server.exe'
+
+# plugin_hooks — 默认: false | 开发中
+# 加载插件包中声明的生命周期 hooks
+# plugin_hooks = false
+
+# goals — 默认: false | 开发中
+# 启用持久化 /goal 工作流、自动延续与 TUI 控件
+# goals = false
+
+# realtime_conversation — 默认: false | 开发中
+# 启用实验性实时语音对话模式 (默认走 v2 + WebRTC)
+# realtime_conversation = false
+
+# remote_control — 默认: false | 开发中
+# 启用 app-server 的远程控制通道
+# 说明: 主要用于远程 / 集成场景, 允许运行中的 app-server 接受远程控制连接
+# remote_control = false
+
+# runtime_metrics — 默认: false | 开发中
+# 启用运行时性能指标快照
+# runtime_metrics = false
+
+# enable_fanout — 默认: false | 开发中
+# 启用 SpawnCsv 扇出能力, 允许 Agent 批量派生子任务
+# enable_fanout = false
+
+# workspace_owner_usage_nudge — 默认: false | 开发中
+# 在 TUI 中显示工作区归属 / 用量提示文案
+# workspace_owner_usage_nudge = false
+
+# ── 已弃用功能 (Deprecated) ────────────────────────────────────────────────
+# 以下功能已被其他机制替代, 不建议使用
+
+# web_search         — 历史别名, 等同于 [features].web_search_request;
+#                      现已弃用, 请使用顶层 web_search = "live" 代替
+# web_search_request — 已弃用, 请使用顶层 web_search = "live" 代替
+# web_search_cached  — 已弃用, 请使用顶层 web_search = "cached" 代替
+# use_legacy_landlock — 已弃用: 旧版 Linux 沙箱实现开关;
+#                        如无特殊需要, 请删除此项
+
+# ── 已移除功能 (Removed) — 不要在新配置中使用 ──────────────────────────────
+# undo                   — 已移除, /undo 现在会报告不可用
+# js_repl                — 已移除, 相关 Node 路径配置也已忽略
+# js_repl_tools_only     — 已移除
+# general_analytics      — 已移除, 不再是可配置 feature
+# steer                   — 始终启用
+# collaboration_modes     — 始终启用
+# sqlite                  — 始终启用
+# search_tool             — 已移除
+# request_rule            — 已移除
+# responses_websockets    — 已移除
+# responses_websockets_v2 — 已移除
+# experimental_windows_sandbox  — 已移除 (用 [windows].sandbox 替代)
+# enable_experimental_windows_sandbox — 历史别名, 现已移除 (用 [windows].sandbox 替代)
+# elevated_windows_sandbox      — 已移除 (用 [windows].sandbox 替代)
+# remote_models                 — 已移除
+# use_linux_sandbox_bwrap       — 已移除
+# tui_app_server                — 已移除 (始终启用)
+# image_detail_original         — 已移除 (兼容旧包装器的空操作标志)
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 15 节: Lifecycle Hooks                           ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 在会话、工具调用、审批请求、用户提交和停止等生命周期事件中运行命令
+# 说明: v0.124.0 起 hooks 已稳定; 也可以继续使用 ~/.codex/hooks.json
+# 支持事件: PreToolUse / PermissionRequest / PostToolUse / SessionStart /
+#           UserPromptSubmit / Stop
+# matcher:
+#   - PreToolUse / PermissionRequest / PostToolUse: 匹配工具名或兼容别名
+#   - SessionStart: 匹配 "startup" / "resume" / "clear"
+#   - UserPromptSubmit / Stop: 当前忽略 matcher
+# handler:
+#   - 目前仅 command 类型会执行; prompt / agent 类型可解析但尚未执行
+#   - timeout 单位为秒, 默认 600; async = true 目前会被跳过
+
+[hooks]
+# ── PreToolUse: 在工具调用前运行 ───────────────────────────────────────────
+# [[hooks.PreToolUse]]
+# matcher = "Bash|local_shell|apply_patch"
+#
+# [[hooks.PreToolUse.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/pre_tool.py"
+# timeout = 10
+# statusMessage = "检查工具调用"
+# async = false
+
+# ── PermissionRequest: 在审批请求出现时运行 ────────────────────────────────
+# [[hooks.PermissionRequest]]
+# matcher = "*"
+#
+# [[hooks.PermissionRequest.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/permission_request.py"
+# timeout = 30
+# statusMessage = "检查审批请求"
+
+# ── SessionStart: 会话启动 / 恢复 / 清空后运行 ─────────────────────────────
+# [[hooks.SessionStart]]
+# matcher = "startup|resume|clear"
+#
+# [[hooks.SessionStart.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/session_start.py"
+
+# ── PostToolUse / UserPromptSubmit / Stop 也使用同样的数组表结构 ───────────
+# [[hooks.PostToolUse]]
+# matcher = "*"
+# [[hooks.PostToolUse.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/post_tool.py"
+#
+# ── hook state: 用户级启用/禁用状态 ────────────────────────────────────────
+# 作用: 记录单个 hook 是否启用; 通常由 UI / app-server 写入
+# key 是 Codex 生成的 hook 标识, 例如 file:<path>:<event>:<group>:<hook>
+# [hooks.state."file:C:/Users/you/.codex/hooks.json:PreToolUse:0:0"]
+# enabled = false
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 16 节: Agent (子智能体) 配置                     ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 配置多 Agent 协作时的线程数、嵌套深度和超时
+# 前提: 需要启用 multi_agent 功能标志
+
+[agents]
+# max_threads — 类型: 整数 | 默认: 6 | 最小: 1
+# 同时运行的最大 Agent 线程数
+# 越大可以并行处理越多任务, 但消耗资源也越多
+# 注意: 如果启用 [features].multi_agent_v2, 不能再设置此字段;
+#       请删除或注释掉 max_threads, 否则启动时会报错。
+max_threads = 6
+
+# max_depth — 类型: 整数 | 默认: 1 | 最小: 1
+# Agent 嵌套的最大深度 (即 Agent 可以再派生 Agent 的层数)
+# 1 表示只允许一层子 Agent; 增大可以支持更复杂的任务分解
+max_depth = 2
+
+# job_max_runtime_seconds — 类型: 整数 (可选) | 默认: 无 (不限时)
+# 每个 Agent 任务的最大运行时间 (秒); 超时后任务会被标记为失败
+# 设置此值可以防止 Agent 无限运行
+# job_max_runtime_seconds = 1800
+
+# interrupt_message — 类型: 布尔值 | 默认: true
+# 子 Agent 回合被中断时, 是否记录一条模型可见的中断说明
+interrupt_message = true
+
+# ── 自定义 Agent 角色 ──────────────────────────────────────────────────────
+# 你可以定义多个 Agent 角色, 每个角色有独立的配置
+# 配置层中的相对 config_file 路径会按声明它的 config.toml 所在目录解析;
+# 绝对路径仍按原样使用。
+
+# [agents.explorer]
+# description — 类型: 字符串 | 对这个角色的描述, 帮助主 Agent 理解该角色的职责
+# config_file — 类型: 路径 | 角色专属的配置文件 (另一个 TOML 文件)
+# nickname_candidates — 类型: 字符串数组 | 该角色的 Agent 的候选昵称
+# description = "Fast read-only explorer"
+# config_file = 'C:\Users\you\.codex\agents\explorer.toml'
+# nickname_candidates = ["Scout", "Indexer"]
+
+# [agents.worker]
+# description = "Implementation worker"
+# config_file = 'C:\Users\you\.codex\agents\worker.toml'
+# nickname_candidates = ["Builder", "Fixer"]
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 17 节: Skills (技能) 配置                        ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 注册自定义技能 (SKILL.md 文件), 扩展 Codex 的能力
+
+[skills]
+# include_instructions — 类型: 布尔值 (可选) | 默认: true
+# 是否在每轮对话中注入自动生成的 Skills 指导块
+# 设为 false 后, 已注册技能仍可存在, 但不会自动把技能使用规则加入提示词
+# include_instructions = true
+#
+# config — 类型: 对象数组
+# 每个条目:
+#   path    — 按 SKILL.md 文件绝对路径选择
+#   name    — 按技能名称选择
+#   enabled — 是否启用这个技能
+config = [
+  # { path = 'C:\Users\you\.codex\skills\my-skill\SKILL.md', enabled = true },
+  # { name = 'agent-browser', enabled = false },
+]
+
+# ── [skills.bundled] — 内置技能控制 ─────────────────────────────────────────
+# 作用: 控制 Codex 自带的内置技能是否启用
+# 说明: 内置技能是 Codex 预装的功能模块 (如系统内置工作流与辅助能力);
+#       如果你只想使用自定义技能, 可以在这里禁用内置技能
+[skills.bundled]
+# enabled — 类型: 布尔值 | 默认: true
+# 是否加载内置技能; 设为 false 可完全禁用所有内置技能
+# enabled = true
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 18 节: Plugins (插件) 配置                       ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 启用或禁用已安装的插件
+# 前提: 插件功能默认已启用; 若显式设置 [features] plugins = false, 本节不会生效
+
+# [plugins.example-plugin]
+# enabled — 类型: 布尔值 | 默认: true
+# 是否加载这个插件
+# enabled = true
+#
+# ── 插件内 MCP server 策略覆盖 ─────────────────────────────────────────────
+# 说明: 插件 manifest 决定 MCP server 如何启动; 这里只覆盖启用状态与工具策略
+# [plugins.example-plugin.mcp_servers.docs]
+# enabled = true
+# default_tools_approval_mode = "prompt"
+# enabled_tools = ["search", "read"]
+# disabled_tools = ["delete"]
+#
+# [plugins.example-plugin.mcp_servers.docs.tools.search]
+# approval_mode = "approve"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 19 节: Marketplaces (插件市场) 配置              ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 记录已添加的插件市场来源与刷新元数据
+# 说明: 通常由 `codex marketplace add` / 刷新流程自动维护, 一般不需要手动编辑
+
+[marketplaces.openai-curated]
+# last_updated — 类型: 字符串 (可选)
+# 最后一次成功添加或刷新此 marketplace 的时间戳
+last_updated = "2026-04-16T09:30:00Z"
+
+# last_revision — 类型: 字符串 (可选)
+# 最近一次成功激活的 Git revision
+# 通常由 Codex 自动写入, 例如 commit SHA
+# last_revision = "0123456789abcdef"
+
+# source_type — 类型: 字符串 (可选) | 可选值: "git" | "local"
+# marketplace 的来源类型
+source_type = "git"
+
+# source — 类型: 字符串 (可选)
+# 添加 marketplace 时使用的来源位置
+# source_type = "git" 时通常为 Git URL; source_type = "local" 时通常为本地目录
+source = "https://github.com/openai/codex-marketplace.git"
+
+# ref — 类型: 字符串 (可选)
+# 当 source_type = "git" 时检出的分支 / tag / commit
+ref = "main"
+
+# sparse_paths — 类型: 字符串数组 (可选)
+# 当 source_type = "git" 时使用的稀疏检出路径
+sparse_paths = ["marketplaces/openai-curated"]
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 20 节: 模型提供商定义                            ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 定义自定义模型 API 提供商, 或对少数内置提供商做受限覆盖
+# 说明: 内置提供商有 openai / amazon-bedrock / ollama / lmstudio
+#       openai / ollama / lmstudio 不能在这里重定义;
+#       amazon-bedrock 当前只支持覆盖 aws.profile / aws.region
+#       你也可以在这里添加自定义提供商 (如本地代理、Azure OpenAI 等)
+
+# ── [model_providers.amazon-bedrock.aws] — Amazon Bedrock (v0.124.0 新增) ─
+# 作用: 覆盖内置 amazon-bedrock 提供商使用的 AWS profile / region
+# 说明: 无需自行填写 name / base_url / wire_api 等字段, CLI 已内置这些默认值
+#       当前只支持修改 aws.profile / aws.region; 其他 provider 字段会报错
+#       当前模型发现由具体 model provider 负责, Bedrock 账户状态也会
+#       暴露给 app 客户端; 使用 Bedrock 时通常只需要选择 provider 和 AWS 设置
+#
+# 要使用它, 请在顶层设置:
+# model_provider = "amazon-bedrock"
+#
+# [model_providers.amazon-bedrock.aws]
+# profile — 类型: 字符串 (可选)
+# 指定要使用的 AWS profile 名称; 不设置则走 AWS SDK 默认凭证链
+# profile = "codex-bedrock"
+#
+# region — 类型: 字符串 (可选)
+# 指定 AWS region; 不设置则走 AWS SDK 默认 region 解析链
+# region = "us-west-2"
+
+[model_providers.custom]
+# name — 类型: 字符串 (必填)
+# 提供商的显示名称
+name = "custom"
+
+# base_url — 类型: 字符串 (可选) | 默认: "https://api.openai.com/v1" (openai)
+# API 基础 URL; 对于自定义提供商, 通常指向你的本地代理或第三方 API
+base_url = "http://127.0.0.1:8317/v1"
+
+# wire_api — 类型: 字符串 | 默认: "responses"
+# API 协议: 目前仅支持 "responses"
+wire_api = "responses"
+
+# env_key — 类型: 字符串 (可选)
+# 存储 API Key 的环境变量名称
+# 说明: Codex 会从此环境变量读取 API Key 并添加到请求头中
+env_key = "OPENAI_API_KEY"
+
+# env_key_instructions — 类型: 字符串 (可选)
+# 当环境变量缺失时显示的帮助文本
+env_key_instructions = "Set OPENAI_API_KEY in your environment."
+
+# requires_openai_auth — 类型: 布尔值 | 默认: false
+# 是否需要 OpenAI 认证 (API Key 或 ChatGPT 登录)
+# 说明: 内置 openai 提供商设为 true; 自定义提供商通常设为 false
+requires_openai_auth = false
+
+# supports_websockets — 类型: 布尔值 | 默认: false
+# 是否支持 Responses API WebSocket 传输
+supports_websockets = false
+
+# request_max_retries — 类型: 整数 | 默认: 4 | 最大: 100
+# HTTP 请求失败时的最大重试次数
+request_max_retries = 3
+
+# stream_max_retries — 类型: 整数 | 默认: 5 | 最大: 100
+# 流式连接断开后的最大重连次数
+stream_max_retries = 10
+
+# stream_idle_timeout_ms — 类型: 整数 (毫秒) | 默认: 300000 (5分钟)
+# 流式连接的空闲超时: 如果这么长时间没有收到数据, 视为连接丢失
+stream_idle_timeout_ms = 300000
+
+# websocket_connect_timeout_ms — 类型: 整数 (毫秒) (可选)
+# 默认: 15000
+# WebSocket 连接尝试的最大等待时间; 超时则视为连接失败
+# websocket_connect_timeout_ms = 10000
+
+# http_headers — 类型: 键值对 (可选)
+# 每次请求都附带的静态 HTTP 头
+http_headers = { "x-client" = "codex" }
+
+# env_http_headers — 类型: 键值对 (可选)
+# 从环境变量读取值的 HTTP 头
+# 格式: { "头名称" = "环境变量名" }
+# 说明: 运行时, 头的值会替换为环境变量的实际值; 如果变量为空则跳过
+env_http_headers = { "Authorization" = "UPSTREAM_AUTH_BEARER" }
+
+# query_params — 类型: 键值对 (可选)
+# 附加到 base_url 的查询参数 (适合如 Azure API 版本号等场景)
+query_params = { "api-version" = "2026-01-01" }
+
+# experimental_bearer_token — 类型: 字符串 (可选)
+# ⚠️ 不推荐: 明文 bearer token; 请优先使用 env_key
+# experimental_bearer_token = "avoid plaintext secrets"
+
+# ── [model_providers.<id>.auth] — 动态 Bearer Token (v0.118.0 新增) ────────
+# 作用: 通过执行外部命令来动态获取并刷新短期 bearer token
+# 说明: 适合令牌有有效期的场景 (如 cloud IAM、vault、SSO 等)
+#       命令的 stdout 输出将作为 Bearer token 使用
+# ⚠️ 互斥: auth 不能与 env_key、experimental_bearer_token、
+#           requires_openai_auth 同时使用
+#
+# [model_providers.custom.auth]
+# command — 类型: 字符串 (必填)
+# 要执行的命令; 裸名称通过 PATH 查找, 路径相对于 cwd 解析
+# command = "gcloud"
+#
+# args — 类型: 字符串数组 | 默认: []
+# 传给 command 的参数
+# args = ["auth", "print-access-token"]
+#
+# timeout_ms — 类型: 正整数 (毫秒) | 默认: 5000
+# 等待命令执行完成的最大时间
+# timeout_ms = 5000
+#
+# refresh_interval_ms — 类型: 非负整数 (毫秒) | 默认: 300000 (5 分钟)
+# 缓存 token 的最大有效时间; 超过后重新执行命令刷新
+# 特殊值: 设为 0 可禁用主动刷新, 仅在收到 401 后按重试路径重新获取 token
+# refresh_interval_ms = 300000
+#
+# cwd — 类型: 路径 (可选) | 默认: 当前工作目录
+# 执行命令时的工作目录
+# cwd = 'C:\Users\you'
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 21 节: MCP 服务器配置                            ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 配置 MCP (Model Context Protocol) 服务器, 让模型调用外部工具
+# 说明: 有两种传输方式:
+#   1. stdio — 启动本地进程, 通过标准输入输出通信 (设置 command)
+#   2. streamable_http — 连接远程 HTTP 服务器 (设置 url)
+# 注意: command 和 url 不能同时设置
+
+# ── 示例 1: stdio 传输 (本地进程) ──────────────────────────────────────────
+[mcp_servers.filesystem]
+# command — 类型: 字符串 (stdio 必填)
+# 要启动的可执行文件
+command = "npx"
+
+# args — 类型: 字符串数组 | 默认: []
+# 传给 command 的命令行参数
+args = ["-y", "@modelcontextprotocol/server-filesystem", 'C:\Users\you\workspace']
+
+# cwd — 类型: 路径 (可选)
+# 子进程的工作目录
+cwd = 'C:\Users\you\workspace'
+
+# env — 类型: 键值对 (可选)
+# 为子进程设置的额外环境变量
+env = { MCP_LOG_LEVEL = "info" }
+
+# env_vars — 类型: 字符串数组 | 默认: []
+# 从父进程透传到子进程的环境变量名列表
+# env_vars = ["HOME", "PATH"]
+#
+# 也支持对象形式来显式指定变量来源:
+# env_vars = [
+#   { name = "PATH", source = "local" },
+#   { name = "REMOTE_TOKEN", source = "remote" },
+# ]
+# source 可选值:
+#   "local"  — 从本地 Codex 进程环境读取
+#   "remote" — 从远端运行环境读取 (通常与 experimental_environment = "remote" 配合)
+
+# enabled — 类型: 布尔值 | 默认: true
+# 是否启用此 MCP 服务器; 设为 false 则跳过初始化
+enabled = true
+
+# required — 类型: 布尔值 | 默认: false
+# 当设为 true 时, 如果此服务器初始化失败, codex exec 会直接退出报错
+# 适合关键依赖: 如果这个服务器不可用, 任务就无法进行
+required = false
+
+# experimental_environment — 类型: 字符串 (可选)
+# 可选值:
+#   "local"  — 默认行为, 在当前本地环境启动/连接
+#   "remote" — 在远端运行环境中启动 stdio MCP 服务
+# 说明: 当前主要用于远端执行场景; 不支持的值会直接报错
+# experimental_environment = "remote"
+
+# supports_parallel_tool_calls — 类型: 布尔值 | 默认: false
+# 是否将此服务器暴露的所有工具都标记为“可安全并行调用”
+# 说明: 只有当这些工具并发运行不会读写冲突或破坏外部状态时才建议启用
+# supports_parallel_tool_calls = true
+
+# startup_timeout_ms — 类型: 整数 (毫秒) (可选)
+# 服务器初始化 + 工具列表获取的超时时间 (毫秒版本)
+startup_timeout_ms = 20000
+
+# startup_timeout_sec — 类型: 浮点数 (秒) (可选)
+# 服务器初始化超时 (秒版本); 如果同时设置, 此项优先于 startup_timeout_ms
+# startup_timeout_sec = 20.0
+
+# tool_timeout_sec — 类型: 浮点数 (秒) (可选)
+# 单次工具调用的默认超时
+tool_timeout_sec = 120
+
+# default_tools_approval_mode — 类型: 字符串 (可选) | 默认: 无
+# 可选值: "auto" | "prompt" | "approve"
+# 为该服务器暴露的全部工具设置默认审批方式
+# 若某个工具在 [mcp_servers.<name>.tools.<tool>] 中单独配置 approval_mode,
+# 则单工具配置优先
+# default_tools_approval_mode = "approve"
+
+# enabled_tools — 类型: 字符串数组 (可选) | 默认: 无 (注册所有工具)
+# 工具白名单: 如果设置, 只注册这些名称的工具
+enabled_tools = ["list_files", "read_file", "search_files"]
+
+# disabled_tools — 类型: 字符串数组 (可选) | 默认: 无
+# 工具黑名单: 在 enabled_tools 之后应用, 排除指定工具
+disabled_tools = ["delete_file"]
+
+# scopes — 类型: 字符串数组 (可选)
+# MCP OAuth 登录时请求的 OAuth 权限范围
+# scopes = ["repo", "read:org"]
+
+# 注意: oauth_resource 仅支持 streamable_http 传输; stdio 服务器设置它会报错
+
+# ── 单个 MCP 工具审批覆盖 (可选) ──────────────────────────────────────────
+# [mcp_servers.filesystem.tools.read_file]
+# approval_mode — 类型: 字符串 | 可选值: "auto" | "prompt" | "approve"
+# 仅覆盖这个 MCP 工具的审批方式
+# approval_mode = "approve"
+
+# ── 示例 2: streamable_http 传输 (远程服务器) ──────────────────────────────
+[mcp_servers.github]
+# url — 类型: 字符串 (streamable_http 必填)
+# 远程 MCP 服务器的 HTTP/HTTPS 地址
+url = "https://api.githubcopilot.com/mcp/"
+
+enabled = true
+required = false
+
+# bearer_token_env_var — 类型: 字符串 (可选)
+# 存储 bearer token 的环境变量名;
+# 请求时自动添加 Authorization: Bearer <token> 头
+# 注意: 当前公开配置 schema 不再暴露内联 bearer_token;
+#       请使用 bearer_token_env_var, 避免把密钥明文写入 config.toml。
+bearer_token_env_var = "GITHUB_TOKEN"
+
+# http_headers — 类型: 键值对 (可选)
+# 每次请求附带的静态 HTTP 头
+http_headers = { "x-org" = "your-org" }
+
+# env_http_headers — 类型: 键值对 (可选)
+# 从环境变量读取值的 HTTP 头 (同 model_providers 中的用法)
+# env_http_headers = { "X-Custom" = "MY_ENV_VAR" }
+
+scopes = ["repo", "read:org"]
+oauth_resource = "https://github.com/"
+startup_timeout_sec = 30
+tool_timeout_sec = 120
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 22 节: Apps 控制                                 ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 控制 ChatGPT Apps/Connectors 的行为
+# 前提: Apps 功能默认已启用; 若显式设置 [features] apps = false, 本节不会生效
+
+# ── 全局默认 ───────────────────────────────────────────────────────────────
+[apps._default]
+# enabled — 类型: 布尔值 | 默认: true
+# 所有 App 的全局开关
+enabled = true
+
+# destructive_enabled — 类型: 布尔值 | 默认: true
+# 是否允许具有 "destructive" 标记的工具 (如删除操作)
+destructive_enabled = true
+
+# open_world_enabled — 类型: 布尔值 | 默认: true
+# 是否允许具有 "open_world" 标记的工具 (如创建新资源)
+open_world_enabled = true
+
+# ── 单个 App 配置 ──────────────────────────────────────────────────────────
+[apps.github]
+enabled = true
+
+# default_tools_enabled — 类型: 布尔值 (可选)
+# 此 App 的工具是否默认启用
+default_tools_enabled = true
+
+# default_tools_approval_mode — 类型: 字符串 (可选) | 默认: "auto"
+# 可选值:
+#   "auto"    — 自动审批 (不弹提示)
+#   "prompt"  — 每次使用前弹出提示让用户确认
+#   "approve" — 需要用户明确批准
+default_tools_approval_mode = "auto"
+
+destructive_enabled = false
+open_world_enabled = true
+
+# ── 单个工具配置 ───────────────────────────────────────────────────────────
+[apps.github.tools.search_issues]
+# enabled — 类型: 布尔值 | 是否启用此工具
+enabled = true
+# approval_mode — 类型: 字符串 | 可选值: "auto" | "prompt" | "approve"
+approval_mode = "auto"
+
+[apps.github.tools.create_issue]
+enabled = true
+approval_mode = "prompt"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 23 节: OpenTelemetry 可观测性配置                ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 配置 Codex 的 OpenTelemetry 遥测数据导出 (Traces / Metrics / Logs)
+# 说明: 适合需要对 Codex 进行性能监控或集成到公司可观测性平台的场景
+
+[otel]
+# environment — 类型: 字符串 | 默认: "dev"
+# 环境标签, 附加到所有 trace 上 (如 dev / staging / prod / test)
+environment = "dev"
+
+# log_user_prompt — 类型: 布尔值 | 默认: false
+# 是否在 trace span 中包含用户的原始提示文本
+# ⚠️ 注意: 启用会将用户输入发送到 OTEL 后端, 可能有隐私风险
+log_user_prompt = false
+
+# ── exporter / trace_exporter / metrics_exporter ───────────────────────────
+# 类型: 以下三种之一:
+#   "none"    — 禁用导出
+#   "statsig" — 使用 Codex 内置的 Statsig OTLP-HTTP 端点
+#   otlp-http 或 otlp-grpc 对象 — 自定义 OTLP 导出
+#
+# exporter         — 日志导出器 | 默认: "none"
+# trace_exporter   — 链路追踪导出器 | 默认: 跟随 exporter
+# metrics_exporter — 指标导出器 | 默认: "statsig"
+
+# ── 自定义 OTLP-HTTP 链路追踪导出器 ────────────────────────────────────────
+[otel.trace_exporter.otlp-http]
+# endpoint — 类型: 字符串 (必填)
+endpoint = "http://127.0.0.1:4318/v1/traces"
+# protocol — 类型: 字符串 (必填) | 可选值: "binary" (protobuf) 或 "json"
+protocol = "json"
+headers = { "x-otel-key" = "replace-me" }
+
+# ── TLS 配置 (可选, 用于 mTLS 认证) ─────────────────────────────────────
+[otel.trace_exporter.otlp-http.tls]
+ca-certificate = 'C:\certs\otel-ca.pem'
+client-certificate = 'C:\certs\otel-client.pem'
+client-private-key = 'C:\certs\otel-client-key.pem'
+
+# ── 自定义 OTLP-HTTP 指标导出器 ────────────────────────────────────────────
+[otel.metrics_exporter.otlp-http]
+# endpoint — 类型: 字符串 (必填)
+endpoint = "http://127.0.0.1:4318/v1/metrics"
+# protocol — 类型: 字符串 (必填) | 可选值: "binary" (protobuf) 或 "json"
+protocol = "json"
+headers = {}
+
+# ── 自定义 OTLP-HTTP 日志导出器 ────────────────────────────────────────────
+[otel.exporter.otlp-http]
+# endpoint — 类型: 字符串 (必填)
+endpoint = "http://127.0.0.1:4318/v1/logs"
+# protocol — 类型: 字符串 (必填) | 可选值: "binary" (protobuf) 或 "json"
+protocol = "json"
+headers = {}
+
+# ── OTLP-gRPC 示例 (替代 otlp-http) ───────────────────────────────────────
+# [otel.trace_exporter.otlp-grpc]
+# endpoint — 类型: 字符串 (必填)
+# endpoint = "http://127.0.0.1:4317"
+# headers = { "x-otel-key" = "replace-me" }
+# [otel.trace_exporter.otlp-grpc.tls]
+# ca-certificate = 'C:\certs\otel-ca.pem'
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 24 节: 项目信任映射                              ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 为不同的项目目录设置信任级别
+# 说明:
+#   "trusted"   — 受信任: 使用 workspace-write 沙箱, 审批策略较宽松
+#   "untrusted" — 不受信任: 使用 read-only 沙箱, 审批策略较严格
+# 提示: Codex 会在你首次打开新项目时自动询问信任级别, 结果保存在这里
+
+[projects.'C:\Users\you']
+trust_level = "trusted"
+
+# Windows 长路径 (UNC 前缀) 示例:
+# [projects.'\\?\E:\VSCodeSpace\CLIProxyAPI']
+# trust_level = "trusted"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 25 节: 配置预设 (Profiles)                       ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 将多个配置打包成 "预设", 通过切换 profile 一键切换使用场景
+# 激活: 在顶层设置 profile = "名称" 即可激活对应的预设
+# 优先级: CLI 参数 > profile 中的值 > 顶层配置 > 默认值
+#
+# Profile 可以设置的字段 (所有均为可选, 只有设置了才会覆盖顶层配置):
+#   model, model_provider, service_tier, approval_policy, approvals_reviewer,
+#   sandbox_mode, model_reasoning_effort, plan_mode_reasoning_effort,
+#   model_reasoning_summary, model_verbosity, model_catalog_json, personality,
+#   chatgpt_base_url, model_instructions_file, zsh_path, experimental_compact_prompt_file,
+#   include_apply_patch_tool, include_permissions_instructions,
+#   include_apps_instructions, include_environment_context,
+#   experimental_use_unified_exec_tool, experimental_use_freeform_apply_patch,
+#   tools_view_image, tools (工具配置), web_search, oss_provider,
+#   analytics (子对象), windows (子对象), features (功能标志子对象)
+
+# ── 预设: default (日常使用) ───────────────────────────────────────────────
+[profiles.default]
+model = "gpt-5.4"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
+web_search = "cached"
+service_tier = "fast"
+personality = "pragmatic"
+tools_view_image = true
+model_reasoning_effort = "high"
+model_reasoning_summary = "auto"
+model_verbosity = "medium"
+plan_mode_reasoning_effort = "high"
+
+[profiles.default.analytics]
+enabled = true
+
+[profiles.default.windows]
+sandbox = "elevated"
+
+[profiles.default.features]
+multi_agent = true
+unified_exec = true
+shell_tool = true
+shell_snapshot = true
+memories = true
+fast_mode = true
+
+# ── Profile 中的工具配置 (tools 子对象) ───────────────────────────────────
+# 可以在 profile 中嵌入 [tools] 的完整配置, 与顶层 [tools] 合并
+# [profiles.default.tools]
+# view_image = true
+# [profiles.default.tools.web_search]
+# context_size = "medium"
+# allowed_domains = ["docs.python.org"]
+
+# ── 预设: fast (追求速度) ──────────────────────────────────────────────────
+[profiles.fast]
+model = "gpt-5.4"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+web_search = "live"
+service_tier = "fast"
+personality = "pragmatic"
+tools_view_image = true
+model_reasoning_effort = "medium"
+model_reasoning_summary = "concise"
+model_verbosity = "low"
+
+[profiles.fast.features]
+fast_mode = true
+multi_agent = true
+unified_exec = true
+
+# ── 预设: safe (最安全) ────────────────────────────────────────────────────
+[profiles.safe]
+model = "gpt-5.4"
+approval_policy = "untrusted"
+sandbox_mode = "read-only"
+web_search = "disabled"
+service_tier = "flex"
+personality = "pragmatic"
+tools_view_image = false
+model_reasoning_effort = "high"
+model_reasoning_summary = "auto"
+model_verbosity = "medium"
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 26 节: 审批策略对象形式 (高级)                   ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 除了字符串形式的 approval_policy, 还支持对象形式, 可以细粒度控制审批
+# 说明: 使用此形式时, 必须删除顶层的字符串形式 approval_policy
+#
+# [approval_policy.granular]
+# sandbox_approval — 类型: 布尔值 | 必填
+#   设为 true: 允许 shell 提权/沙箱升级类审批请求
+#   设为 false: 直接拒绝这类请求, 不再弹提示
+# rules — 类型: 布尔值 | 必填
+#   设为 true: 允许执行策略规则触发的审批提示
+#   设为 false: 直接拒绝这类请求
+# skill_approval — 类型: 布尔值 | 默认: false
+#   设为 true: 允许 Skill 脚本执行触发的审批提示
+# request_permissions — 类型: 布尔值 | 默认: false
+#   设为 true: 允许 request_permissions 工具触发的审批提示
+# mcp_elicitations — 类型: 布尔值 | 必填
+#   设为 true: 允许 MCP elicitation 审批提示
+#
+# 示例:
+# [approval_policy.granular]
+# sandbox_approval = true
+# rules = true
+# skill_approval = false
+# request_permissions = false
+# mcp_elicitations = true
