@@ -1,5 +1,23 @@
 # Codex Config
 
+## 同步到 Codex
+
+运行脚本可将仓库中的 `agents/`、`hooks/`、`skills/`、`AGENTS.md` 同步到当前用户的 `~/.codex`。如果仓库根目录存在 `config.toml`，脚本也会同步它；不存在时会跳过并打印提示。
+
+同步策略是覆盖 `~/.codex` 中的同名文件，同时保留目标目录里的其他文件，例如认证、会话、日志、缓存和运行状态。
+
+Windows PowerShell:
+
+```powershell
+python .\sync_codex.py
+```
+
+macOS/Linux:
+
+```bash
+python3 ./sync_codex.py
+```
+
 ## Skills
 
 ```bash
