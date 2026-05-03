@@ -6,16 +6,8 @@
 
 同步策略是覆盖 `~/.codex` 中的同名文件，同时保留目标目录里的其他文件，例如认证、会话、日志、缓存和运行状态。
 
-Windows PowerShell:
-
-```powershell
-python .\sync_codex.py
-```
-
-macOS/Linux:
-
 ```bash
-python3 ./sync_codex.py
+python ./sync_codex.py
 ```
 
 ## Skills
