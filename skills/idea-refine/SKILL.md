@@ -79,7 +79,7 @@ When the user invokes this skill with an idea (`$ARGUMENTS`), guide them through
 
    Push beyond what the user initially asked for. Create products people don't know they need yet.
 
-**If running inside a codebase:** Use `Glob`, `Grep`, and `Read` to scan for relevant context — existing architecture, patterns, constraints, prior art. Ground your variations in what actually exists. Reference specific files and patterns when relevant.
+**If running inside a codebase:** Scan for relevant context — existing architecture, patterns, constraints, prior art. Ground your variations in what actually exists. Reference specific files and patterns when relevant.
 
 Read `frameworks.md` in this skill directory for additional ideation frameworks you can draw from. Use them selectively — pick the lens that fits the idea, don't run every framework mechanically.
 
