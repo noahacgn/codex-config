@@ -66,7 +66,7 @@ When the user invokes this skill with an idea (`$ARGUMENTS`), guide them through
    - What's been tried before?
    - Why now?
 
-   Use the `AskUserQuestion` tool to gather this input. Do NOT proceed until you understand who this is for and what success looks like.
+   Use the `request_user_input` tool to gather this input. Do NOT proceed until you understand who this is for and what success looks like.
 
 3. **Generate 5-8 idea variations** using these lenses:
    - **Inversion:** "What if we did the opposite?"
