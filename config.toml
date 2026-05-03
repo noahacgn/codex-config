@@ -50,7 +50,7 @@ matcher = "startup|resume|clear"
 
 [[hooks.SessionStart.hooks]]
 type = "command"
-command = "python3 ~/.codex/hooks/session_start.py"
+command = "python ~/.codex/hooks/session_start.py"
 timeout = 15
 statusMessage = "Loading agent skills..."
 
