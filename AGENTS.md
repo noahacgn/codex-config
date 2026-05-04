@@ -65,6 +65,10 @@ When adding dependencies, CI actions, or tool versions, always look up the curre
 
 Prefer `ast-grep` over ripgrep when searching for code structure (function calls, class definitions, imports, pattern matching across arguments). Use ripgrep for literal strings and log messages.
 
+## Subagents
+
+ALWAYS wait for all subagents to complete before yielding.
+
 ## Miscellaneous
 
 - Think in English, respond in Simplified Chinese (including docs).
