@@ -8,7 +8,7 @@ Invoke the agent-skills:shipping-and-launch skill.
 
 ## Phase A — Parallel fan-out
 
-Spawn three subagents concurrently using the Agent tool. **Issue all three Agent tool calls in a single assistant turn so they execute in parallel** — sequential calls defeat the purpose of this command.
+Spawn three subagents concurrently using the `spawn_agent` tool. **Issue all three `spawn_agent` tool calls in a single assistant turn so they execute in parallel** — sequential calls defeat the purpose of this command.
 
 In Codex, each call passes `agent_type` matching the persona's `name` field:
 
@@ -16,7 +16,7 @@ In Codex, each call passes `agent_type` matching the persona's `name` field:
 2. **`security-auditor`** — Run a vulnerability and threat-model pass. Check OWASP Top 10, secrets handling, auth/authz, dependency CVEs. Output the standard audit report.
 3. **`test-engineer`** — Analyze test coverage for the change. Identify gaps in happy path, edge cases, error paths, and concurrency scenarios. Output the standard coverage analysis.
 
-In other harnesses without an Agent tool, invoke each persona's system prompt sequentially and treat their outputs as if returned in parallel — the merge phase still works.
+In other harnesses without an `spawn_agent` tool, invoke each persona's system prompt sequentially and treat their outputs as if returned in parallel — the merge phase still works.
 
 Constraints (from Codex's subagent model):
 - Subagents cannot spawn other subagents — do not let one persona delegate to another.
