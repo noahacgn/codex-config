@@ -67,7 +67,7 @@ Prefer `ast-grep` over ripgrep when searching for code structure (function calls
 
 ## Subagents
 
-ALWAYS wait for all subagents to complete before yielding.
+ALWAYS wait for all subagents to complete before yielding. Do not combine `fork_context: true` with `agent_type`, `model`, or `reasoning_effort`.
 
 ## Miscellaneous
 
