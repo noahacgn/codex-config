@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.128.0 (发布于 2026-04-30)                     #
+#  适用版本: Codex CLI rust-v0.129.0 (发布于 2026-05-07)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -506,6 +506,26 @@ project_doc_fallback_filenames = ["AGENTS.md", "README.md", "CONTRIBUTING.md"]
 project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 
 
+# ── 调试与可复现性配置 ──────────────────────────────────────────────────────
+
+# [debug.config_lockfile]
+# export_dir — 类型: 绝对路径 (可选)
+# 作用: 将会话解析后的有效配置锁文件写入指定目录
+# export_dir = 'C:\Users\you\.codex\config-locks'
+#
+# load_path — 类型: 绝对路径 (可选)
+# 作用: 从指定锁文件回放有效配置, 用于调试和复现配置解析问题
+# load_path = 'C:\Users\you\.codex\config-locks\session-config.toml'
+#
+# allow_codex_version_mismatch — 类型: 布尔值 | 默认: false
+# 是否允许回放由其他 Codex 版本生成的锁文件
+# allow_codex_version_mismatch = false
+#
+# save_fields_resolved_from_model_catalog — 类型: 布尔值 (可选)
+# 是否把从模型目录 / 会话配置解析出的字段也写入锁文件
+# save_fields_resolved_from_model_catalog = true
+
+
 # ── 实验性: 实时语音对话 ────────────────────────────────────────────────────
 
 # ── experimental_realtime_ws_backend_prompt ─────────────────────────────────
@@ -708,7 +728,7 @@ max_bytes = 10485760
 # ║                     第 5 节: Ghost Snapshot (撤销功能)                  ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 兼容旧版 ghost_snapshot 配置, 让旧 config.toml 仍可被加载
-# 说明: rust-v0.128.0 中撤销功能已不可用, 不再产生新的 Ghost Snapshot;
+# 说明: 自 rust-v0.128.0 起撤销功能已不可用, 不再产生新的 Ghost Snapshot;
 #       本节配置只保留兼容读取能力, 通常不需要再设置。
 
 [ghost_snapshot]
@@ -1093,6 +1113,26 @@ show_tooltips = true
 #   "task-progress"        — 最近一次 update_plan 的任务进度 (可用时显示)
 status_line = ["model-with-reasoning", "context-used", "current-dir"]
 
+# status_line_use_colors — 类型: 布尔值 | 默认: true
+# 是否使用当前语法主题派生出的颜色来渲染状态栏信息项
+status_line_use_colors = true
+
+# vim_mode_default — 类型: 布尔值 | 默认: false
+# 是否默认以 Vim Normal 模式启动输入框; 也可在 TUI 中用 /vim 切换
+vim_mode_default = false
+
+# raw_output_mode — 类型: 布尔值 | 默认: false
+# 是否默认启用原始 scrollback 模式, 方便从终端复制完整会话内容
+raw_output_mode = false
+
+# session_picker_view — 类型: 字符串 (可选)
+# 默认: "dense"
+# 可选值:
+#   "dense"       — 紧凑列表, 适合快速浏览更多会话
+#   "comfortable" — 更宽松的列表, 适合查看摘要
+# 作用: 控制 /resume 和 /fork 会话选择器的默认布局
+session_picker_view = "dense"
+
 # terminal_title — 类型: 字符串数组 (可选)
 # 默认: ["activity", "project-name"]
 # 作用: 配置终端窗口/标签页标题中显示的信息项 (按顺序排列)
@@ -1148,14 +1188,26 @@ terminal_resize_reflow_max_rows = 9000
 #
 # 常用上下文:
 #   global   — 全局动作: open_transcript, open_external_editor, copy,
-#              clear_terminal, submit, queue, toggle_shortcuts
+#              clear_terminal, submit, queue, toggle_shortcuts,
+#              toggle_vim_mode, toggle_fast_mode, toggle_raw_output
 #   chat     — 聊天区动作: increase_reasoning_effort, decrease_reasoning_effort,
 #              edit_queued_message
 #   composer — 输入框动作: submit, queue, toggle_shortcuts,
 #              history_search_previous, history_search_next
 #   editor   — 文本编辑动作: insert_newline, move_left/right/up/down,
 #              move_word_left/right, move_line_start/end, delete_backward/forward,
-#              delete_backward_word/forward_word, kill_line_start/end, yank
+#              delete_backward_word/forward_word, kill_line_start/end,
+#              kill_whole_line, yank
+#   vim_normal — Vim Normal 模式动作: enter_insert, append_after_cursor,
+#              append_line_end, insert_line_start, open_line_below,
+#              open_line_above, move_left/right/up/down, move_word_forward,
+#              move_word_backward, move_word_end, move_line_start/end,
+#              delete_char, delete_to_line_end, yank_line, paste_after,
+#              start_delete_operator, start_yank_operator, cancel_operator
+#   vim_operator — Vim operator-pending 动作: delete_line, yank_line,
+#              motion_left/right/up/down, motion_word_forward,
+#              motion_word_backward, motion_word_end, motion_line_start/end,
+#              cancel
 #   pager    — 覆盖层滚动动作: scroll_up/down, page_up/down, half_page_up/down,
 #              jump_top/bottom, close, close_transcript
 #   list     — 列表选择动作: move_up, move_down, accept, cancel
@@ -1173,6 +1225,16 @@ terminal_resize_reflow_max_rows = 9000
 #
 # [tui.keymap.editor]
 # insert_newline = "shift-enter"
+# kill_whole_line = "ctrl-u"
+#
+# [tui.keymap.vim_normal]
+# enter_insert = "i"
+# append_line_end = "shift-a"
+# delete_char = "x"
+#
+# [tui.keymap.vim_operator]
+# delete_line = "d"
+# yank_line = "y"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -1364,15 +1426,23 @@ plugins = true
 
 # in_app_browser — 默认: true | 稳定
 # 启用 Codex 内置浏览器能力
-in_app_browser = true
+# 说明: 这是 requirements 管理的能力门禁, 通常不应在用户 config.toml 中手动设置
+# in_app_browser = true
 
 # browser_use — 默认: true | 稳定
 # 启用 browser-use 浏览器自动化工具
-browser_use = true
+# 说明: 这是 requirements 管理的能力门禁, 通常不应在用户 config.toml 中手动设置
+# browser_use = true
+
+# browser_use_external — 默认: true | 稳定
+# 允许 browser-use 使用外部浏览器集成路径
+# 说明: 这是 requirements 管理的能力门禁, 通常不应在用户 config.toml 中手动设置
+# browser_use_external = true
 
 # computer_use — 默认: true | 稳定
 # 启用计算机使用类工具的发现与调用支持
-computer_use = true
+# 说明: 这是 requirements 管理的能力门禁, 通常不应在用户 config.toml 中手动设置
+# computer_use = true
 
 # image_generation — 默认: true | 稳定
 # 启用内置图片生成工具
@@ -1382,9 +1452,9 @@ image_generation = true
 # 通过 MCP elicitation 路径路由 MCP 工具审批提示
 tool_call_mcp_elicitation = true
 
-# codex_hooks — 默认: true | 稳定
+# hooks — 默认: true | 稳定 (历史别名: codex_hooks)
 # 启用生命周期 hooks, 支持 config.toml 内联配置和 hooks.json 文件
-codex_hooks = true
+hooks = true
 
 # guardian_approval — 默认: true | 稳定
 # 启用 Auto-review 审批审查能力; approvals_reviewer = "auto_review" 会使用它
@@ -1432,9 +1502,9 @@ terminal_resize_reflow = true
 # 将 shell 执行路由到 zsh exec bridge
 # shell_zsh_fork = false
 
-# artifact — 默认: false | 开发中
-# 启用原生 artifact 工具
-# artifact = false
+# builtin_mcp — 默认: false | 开发中
+# 启用 Codex 内置 MCP server; 记忆等内置 MCP 能力依赖它
+# builtin_mcp = false
 
 # codex_git_commit — 默认: false | 开发中
 # 启用 git 提交署名指导 (配合 commit_attribution 使用)
@@ -1512,6 +1582,10 @@ apply_patch_freeform = true
 # 在 Default 模式 (非 Plan 模式) 中允许 request_user_input
 # default_mode_request_user_input = false
 
+# auth_elicitation — 默认: false | 开发中
+# 支持通过 MCP elicitation 触发 Apps/Connector 认证流程
+# auth_elicitation = false
+
 # tool_search_always_defer_mcp_tools — 默认: false | 开发中
 # 始终将 MCP 工具放到 tool_search 后按需发现, 不直接暴露小规模工具集
 # tool_search_always_defer_mcp_tools = false
@@ -1552,6 +1626,14 @@ apply_patch_freeform = true
 # runtime_metrics — 默认: false | 开发中
 # 启用运行时性能指标快照
 # runtime_metrics = false
+
+# responses_websocket_response_processed — 默认: false | 开发中
+# 启用 response.processed WebSocket 请求路径
+# responses_websocket_response_processed = false
+
+# remote_compaction_v2 — 默认: false | 开发中
+# 启用远端 compaction v2 Responses 客户端路径
+# remote_compaction_v2 = false
 
 # enable_fanout — 默认: false | 开发中
 # 启用 SpawnCsv 扇出能力, 允许 Agent 批量派生子任务
@@ -1598,11 +1680,11 @@ apply_patch_freeform = true
 # 作用: 在会话、工具调用、审批请求、用户提交和停止等生命周期事件中运行命令
 # 说明: v0.124.0 起 hooks 已稳定; 也可以继续使用 ~/.codex/hooks.json
 # 支持事件: PreToolUse / PermissionRequest / PostToolUse / SessionStart /
-#           UserPromptSubmit / Stop
+#           UserPromptSubmit / PreCompact / PostCompact / Stop
 # matcher:
 #   - PreToolUse / PermissionRequest / PostToolUse: 匹配工具名或兼容别名
 #   - SessionStart: 匹配 "startup" / "resume" / "clear"
-#   - UserPromptSubmit / Stop: 当前忽略 matcher
+#   - PreCompact / PostCompact / UserPromptSubmit / Stop: 当前忽略 matcher
 # handler:
 #   - 目前仅 command 类型会执行; prompt / agent 类型可解析但尚未执行
 #   - timeout 单位为秒, 默认 600; async = true 目前会被跳过
@@ -1637,18 +1719,31 @@ apply_patch_freeform = true
 # type = "command"
 # command = "python3 ~/.codex/hooks/session_start.py"
 
-# ── PostToolUse / UserPromptSubmit / Stop 也使用同样的数组表结构 ───────────
+# ── PostToolUse / UserPromptSubmit / PreCompact / PostCompact / Stop 也使用同样结构 ─
 # [[hooks.PostToolUse]]
 # matcher = "*"
 # [[hooks.PostToolUse.hooks]]
 # type = "command"
 # command = "python3 ~/.codex/hooks/post_tool.py"
 #
+# [[hooks.PreCompact]]
+# matcher = "*"
+# [[hooks.PreCompact.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/pre_compact.py"
+#
+# [[hooks.PostCompact]]
+# matcher = "*"
+# [[hooks.PostCompact.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/post_compact.py"
+#
 # ── hook state: 用户级启用/禁用状态 ────────────────────────────────────────
-# 作用: 记录单个 hook 是否启用; 通常由 UI / app-server 写入
+# 作用: 记录单个 hook 是否启用以及已信任的命令内容哈希; 通常由 UI / app-server 写入
 # key 是 Codex 生成的 hook 标识, 例如 file:<path>:<event>:<group>:<hook>
 # [hooks.state."file:C:/Users/you/.codex/hooks.json:PreToolUse:0:0"]
 # enabled = false
+# trusted_hash = "sha256:abc123"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -2188,7 +2283,7 @@ trust_level = "trusted"
 #   include_apps_instructions, include_environment_context,
 #   experimental_use_unified_exec_tool, experimental_use_freeform_apply_patch,
 #   tools_view_image, tools (工具配置), web_search, oss_provider,
-#   analytics (子对象), windows (子对象), features (功能标志子对象)
+#   analytics (子对象), windows (子对象), tui (子对象), features (功能标志子对象)
 
 # ── 预设: default (日常使用) ───────────────────────────────────────────────
 [profiles.default]
@@ -2209,6 +2304,9 @@ enabled = true
 
 [profiles.default.windows]
 sandbox = "elevated"
+
+[profiles.default.tui]
+session_picker_view = "dense"
 
 [profiles.default.features]
 multi_agent = true
