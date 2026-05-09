@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.129.0 (发布于 2026-05-07)                     #
+#  适用版本: Codex CLI rust-v0.130.0 (发布于 2026-05-08)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -565,16 +565,8 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # 作用: 选择 app-server/thread-manager 使用的 thread store 实现
 # 可选值:
 #   { type = "local" } — 使用本地文件系统 / SQLite 存储
-#   { type = "remote", endpoint = "https://..." } — 使用远端 thread store 服务
-# 说明: 实验性配置; 普通 CLI / TUI 使用场景通常不需要设置
-# experimental_thread_store = { type = "remote", endpoint = "https://threads.example.internal" }
-
-# ── experimental_thread_store_endpoint ─────────────────────────────────────
-# 类型: 字符串 (可选)
-# 默认: 无
-# 作用: 为 app-server 指定远端线程存储服务的地址
-# 说明: 兼容旧配置; 新配置优先使用上面的 experimental_thread_store 对象
-# experimental_thread_store_endpoint = "https://threads.example.internal"
+# 说明: 实验性配置; v0.130.0 起远端 thread store 配置已移除
+# experimental_thread_store = { type = "local" }
 
 # ── experimental_thread_config_endpoint ────────────────────────────────────
 # 类型: 字符串 (可选)
@@ -1610,9 +1602,13 @@ apply_patch_freeform = true
 # 加载插件包中声明的生命周期 hooks
 # plugin_hooks = false
 
-# goals — 默认: false | 开发中
+# goals — 默认: false | 实验
 # 启用持久化 /goal 工作流、自动延续与 TUI 控件
 # goals = false
+
+# artifact — 默认: false | 开发中
+# 启用原生 artifact 工具
+# artifact = false
 
 # realtime_conversation — 默认: false | 开发中
 # 启用实验性实时语音对话模式 (默认走 v2 + WebRTC)
@@ -2200,6 +2196,22 @@ environment = "dev"
 # 是否在 trace span 中包含用户的原始提示文本
 # ⚠️ 注意: 启用会将用户输入发送到 OTEL 后端, 可能有隐私风险
 log_user_prompt = false
+
+# ── span_attributes ────────────────────────────────────────────────────────
+# 类型: 键值对 (可选) | 默认: {}
+# 作用: 为每个导出的 trace span 添加静态属性
+# 说明: 无效属性会被忽略, 并在启动时作为 warning 报告
+[otel.span_attributes]
+"example.trace_attr" = "enabled"
+
+# ── tracestate ─────────────────────────────────────────────────────────────
+# 类型: 嵌套键值对 (可选) | 默认: {}
+# 作用: 向传播的 W3C tracestate 成员写入静态字段
+# 说明: 子表名是 tracestate member 名; 字段会编码为 key:value 并用分号拼接
+#       如果上下文中已有同名 member, Codex 会更新配置字段并保留其他字段
+[otel.tracestate.example]
+alpha = "one"
+beta = "two"
 
 # ── exporter / trace_exporter / metrics_exporter ───────────────────────────
 # 类型: 以下三种之一:
