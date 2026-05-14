@@ -183,7 +183,6 @@ For richer context, use Model Context Protocol servers:
 
 | MCP Server | What It Provides |
 |-----------|-----------------|
-| **Exa** | Auto-fetches relevant documentation for libraries |
 | **Chrome DevTools** | Live browser state, DOM, console, network |
 
 ## Confusion Management
