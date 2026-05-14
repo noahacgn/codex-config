@@ -2,9 +2,6 @@
 
 Global instructions for all projects.
 
-- Prefer Exa AI (`mcp__exa__web_search_exa`) for all web searches
-- Use skills proactively when they match the task — suggest relevant ones, don't block on them
-
 ## Philosophy
 
 - **No speculative features** - Don't add features, flags, or configuration unless users actively need them
@@ -63,11 +60,10 @@ When adding dependencies, CI actions, or tool versions, always look up the curre
 | `ast-grep` | - | `ast-grep --pattern '$FUNC($$$)' --lang py` - AST-based code search |
 | `jq` | grep / awk (for JSON) | `jq '.key[]' file.json` - command-line JSON processor |
 
-Prefer `ast-grep` over ripgrep when searching for code structure (function calls, class definitions, imports, pattern matching across arguments). Use ripgrep for literal strings and log messages.
-
 ## Subagents
 
-ALWAYS wait for all subagents to complete before yielding. Do not combine `fork_context: true` with `agent_type`, `model`, or `reasoning_effort`.
+- ALWAYS wait for all subagents to complete before yielding
+- Do not combine `fork_context: true` with `agent_type`, `model`, or `reasoning_effort`
 
 ## Miscellaneous
 

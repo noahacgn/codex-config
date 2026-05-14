@@ -14,9 +14,6 @@ python ./sync_codex.py
 
 ```bash
 # Install skills
-npx skills add https://github.com/ast-grep/agent-skill --skill ast-grep -g -a codex -y
-npx skills add https://github.com/trailofbits/skills --skill ask-questions-if-underspecified -g -a codex -y
-npx skills add https://github.com/mattpocock/skills --skill grill-me -g -a codex -y
 npx skills add https://github.com/dimillian/skills --skill review-swarm -g -a codex -y
 npx skills add https://github.com/dimillian/skills --skill review-and-simplify-changes -g -a codex -y
 
