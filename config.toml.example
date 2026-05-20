@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.131.0 (发布于 2026-05-18)                     #
+#  适用版本: Codex CLI rust-v0.132.0 (发布于 2026-05-20)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -105,11 +105,13 @@ web_search = "cached"
 # ── service_tier ───────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
 # 默认: 无 (由服务端 / Codex 托管默认值决定)
-# 可选值:
-#   "fast" — 优先速度: 响应更快, 但可能消耗更多配额
-#   "flex" — 优先节省: 使用弹性队列, 价格更低, 但响应可能较慢
-# 说明: 在速度和成本之间做权衡; 符合条件的 ChatGPT 计划在 v0.124.0 起
-#       默认使用 fast, 除非你显式设置 service_tier 或退出托管默认值
+# 常用值:
+#   "priority" — 优先速度: 这是发送给服务端的当前请求值
+#   "fast"     — priority 的旧别名; 配置编辑器仍会把快速层保存为 fast
+#   "flex"     — 优先节省: 使用弹性队列, 价格更低, 但响应可能较慢
+# 说明: 源码还会透传未知字符串, 以便服务端/实验环境支持新的 tier id。
+#       符合条件的 ChatGPT 计划在 v0.124.0 起默认使用快速层, 除非你显式
+#       设置 service_tier 或退出托管默认值
 service_tier = "fast"
 
 # ── personality ────────────────────────────────────────────────────────────
@@ -689,8 +691,8 @@ speaker = "default"
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
 [history]
-# persistence — 类型: 字符串 | 默认: "save-all" (省略整个 [history] 表时)
-# 说明: 如果写出 [history] 表, 源码要求显式设置本字段
+# persistence — 类型: 字符串 | 默认: "save-all"
+# 说明: 即使写出 [history] 表也可以省略本字段, 源码会按默认值补齐
 # 可选值:
 #   "save-all" — 保存所有会话历史到 ~/.codex/history.jsonl
 #   "none"     — 不保存任何历史记录 (关闭后之前的历史不会被自动删除)
@@ -1605,6 +1607,13 @@ mentions_v2 = true
 # subagent_usage_hint_text — 类型: 字符串 (可选)
 # 仅追加到子 Agent 看到的 Multi-Agent V2 用法提示
 # subagent_usage_hint_text = "子 Agent 只处理被分配的范围, 不要改动其他人的文件。"
+#
+# tool_namespace — 类型: 字符串 (可选) | 默认: 无
+# 作用: 为 Multi-Agent V2 工具指定自定义工具命名空间
+# 约束: 1-64 个字符, 只能包含 ASCII 字母、数字、下划线和连字符
+#       不能使用 mcp、mcp__ 前缀, 也不能使用 Responses API 保留命名空间
+# 示例: 将 spawn_agent / wait_agent 等工具暴露为 agents.spawn_agent 等名称
+# tool_namespace = "agents"
 #
 # hide_spawn_agent_metadata — 类型: 布尔值 | 默认: false
 # 是否隐藏 spawn_agent 返回中的 agent 类型 / 模型 / reasoning 元信息
