@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.132.0 (发布于 2026-05-20)                     #
+#  适用版本: Codex CLI rust-v0.133.0 (发布于 2026-05-21)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -106,6 +106,7 @@ web_search = "cached"
 # 类型: 字符串 (可选)
 # 默认: 无 (由服务端 / Codex 托管默认值决定)
 # 常用值:
+#   "default"  — 标准路由: 显式退出模型目录或托管配置中的默认服务层
 #   "priority" — 优先速度: 这是发送给服务端的当前请求值
 #   "fast"     — priority 的旧别名; 配置编辑器仍会把快速层保存为 fast
 #   "flex"     — 优先节省: 使用弹性队列, 价格更低, 但响应可能较慢
@@ -267,6 +268,15 @@ tool_output_token_limit = 12000
 # 说明: 当对话的 token 总量超过此值时, Codex 会自动压缩历史记录,
 #       将旧的对话摘要化以腾出上下文空间; 值越大, 压缩越晚触发
 model_auto_compact_token_limit = 180000
+
+# ── model_auto_compact_token_limit_scope ───────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: "total"
+# 可选值:
+#   "total"             — 将完整活跃上下文计入 model_auto_compact_token_limit
+#   "body_after_prefix" — 只统计压缩窗口保留前缀之后的采样输出与后续增长
+# 作用: 控制自动压缩阈值的计数范围; 通常保持默认即可
+model_auto_compact_token_limit_scope = "total"
 
 # ── model_context_window ───────────────────────────────────────────────────
 # 类型: 整数 (可选)
@@ -1251,10 +1261,12 @@ terminal_resize_reflow_max_rows = 9000
 #
 # 结构:
 #   [permissions.<profile-name>]
+#   description = "..."  # 可选: 展示给 UI/API 的说明文字
+#   extends = "base"     # 可选: 继承另一个自定义/托管 profile; 不支持继承内置 :profile
 #   [permissions.<profile-name>.workspace_roots]
 #     为此 profile 追加可作为 :workspace_roots 物化目标的绝对路径; true 启用, false 禁用
 #   [permissions.<profile-name>.filesystem]
-#     可以为每个路径设置: "read" | "write" | "none"
+#     可以为每个路径设置: "read" | "write" | "deny"
 #     特殊路径:
 #       ":root"          — 文件系统根目录
 #       ":minimal"       — 最小路径集
@@ -1265,13 +1277,20 @@ terminal_resize_reflow_max_rows = 9000
 #
 # 使用: 在顶层设置 default_permissions = "<profile-name>" 来激活
 
+# ── 示例: 可复用基础权限配置 ──────────────────────────────────────────────
+# [permissions.base]
+# description = "基础只读环境, 供其他权限配置继承"
+# [permissions.base.filesystem]
+# ":root" = "read"
+#
 # ── 示例: 标准开发权限配置 ────────────────────────────────────────────────
 # [permissions.dev]
+# description = "开发环境: 工作区可写, 允许访问常用包源"
+# extends = "base"
 # [permissions.dev.workspace_roots]
 # 'C:\Users\you\workspace\shared' = true
 #
 # [permissions.dev.filesystem]
-# ":root" = "read"
 # ":workspace_roots" = "write"
 # ":tmpdir" = "write"
 #
@@ -1301,7 +1320,7 @@ terminal_resize_reflow_max_rows = 9000
 #
 # glob_scan_max_depth — 类型: 正整数 (可选) | 最小: 1
 #   限制 deny-read glob 在非 macOS 平台上的预展开深度
-#   说明: 当你使用 `"**/*.env" = "none"` 这类规则时, 可设置此值来限制扫描开销,
+#   说明: 当你使用 `"**/*.env" = "deny"` 这类规则时, 可设置此值来限制扫描开销,
 #         并避免 Linux 因无界 `**` 展开而给出警告
 #
 # [permissions.globbed]
@@ -1309,7 +1328,7 @@ terminal_resize_reflow_max_rows = 9000
 # glob_scan_max_depth = 3
 # [permissions.globbed.filesystem.":workspace_roots"]
 # "." = "write"
-# "**/*.env" = "none"
+# "**/*.env" = "deny"
 
 # ── network 子表的完整字段参考 ────────────────────────────────────────────
 # 以下字段可以在任何 [permissions.<profile>.network] 中设置:
@@ -1321,8 +1340,10 @@ terminal_resize_reflow_max_rows = 9000
 # mode — 类型: 字符串 | 默认: "full"
 #   可选值:
 #     "full"    — 允许所有 HTTP 方法; HTTPS CONNECT 请求直接隧道传输 (不做中间人)
-#     "limited" — 仅允许 GET/HEAD/OPTIONS; HTTPS CONNECT 被阻止; SOCKS5 被禁用
-#   说明: limited 模式更安全, 只允许只读的网络请求
+#     "limited" — 仅允许 GET/HEAD/OPTIONS; HTTPS CONNECT 会通过自动 MITM 终止后执行方法策略;
+#                 SOCKS5 被禁用
+#   说明: limited 模式更安全, 只允许只读的网络请求; MITM CA 证书/密钥由 Codex 在
+#         $CODEX_HOME/proxy/ 下管理
 #
 # proxy_url — 类型: 字符串 | 默认: "http://127.0.0.1:3128"
 #   托管 HTTP 代理的监听地址
@@ -1355,6 +1376,24 @@ terminal_resize_reflow_max_rows = 9000
 #   [permissions.dev.network.domains]
 #   "api.openai.com" = "allow"
 #   "*.internal.example.com" = "deny"
+#
+# [permissions.<profile>.network.mitm]
+# 作用: 配置 HTTPS MITM hook; 当 mode = "limited" 或存在 MITM hook 时自动启用 MITM
+# 说明: hook 在 HTTPS CONNECT 被终止后匹配请求, action 可复用并可被更高优先级配置覆盖
+# 示例:
+#   [permissions.dev.network.mitm.hooks.github_write]
+#   host = "api.github.com"
+#   methods = ["POST", "PUT"]
+#   path_prefixes = ["/repos/openai/"]
+#   action = ["strip_auth"]
+#
+#   [permissions.dev.network.mitm.actions.strip_auth]
+#   strip_request_headers = ["authorization"]
+#
+#   [[permissions.dev.network.mitm.actions.inject_ci_token.inject_request_headers]]
+#   name = "x-ci-token"
+#   secret_env_var = "CI_TOKEN"
+#   prefix = "Bearer "
 #
 # [permissions.<profile>.network.unix_sockets]
 # 类型: 键值对 | key 为绝对路径, value 为 "allow" | "none"
@@ -1419,10 +1458,6 @@ multi_agent = true
 # 说明: 允许通过 $ 符号引用外部应用
 apps = true
 
-# tool_search — 默认: true | 稳定
-# 为 Apps 暴露 tool_search 工具, 让模型按需发现和延迟加载可用工具
-tool_search = true
-
 # tool_suggest — 默认: true | 稳定
 # 启用工具建议功能, 当模型缺少所需工具时自动推荐
 tool_suggest = true
@@ -1480,6 +1515,10 @@ guardian_approval = true
 # 说明: 允许 Codex 感知并使用工作区声明的依赖关系
 workspace_dependencies = true
 
+# goals — 默认: true | 稳定
+# 启用持久化 /goal 工作流、自动延续与 TUI 控件
+goals = true
+
 # ── 实验功能 (Experimental) ────────────────────────────────────────────────
 
 # memories — 默认: false | 实验 (别名: memory_tool)
@@ -1503,10 +1542,6 @@ terminal_resize_reflow = true
 # 使用统一的 @ mention 弹窗搜索文件、目录、Apps、插件和 Skills
 mentions_v2 = true
 
-# goals — 默认: false | 实验
-# 启用持久化 /goal 工作流、自动延续与 TUI 控件
-# goals = false
-
 # network_proxy — 默认: false | 实验
 # 为已经具备网络访问权限的沙箱会话启用托管网络代理限制
 # 说明: 可写成布尔值, 也可写成 [features.network_proxy] 对象来细化策略
@@ -1518,6 +1553,7 @@ mentions_v2 = true
 #
 # mode — 类型: 字符串 | 默认: "full" | 可选值: "full" | "limited"
 # mode = "limited"
+# limited 模式会自动启用 HTTPS MITM 来执行方法策略; SOCKS5 在 limited 模式下会被阻止
 #
 # proxy_url / socks_url — 类型: 字符串 | 默认见下方
 # proxy_url = "http://127.0.0.1:3128"
@@ -1639,10 +1675,6 @@ mentions_v2 = true
 # 暴露内置的 request_permissions 工具, 让模型可以主动请求文件系统权限
 # request_permissions_tool = false
 
-# skill_env_var_dependency_prompt — 默认: false | 开发中
-# 当 Skill 需要的环境变量缺失时, 提示用户设置
-# skill_env_var_dependency_prompt = false
-
 # default_mode_request_user_input — 默认: false | 开发中
 # 在 Default 模式 (非 Plan 模式) 中允许 request_user_input
 # default_mode_request_user_input = false
@@ -1730,6 +1762,8 @@ mentions_v2 = true
 # use_linux_sandbox_bwrap       — 已移除
 # tui_app_server                — 已移除 (始终启用)
 # image_detail_original         — 已移除 (兼容旧包装器的空操作标志)
+# tool_search                   — 已移除 (现在始终可用, 配置项为空操作)
+# skill_env_var_dependency_prompt — 已移除 (缺失 Skill 环境变量提示已删除)
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -1738,11 +1772,14 @@ mentions_v2 = true
 # 作用: 在会话、工具调用、审批请求、用户提交和停止等生命周期事件中运行命令
 # 说明: v0.124.0 起 hooks 已稳定; 也可以继续使用 ~/.codex/hooks.json
 # 支持事件: PreToolUse / PermissionRequest / PostToolUse / SessionStart /
-#           UserPromptSubmit / PreCompact / PostCompact / Stop
+#           UserPromptSubmit / PreCompact / PostCompact / SubagentStart /
+#           SubagentStop / Stop
 # matcher:
 #   - PreToolUse / PermissionRequest / PostToolUse: 匹配工具名或兼容别名
 #   - SessionStart: 匹配 "startup" / "resume" / "clear"
-#   - PreCompact / PostCompact / UserPromptSubmit / Stop: 当前忽略 matcher
+#   - SubagentStart / SubagentStop: 匹配 agent_type, 例如 "worker" 或 "review"
+#   - PreCompact / PostCompact: 匹配 "manual" / "auto"
+#   - UserPromptSubmit / Stop: 当前忽略 matcher
 # handler:
 #   - 目前仅 command 类型会执行; prompt / agent 类型可解析但尚未执行
 #   - timeout 单位为秒, 默认 600; async = true 目前会被跳过
@@ -1796,6 +1833,19 @@ mentions_v2 = true
 # [[hooks.PostCompact.hooks]]
 # type = "command"
 # command = "python3 ~/.codex/hooks/post_compact.py"
+#
+# ── SubagentStart / SubagentStop: 子 Agent 启动与结束 ─────────────────────
+# [[hooks.SubagentStart]]
+# matcher = "worker|review"
+# [[hooks.SubagentStart.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/subagent_start.py"
+#
+# [[hooks.SubagentStop]]
+# matcher = "*"
+# [[hooks.SubagentStop.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/subagent_stop.py"
 #
 # ── hook state: 用户级启用/禁用状态 ────────────────────────────────────────
 # 作用: 记录单个 hook 是否启用以及已信任的命令内容哈希; 通常由 UI / app-server 写入
