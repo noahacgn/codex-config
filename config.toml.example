@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.133.0 (发布于 2026-05-21)                     #
+#  适用版本: Codex CLI rust-v0.134.0 (发布于 2026-05-26)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -183,14 +183,11 @@ model_verbosity = "medium"
 # ── 配置文件 (Profile) 选择 ─────────────────────────────────────────────────
 
 # ── profile ────────────────────────────────────────────────────────────────
-# 类型: 字符串 (可选)
-# 默认: 无 (不使用任何 profile)
-# 作用: 激活指定的配置预设 (对应下方 [profiles.xxx] 中定义的名称)
-# 说明: Profile 是一组配置的 "快照", 可以把多个设置打包在一起,
-#       通过切换 profile 快速切换使用场景(如 "快速模式"、"安全模式")
-#       profile 中的设置会覆盖同名的顶层设置
-# 示例: "default"、"fast"、"safe"
-profile = "default"
+# 状态: 旧式内联 profile 选择已不再支持
+# 说明: 不要在 config.toml 中设置 profile = "名称"; v0.134.0 会直接报错。
+#       如需配置预设, 请创建 $CODEX_HOME/<名称>.config.toml, 然后用
+#       codex --profile <名称> 启动。示例见本文末尾“配置预设”小节。
+# profile = "default"
 
 
 # ── 杂项开关 ────────────────────────────────────────────────────────────────
@@ -337,11 +334,12 @@ mcp_oauth_credentials_store = "auto"
 # forced_login_method = "chatgpt"
 
 # ── forced_chatgpt_workspace_id ────────────────────────────────────────────
-# 类型: 字符串 (可选)
+# 类型: 字符串或字符串数组 (可选)
 # 默认: 无
-# 作用: 限制 ChatGPT 登录时只能使用指定的工作区 ID
+# 作用: 限制 ChatGPT 登录时只能使用指定的一个或多个工作区 ID
 # 说明: 适合企业环境, 确保用户登录到正确的组织工作区
 # forced_chatgpt_workspace_id = "ws_xxx"
+# forced_chatgpt_workspace_id = ["ws_xxx", "ws_yyy"]
 
 # ── chatgpt_base_url ───────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
@@ -444,7 +442,7 @@ include_environment_context = true
 # ── log_dir ────────────────────────────────────────────────────────────────
 # 类型: 路径 (可选)
 # 默认: $CODEX_HOME/log
-# 作用: 日志文件存储目录 (如 codex-tui.log)
+# 作用: 日志文件存储目录; 显式设置后也会启用 TUI 文本日志写入该目录
 # log_dir = 'C:\Users\you\.codex\log'
 
 # ── sqlite_home ────────────────────────────────────────────────────────────
@@ -1470,10 +1468,6 @@ plugins = true
 # 启用插件分享 / 签出相关工作流
 plugin_sharing = true
 
-# plugin_hooks — 默认: true | 稳定
-# 加载插件包中声明的生命周期 hooks
-plugin_hooks = true
-
 # in_app_browser — 默认: true | 稳定
 # 启用 Codex 内置浏览器能力
 # 说明: 这是 requirements 管理的能力门禁, 通常不应在用户 config.toml 中手动设置
@@ -1585,7 +1579,7 @@ mentions_v2 = true
 # ── 开发中功能 (Under Development) ─────────────────────────────────────────
 
 # code_mode — 默认: false | 开发中
-# 启用基于 Node 内置 vm 运行时的最小 JavaScript 模式
+# 启用基于进程内 V8 运行时的最小 JavaScript 模式
 # code_mode = false
 
 # code_mode_only — 默认: false | 开发中
@@ -1764,6 +1758,7 @@ mentions_v2 = true
 # image_detail_original         — 已移除 (兼容旧包装器的空操作标志)
 # tool_search                   — 已移除 (现在始终可用, 配置项为空操作)
 # skill_env_var_dependency_prompt — 已移除 (缺失 Skill 环境变量提示已删除)
+# plugin_hooks                  — 已移除 (插件 hooks 不再由 feature flag 控制)
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -2152,7 +2147,7 @@ env = { MCP_LOG_LEVEL = "info" }
 # ]
 # source 可选值:
 #   "local"  — 从本地 Codex 进程环境读取
-#   "remote" — 从远端运行环境读取 (通常与 experimental_environment = "remote" 配合)
+#   "remote" — 从远端运行环境读取 (通常与 environment_id = "remote" 配合)
 
 # enabled — 类型: 布尔值 | 默认: true
 # 是否启用此 MCP 服务器; 设为 false 则跳过初始化
@@ -2163,12 +2158,11 @@ enabled = true
 # 适合关键依赖: 如果这个服务器不可用, 任务就无法进行
 required = false
 
-# experimental_environment — 类型: 字符串 (可选)
-# 可选值:
-#   "local"  — 默认行为, 在当前本地环境启动/连接
-#   "remote" — 在远端运行环境中启动 stdio MCP 服务
-# 说明: 当前主要用于远端执行场景; 不支持的值会直接报错
-# experimental_environment = "remote"
+# environment_id — 类型: 字符串 (可选) | 默认: "local"
+# 作用: 指定在哪个执行环境中启动/连接此 MCP 服务器
+# 说明: "local" 表示当前本地环境; 其他值需对应已配置/可用的执行环境。
+#       对 stdio 传输, 当 environment_id 不是 "local" 时, cwd 必须是绝对路径。
+# environment_id = "remote"
 
 # supports_parallel_tool_calls — 类型: 布尔值 | 默认: false
 # 是否将此服务器暴露的所有工具都标记为“可安全并行调用”
@@ -2416,87 +2410,75 @@ trust_level = "trusted"
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║                     第 26 节: 配置预设 (Profiles)                       ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
-# 作用: 将多个配置打包成 "预设", 通过切换 profile 一键切换使用场景
-# 激活: 在顶层设置 profile = "名称" 即可激活对应的预设
-# 优先级: CLI 参数 > profile 中的值 > 顶层配置 > 默认值
+# 作用: 将多个配置打包成独立预设文件, 通过 --profile 一键切换使用场景
+# 激活: 创建 $CODEX_HOME/<名称>.config.toml, 然后运行 codex --profile <名称>
+# 优先级: CLI 参数 > profile 文件 > config.toml > 默认值
 #
-# Profile 可以设置的字段 (所有均为可选, 只有设置了才会覆盖顶层配置):
-#   model, model_provider, service_tier, approval_policy, approvals_reviewer,
-#   sandbox_mode, model_reasoning_effort, plan_mode_reasoning_effort,
-#   model_reasoning_summary, model_verbosity, model_catalog_json, personality,
-#   chatgpt_base_url, model_instructions_file, zsh_path, experimental_compact_prompt_file,
-#   include_permissions_instructions, include_apps_instructions,
-#   include_collaboration_mode_instructions, include_environment_context,
-#   experimental_use_unified_exec_tool, tools (工具配置), web_search, oss_provider,
-#   analytics (子对象), windows (子对象), tui (子对象), features (功能标志子对象)
+# 注意: 旧式 profile = "名称" 与 [profiles.名称] 已不再用于激活预设。
+#       如果 config.toml 中设置了 profile = "名称", v0.134.0 会提示移到
+#       <名称>.config.toml 并移除旧式 selector/table。
 
-# ── 预设: default (日常使用) ───────────────────────────────────────────────
-[profiles.default]
-model = "gpt-5.4"
-approval_policy = "on-request"
-sandbox_mode = "workspace-write"
-web_search = "cached"
-service_tier = "fast"
-personality = "pragmatic"
-model_reasoning_effort = "high"
-model_reasoning_summary = "auto"
-model_verbosity = "medium"
-plan_mode_reasoning_effort = "high"
-
-[profiles.default.analytics]
-enabled = true
-
-[profiles.default.windows]
-sandbox = "elevated"
-
-[profiles.default.tui]
-session_picker_view = "dense"
-
-[profiles.default.features]
-multi_agent = true
-unified_exec = true
-shell_tool = true
-shell_snapshot = true
-memories = true
-fast_mode = true
-plugin_sharing = true
-mentions_v2 = true
-
-# ── Profile 中的工具配置 (tools 子对象) ───────────────────────────────────
-# 可以在 profile 中嵌入 [tools] 的完整配置, 与顶层 [tools] 合并
-# [profiles.default.tools]
-# [profiles.default.tools.web_search]
+# ── 预设文件示例: $CODEX_HOME/default.config.toml ────────────────────────
+# model = "gpt-5.4"
+# approval_policy = "on-request"
+# sandbox_mode = "workspace-write"
+# web_search = "cached"
+# service_tier = "fast"
+# personality = "pragmatic"
+# model_reasoning_effort = "high"
+# model_reasoning_summary = "auto"
+# model_verbosity = "medium"
+# plan_mode_reasoning_effort = "high"
+#
+# [analytics]
+# enabled = true
+#
+# [windows]
+# sandbox = "elevated"
+#
+# [tui]
+# session_picker_view = "dense"
+#
+# [features]
+# multi_agent = true
+# unified_exec = true
+# shell_tool = true
+# shell_snapshot = true
+# memories = true
+# fast_mode = true
+# plugin_sharing = true
+# mentions_v2 = true
+#
+# [tools.web_search]
 # context_size = "medium"
 # allowed_domains = ["docs.python.org"]
 
-# ── 预设: fast (追求速度) ──────────────────────────────────────────────────
-[profiles.fast]
-model = "gpt-5.4"
-approval_policy = "never"
-sandbox_mode = "danger-full-access"
-web_search = "live"
-service_tier = "fast"
-personality = "pragmatic"
-model_reasoning_effort = "medium"
-model_reasoning_summary = "concise"
-model_verbosity = "low"
+# ── 预设文件示例: $CODEX_HOME/fast.config.toml ───────────────────────────
+# model = "gpt-5.4"
+# approval_policy = "never"
+# sandbox_mode = "danger-full-access"
+# web_search = "live"
+# service_tier = "fast"
+# personality = "pragmatic"
+# model_reasoning_effort = "medium"
+# model_reasoning_summary = "concise"
+# model_verbosity = "low"
+#
+# [features]
+# fast_mode = true
+# multi_agent = true
+# unified_exec = true
 
-[profiles.fast.features]
-fast_mode = true
-multi_agent = true
-unified_exec = true
-
-# ── 预设: safe (最安全) ────────────────────────────────────────────────────
-[profiles.safe]
-model = "gpt-5.4"
-approval_policy = "untrusted"
-sandbox_mode = "read-only"
-web_search = "disabled"
-service_tier = "flex"
-personality = "pragmatic"
-model_reasoning_effort = "high"
-model_reasoning_summary = "auto"
-model_verbosity = "medium"
+# ── 预设文件示例: $CODEX_HOME/safe.config.toml ───────────────────────────
+# model = "gpt-5.4"
+# approval_policy = "untrusted"
+# sandbox_mode = "read-only"
+# web_search = "disabled"
+# service_tier = "flex"
+# personality = "pragmatic"
+# model_reasoning_effort = "high"
+# model_reasoning_summary = "auto"
+# model_verbosity = "medium"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
