@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.134.0 (发布于 2026-05-26)                     #
+#  适用版本: Codex CLI rust-v0.135.0 (发布于 2026-05-28)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -184,7 +184,9 @@ model_verbosity = "medium"
 
 # ── profile ────────────────────────────────────────────────────────────────
 # 状态: 旧式内联 profile 选择已不再支持
-# 说明: 不要在 config.toml 中设置 profile = "名称"; v0.134.0 会直接报错。
+# 说明: 不要在 config.toml 中设置 profile = "名称"; 构建最终配置时会报错。
+#       如果同时用 codex --profile <名称> 启动, 且 config.toml 里仍有同名
+#       profile = "名称" 或 [profiles.名称], 加载配置层时也会报错。
 #       如需配置预设, 请创建 $CODEX_HOME/<名称>.config.toml, 然后用
 #       codex --profile <名称> 启动。示例见本文末尾“配置预设”小节。
 # profile = "default"
@@ -473,14 +475,6 @@ include_environment_context = true
 # 作用: 指定一个文件, 其内容覆盖历史压缩时使用的提示词
 # experimental_compact_prompt_file = 'C:\Users\you\.codex\compact_prompt.md'
 
-# ── zsh_path ───────────────────────────────────────────────────────────────
-# 类型: 路径 (可选)
-# 默认: 无
-# 作用: 指定 zsh 可执行文件的路径, 用于 zsh-exec-bridge 模式
-# 说明: 仅在 shell_zsh_fork 功能启用时有效
-# zsh_path = "/usr/bin/zsh"
-
-
 # ── 项目文档相关 ────────────────────────────────────────────────────────────
 
 # ── project_doc_max_bytes ──────────────────────────────────────────────────
@@ -569,6 +563,9 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 #   { type = "local" } — 使用本地文件系统 / SQLite 存储
 # 说明: 实验性配置; v0.130.0 起远端 thread store 配置已移除
 # experimental_thread_store = { type = "local" }
+#
+# 已移除旧键: experimental_thread_store_endpoint
+# 说明: 如果设置该旧键, Codex 会直接报错; 请从 config.toml 中删除。
 
 # ── experimental_thread_config_endpoint ────────────────────────────────────
 # 类型: 字符串 (可选)
@@ -923,6 +920,11 @@ generate_memories = true
 # 设为 false 后 Codex 不会使用任何记忆来辅助回答
 use_memories = true
 
+# dedicated_tools — 类型: 布尔值 | 默认: false
+# 是否通过 extension tool surface 暴露专用记忆工具
+# 设为 true 后, 模型可使用专门的记忆工具来访问记忆能力
+dedicated_tools = false
+
 # disable_on_external_context — 类型: 布尔值 | 默认: false
 # 当设为 true 时, 如果会话中使用了 MCP 工具或网络搜索,
 # 该会话会被标记为 "污染", 不会从中提取记忆
@@ -1191,7 +1193,7 @@ terminal_resize_reflow_max_rows = 9000
 #              clear_terminal, submit, queue, toggle_shortcuts,
 #              toggle_vim_mode, toggle_fast_mode, toggle_raw_output
 #   chat     — 聊天区动作: increase_reasoning_effort, decrease_reasoning_effort,
-#              edit_queued_message
+#              edit_queued_message, interrupt_turn
 #   composer — 输入框动作: submit, queue, toggle_shortcuts,
 #              history_search_previous, history_search_next
 #   editor   — 文本编辑动作: insert_newline, move_left, move_right, move_up,
@@ -1204,12 +1206,16 @@ terminal_resize_reflow_max_rows = 9000
 #              open_line_above, move_left, move_right, move_up, move_down,
 #              move_word_forward, move_word_backward, move_word_end,
 #              move_line_start, move_line_end, delete_char, delete_to_line_end,
-#              yank_line, paste_after, start_delete_operator,
-#              start_yank_operator, cancel_operator
+#              change_to_line_end, yank_line, paste_after,
+#              start_delete_operator, start_yank_operator,
+#              start_change_operator, cancel_operator
 #   vim_operator — Vim operator-pending 动作: delete_line, yank_line,
 #              motion_left, motion_right, motion_up, motion_down,
 #              motion_word_forward, motion_word_backward, motion_word_end,
-#              motion_line_start, motion_line_end, cancel
+#              motion_line_start, motion_line_end, select_inner_text_object,
+#              select_around_text_object, cancel
+#   vim_text_object — Vim 文本对象动作: word, big_word, parentheses,
+#              brackets, braces, double_quote, single_quote, backtick, cancel
 #   pager    — 覆盖层滚动动作: scroll_up, scroll_down, page_up, page_down,
 #              half_page_up, half_page_down, jump_top, jump_bottom, close,
 #              close_transcript
@@ -1221,6 +1227,9 @@ terminal_resize_reflow_max_rows = 9000
 # [tui.keymap.global]
 # open_transcript = "ctrl-t"
 # copy = ["ctrl-y", "alt-y"]
+#
+# [tui.keymap.chat]
+# interrupt_turn = "esc"
 #
 # [tui.keymap.composer]
 # submit = "enter"
@@ -1235,10 +1244,24 @@ terminal_resize_reflow_max_rows = 9000
 # enter_insert = "i"
 # append_line_end = "shift-a"
 # delete_char = "x"
+# change_to_line_end = "shift-c"
+# start_change_operator = "c"
 #
 # [tui.keymap.vim_operator]
 # delete_line = "d"
 # yank_line = "y"
+# select_inner_text_object = "i"
+# select_around_text_object = "a"
+#
+# [tui.keymap.vim_text_object]
+# word = "w"
+# big_word = "shift-w"
+# parentheses = ["(", ")"]
+# brackets = ["[", "]"]
+# braces = ["{", "}"]
+# double_quote = '"'
+# single_quote = "'"
+# backtick = "`"
 #
 # [tui.keymap.list]
 # page_up = "page-up"
@@ -1590,6 +1613,11 @@ mentions_v2 = true
 # 将 shell 执行路由到 zsh exec bridge
 # shell_zsh_fork = false
 
+# standalone_web_search — 默认: false | 开发中
+# 通过扩展工具面暴露独立 web_search 工具
+# 说明: 仅在 OpenAI 模型提供商且顶层 web_search 未禁用时生效
+# standalone_web_search = false
+
 # chronicle — 默认: false | 开发中 (历史别名: telepathy)
 # 启用 Chronicle sidecar, 以被动屏幕上下文的形式扩展记忆能力
 # chronicle = false
@@ -1680,6 +1708,11 @@ mentions_v2 = true
 # tool_search_always_defer_mcp_tools — 默认: false | 开发中
 # 始终将 MCP 工具放到 tool_search 后按需发现, 不直接暴露小规模工具集
 # tool_search_always_defer_mcp_tools = false
+
+# non_prefixed_mcp_tool_names — 默认: false | 开发中
+# 暴露 MCP 工具命名空间时去掉历史 mcp__ 前缀
+# 说明: 例如把 mcp__rmcp__echo 暴露为 rmcp__echo; 仅用于新工具命名实验
+# non_prefixed_mcp_tool_names = false
 
 # remote_plugin — 默认: false | 开发中
 # 启用远程插件市场的列表与详情读取能力
@@ -2415,7 +2448,7 @@ trust_level = "trusted"
 # 优先级: CLI 参数 > profile 文件 > config.toml > 默认值
 #
 # 注意: 旧式 profile = "名称" 与 [profiles.名称] 已不再用于激活预设。
-#       如果 config.toml 中设置了 profile = "名称", v0.134.0 会提示移到
+#       如果 config.toml 中设置了 profile = "名称", v0.135.0 会提示移到
 #       <名称>.config.toml 并移除旧式 selector/table。
 
 # ── 预设文件示例: $CODEX_HOME/default.config.toml ────────────────────────
