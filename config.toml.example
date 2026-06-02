@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.135.0 (发布于 2026-05-28)                     #
+#  适用版本: Codex CLI rust-v0.136.0 (发布于 2026-06-01)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -91,6 +91,24 @@ approval_policy = "on-request"
 # 说明: 沙箱决定了模型可以对你的电脑做什么; 未显式设置时, trusted/untrusted
 #       项目通常会派生为 workspace-write, Windows 沙箱不可用时会回落到 read-only
 sandbox_mode = "workspace-write"
+
+# ── default_permissions ──────────────────────────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 指定默认启用的权限 profile
+# 说明: 名称以 ":" 开头时引用内置 profile, 其他名称引用第 13 节
+#       [permissions.<名称>] 中定义的 profile。设置此项会使用新的权限
+#       profile 语法来派生运行时沙箱与权限状态。
+# 常用内置值:
+#   ":workspace"          — workspace-write 权限
+#   ":read-only"          — 只读权限
+#   ":danger-full-access" — 无沙箱限制, 风险最高
+# 运行时会把当前权限 profile 作为规范权限视图传递给 TUI 会话、子回合、
+# MCP sandbox state、shell 提权和 app-server API。
+# 示例:
+# default_permissions = ":workspace"
+# 或引用第 13 节中定义的 "dev" profile:
+# default_permissions = "dev"
 
 # ── web_search ─────────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
@@ -819,23 +837,6 @@ sandbox = "elevated"
 # 作用: 当 sandbox_mode = "workspace-write" 时, 定制沙箱的详细行为
 # 说明: 仅在 workspace-write 模式下生效; 其他沙箱模式忽略此配置
 
-# ── default_permissions ──────────────────────────────────────────────────
-# 类型: 字符串 (可选)
-# 默认: 无
-# 作用: 指定默认启用的权限 profile
-# 说明: 这是顶层键, 必须写在表外; 名称以 ":" 开头时引用内置 profile,
-#       其他名称引用第 13 节 [permissions.<名称>] 中定义的 profile。
-# 常用内置值:
-#   ":workspace"         — workspace-write 权限
-#   ":read-only"         — 只读权限
-#   ":danger-no-sandbox" — 无沙箱限制, 风险最高
-# 运行时会把当前权限 profile 作为规范权限视图传递给 TUI 会话、子回合、
-# MCP sandbox state、shell 提权和 app-server API。
-# 示例:
-# default_permissions = ":workspace"
-# 或引用第 13 节中定义的 "dev" profile:
-# default_permissions = "dev"
-
 [sandbox_workspace_write]
 # network_access — 类型: 布尔值 | 默认: false
 # 是否允许在 workspace-write 沙箱中进行网络访问
@@ -996,6 +997,16 @@ min_rate_limit_remaining_percent = 25
 # region = "California"
 # city = "San Francisco"
 # timezone = "America/Los_Angeles"
+
+# ── [tools.experimental_request_user_input] — request_user_input 工具开关 ──
+# 类型: 对象 (可选) | 默认: 未设置时启用
+# 作用: 控制是否注册实验性的 request_user_input 工具
+# 说明: 设为 false 会完全隐藏并禁用该工具; Default 模式是否可用还受
+#       [features] default_mode_request_user_input 控制
+
+[tools.experimental_request_user_input]
+# enabled — 类型: 布尔值 | 默认: true
+enabled = true
 
 
 # ── [tool_suggest] — 可建议安装的工具来源 ──────────────────────────────────
@@ -1205,8 +1216,8 @@ terminal_resize_reflow_max_rows = 9000
 #              append_line_end, insert_line_start, open_line_below,
 #              open_line_above, move_left, move_right, move_up, move_down,
 #              move_word_forward, move_word_backward, move_word_end,
-#              move_line_start, move_line_end, delete_char, delete_to_line_end,
-#              change_to_line_end, yank_line, paste_after,
+#              move_line_start, move_line_end, delete_char, substitute_char,
+#              delete_to_line_end, change_to_line_end, yank_line, paste_after,
 #              start_delete_operator, start_yank_operator,
 #              start_change_operator, cancel_operator
 #   vim_operator — Vim operator-pending 动作: delete_line, yank_line,
@@ -1244,6 +1255,7 @@ terminal_resize_reflow_max_rows = 9000
 # enter_insert = "i"
 # append_line_end = "shift-a"
 # delete_char = "x"
+# substitute_char = "s"
 # change_to_line_end = "shift-c"
 # start_change_operator = "c"
 #
@@ -1276,7 +1288,7 @@ terminal_resize_reflow_max_rows = 9000
 # 作用: 定义命名权限配置文件 (permission profiles), 通过 default_permissions 引用
 # 说明: [permissions] 表使用扁平映射结构 — 每个 key 都是一个自定义 profile 名称,
 #       对应一个包含 filesystem 和 network 子表的权限配置。内置 profile 使用
-#       ":workspace"、":read-only"、":danger-no-sandbox" 等名称, 不需要在这里定义。
+#       ":workspace"、":read-only"、":danger-full-access" 等名称, 不需要在这里定义。
 #       权限 profile 不只用于本地沙箱构建, 也会在 TUI 会话恢复、用户回合、
 #       MCP sandbox state、shell 提权和 app-server API 中往返传递。
 #
@@ -1417,7 +1429,7 @@ terminal_resize_reflow_max_rows = 9000
 #   prefix = "Bearer "
 #
 # [permissions.<profile>.network.unix_sockets]
-# 类型: 键值对 | key 为绝对路径, value 为 "allow" | "none"
+# 类型: 键值对 | key 为绝对路径, value 为 "allow" | "deny"
 # 示例:
 #   [permissions.dev.network.unix_sockets]
 #   "/tmp/example.sock" = "allow"
@@ -1555,10 +1567,6 @@ prevent_idle_sleep = true
 # 细节可用 [tui] terminal_resize_reflow_max_rows 控制
 terminal_resize_reflow = true
 
-# mentions_v2 — 默认: false | 实验
-# 使用统一的 @ mention 弹窗搜索文件、目录、Apps、插件和 Skills
-mentions_v2 = true
-
 # network_proxy — 默认: false | 实验
 # 为已经具备网络访问权限的沙箱会话启用托管网络代理限制
 # 说明: 可写成布尔值, 也可写成 [features.network_proxy] 对象来细化策略
@@ -1617,6 +1625,14 @@ mentions_v2 = true
 # 通过扩展工具面暴露独立 web_search 工具
 # 说明: 仅在 OpenAI 模型提供商且顶层 web_search 未禁用时生效
 # standalone_web_search = false
+
+# mentions_v2 — 默认: false | 开发中
+# 使用统一的 @ mention 弹窗搜索文件、目录、Apps、插件和 Skills
+mentions_v2 = true
+
+# imagegenext — 默认: false | 开发中
+# 用独立 image-generation extension 替代托管图片生成路径
+# imagegenext = false
 
 # chronicle — 默认: false | 开发中 (历史别名: telepathy)
 # 启用 Chronicle sidecar, 以被动屏幕上下文的形式扩展记忆能力
@@ -2448,7 +2464,7 @@ trust_level = "trusted"
 # 优先级: CLI 参数 > profile 文件 > config.toml > 默认值
 #
 # 注意: 旧式 profile = "名称" 与 [profiles.名称] 已不再用于激活预设。
-#       如果 config.toml 中设置了 profile = "名称", v0.135.0 会提示移到
+#       如果 config.toml 中设置了 profile = "名称", v0.136.0 会提示移到
 #       <名称>.config.toml 并移除旧式 selector/table。
 
 # ── 预设文件示例: $CODEX_HOME/default.config.toml ────────────────────────
