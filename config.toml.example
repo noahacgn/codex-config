@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.136.0 (发布于 2026-06-01)                     #
+#  适用版本: Codex CLI rust-v0.137.0 (发布于 2026-06-03)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -1418,6 +1418,10 @@ terminal_resize_reflow_max_rows = 9000
 #   host = "api.github.com"
 #   methods = ["POST", "PUT"]
 #   path_prefixes = ["/repos/openai/"]
+#   query = { state = ["open"], per_page = ["100"] }
+#   headers = { "x-github-api-version" = ["2022-11-28"] }
+#   # body 是保留字段; 当前运行时验证会拒绝非空 body matcher, 不要启用
+#   # body = { repository = "openai/codex" }
 #   action = ["strip_auth"]
 #
 #   [permissions.dev.network.mitm.actions.strip_auth]
@@ -1426,6 +1430,8 @@ terminal_resize_reflow_max_rows = 9000
 #   [[permissions.dev.network.mitm.actions.inject_ci_token.inject_request_headers]]
 #   name = "x-ci-token"
 #   secret_env_var = "CI_TOKEN"
+#   # secret_file 与 secret_env_var 二选一; secret_file 必须是绝对路径
+#   # secret_file = 'C:\Users\you\.codex\secrets\ci-token.txt'
 #   prefix = "Bearer "
 #
 # [permissions.<profile>.network.unix_sockets]
@@ -1621,6 +1627,11 @@ terminal_resize_reflow = true
 # 将 shell 执行路由到 zsh exec bridge
 # shell_zsh_fork = false
 
+# unified_exec_zsh_fork — 默认: false | 开发中
+# 允许 unified_exec 与 zsh exec bridge 组合使用
+# 说明: 这是组合开关; 单独开启不会自动启用 unified_exec 或 shell_zsh_fork
+# unified_exec_zsh_fork = false
+
 # standalone_web_search — 默认: false | 开发中
 # 通过扩展工具面暴露独立 web_search 工具
 # 说明: 仅在 OpenAI 模型提供商且顶层 web_search 未禁用时生效
@@ -1637,6 +1648,10 @@ mentions_v2 = true
 # chronicle — 默认: false | 开发中 (历史别名: telepathy)
 # 启用 Chronicle sidecar, 以被动屏幕上下文的形式扩展记忆能力
 # chronicle = false
+
+# local_thread_store_compression — 默认: false | 开发中
+# 启用本地线程存储压缩, 用于减少本地会话持久化占用
+# local_thread_store_compression = false
 
 # multi_agent_v2 — 默认: false | 开发中
 # 启用新一代多 Agent 协作实现
@@ -2327,6 +2342,13 @@ default_tools_enabled = true
 #   "prompt"  — 每次使用前弹出提示让用户确认
 #   "approve" — 需要用户明确批准
 default_tools_approval_mode = "auto"
+
+# approvals_reviewer — 类型: 字符串 (可选) | 默认: 继承顶层 approvals_reviewer
+# 可选值: "user" | "auto_review" | "guardian_subagent"
+# 作用: 为此 App 的审批提示单独指定审查者
+# 说明: 设为 "user" 会让此 App 的审批提示直接交给用户;
+#       设为 "auto_review" 会在配置要求允许时交给 Auto-review 审查
+approvals_reviewer = "user"
 
 destructive_enabled = false
 open_world_enabled = true
