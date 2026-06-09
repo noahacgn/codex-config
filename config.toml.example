@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.137.0 (发布于 2026-06-03)                     #
+#  适用版本: Codex CLI rust-v0.138.0 (发布于 2026-06-09)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -126,12 +126,12 @@ web_search = "cached"
 # 常用值:
 #   "default"  — 标准路由: 显式退出模型目录或托管配置中的默认服务层
 #   "priority" — 优先速度: 这是发送给服务端的当前请求值
-#   "fast"     — priority 的旧别名; 配置编辑器仍会把快速层保存为 fast
+#   "fast"     — priority 的旧别名, 仍可被解析为快速层
 #   "flex"     — 优先节省: 使用弹性队列, 价格更低, 但响应可能较慢
 # 说明: 源码还会透传未知字符串, 以便服务端/实验环境支持新的 tier id。
 #       符合条件的 ChatGPT 计划在 v0.124.0 起默认使用快速层, 除非你显式
 #       设置 service_tier 或退出托管默认值
-service_tier = "fast"
+service_tier = "priority"
 
 # ── personality ────────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
@@ -149,7 +149,7 @@ personality = "pragmatic"
 # ── model_reasoning_effort ─────────────────────────────────────────────────
 # 类型: 字符串 (可选)
 # 默认: "medium" (模型内部默认)
-# 可选值: "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
+# 常见值: "none" | "minimal" | "low" | "medium" | "high" | "xhigh"
 # 作用: 控制模型的 "思考深度" (reasoning.effort 参数)
 #   "none"    — 不进行推理, 直接回答 (最快, 适合简单问题)
 #   "minimal" — 极少推理
@@ -157,13 +157,15 @@ personality = "pragmatic"
 #   "medium"  — 中等推理 (平衡速度和质量)
 #   "high"    — 深度推理 (适合复杂编程/调试)
 #   "xhigh"   — 极致推理 (最慢但最周密, 适合疑难杂症)
-# 说明: 推理越深, 回答越周全, 但速度越慢、消耗越多
+# 说明: v0.138.0 起这里接受任意非空字符串, 以便透传模型目录发布的自定义
+#       effort 名称; 上方列出的是 Codex 当前识别的常见值。推理越深, 回答
+#       越周全, 但速度越慢、消耗越多
 model_reasoning_effort = "high"
 
 # ── plan_mode_reasoning_effort ─────────────────────────────────────────────
 # 类型: 字符串 (可选)
 # 默认: 无 (Plan 模式使用内置预设, 通常为 "medium")
-# 可选值: 同 model_reasoning_effort
+# 常见值: 同 model_reasoning_effort
 # 作用: 单独为 Plan 模式(计划模式)设置推理深度
 # 说明: 如果不设置, Plan 模式会使用自己的内置默认值;
 #       如果你觉得计划阶段的分析不够深入, 可以在这里调高
@@ -1617,7 +1619,13 @@ terminal_resize_reflow = true
 
 # code_mode — 默认: false | 开发中
 # 启用基于进程内 V8 运行时的最小 JavaScript 模式
+# 简单写法:
 # code_mode = false
+#
+# 对象写法 (v0.138.0 起):
+# [features.code_mode]
+# enabled = true
+# excluded_tool_namespaces = ["web", "image_gen"]
 
 # code_mode_only — 默认: false | 开发中
 # 仅向模型暴露 code_mode 工具 (需要 code_mode 已启用)
@@ -1761,10 +1769,6 @@ mentions_v2 = true
 # enabled = true
 # path = 'C:\Users\you\.codex\apps-mcp-server.exe'
 
-# artifact — 默认: false | 开发中
-# 启用原生 artifact 工具
-# artifact = false
-
 # realtime_conversation — 默认: false | 开发中
 # 启用实验性实时语音对话模式 (默认走 v2 + WebRTC)
 # realtime_conversation = false
@@ -1773,9 +1777,9 @@ mentions_v2 = true
 # 启用运行时性能指标快照
 # runtime_metrics = false
 
-# responses_websocket_response_processed — 默认: false | 开发中
-# 启用 response.processed WebSocket 请求路径
-# responses_websocket_response_processed = false
+# terminal_visualization_instructions — 默认: false | 开发中
+# 在 TUI developer instructions 中追加终端可视化相关指导
+# terminal_visualization_instructions = false
 
 # remote_compaction_v2 — 默认: false | 开发中
 # 启用远端 compaction v2 Responses 客户端路径
@@ -2494,7 +2498,7 @@ trust_level = "trusted"
 # approval_policy = "on-request"
 # sandbox_mode = "workspace-write"
 # web_search = "cached"
-# service_tier = "fast"
+# service_tier = "priority"
 # personality = "pragmatic"
 # model_reasoning_effort = "high"
 # model_reasoning_summary = "auto"
@@ -2529,7 +2533,7 @@ trust_level = "trusted"
 # approval_policy = "never"
 # sandbox_mode = "danger-full-access"
 # web_search = "live"
-# service_tier = "fast"
+# service_tier = "priority"
 # personality = "pragmatic"
 # model_reasoning_effort = "medium"
 # model_reasoning_summary = "concise"
