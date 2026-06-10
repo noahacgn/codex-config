@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.138.0 (发布于 2026-06-09)                     #
+#  适用版本: Codex CLI rust-v0.139.0 (发布于 2026-06-09)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -983,6 +983,7 @@ min_rate_limit_remaining_percent = 25
 # 说明: 这里的 web_search 是工具级别的配置对象,
 #       不要和顶层的 web_search = "cached" 混淆 —
 #       顶层的 web_search 控制"是否启用及模式", 这里控制"怎么搜"
+#       standalone web_search 工具也会复用这些搜索范围和位置设置
 
 # [tools.web_search]
 # context_size — 类型: 字符串 (可选) | 可选值: "low" | "medium" | "high"
@@ -1642,7 +1643,11 @@ terminal_resize_reflow = true
 
 # standalone_web_search — 默认: false | 开发中
 # 通过扩展工具面暴露独立 web_search 工具
-# 说明: 仅在 OpenAI 模型提供商且顶层 web_search 未禁用时生效
+# 说明: 仅在 OpenAI 模型提供商且顶层 web_search 未禁用时生效。
+#       rust-v0.139.0 起, code_mode 可直接调用该工具, 包括嵌套 JavaScript
+#       工具调用; 搜索结果以明文工具输出返回, 并会被视为外部上下文。
+#       若 [features.code_mode].excluded_tool_namespaces 包含 "web",
+#       code_mode 中仍会隐藏该工具。
 # standalone_web_search = false
 
 # mentions_v2 — 默认: false | 开发中
@@ -1803,13 +1808,11 @@ mentions_v2 = true
 # undo                   — 已移除, /undo 现在会报告不可用
 # js_repl                — 已移除, 相关 Node 路径配置也已忽略
 # js_repl_tools_only     — 已移除
-# general_analytics      — 已移除, 不再是可配置 feature
 # steer                   — 始终启用
 # collaboration_modes     — 始终启用
 # sqlite                  — 始终启用
 # search_tool             — 已移除
 # request_rule            — 已移除
-# builtin_mcp             — 已移除
 # codex_git_commit        — 已移除
 # apply_patch_freeform    — 已移除
 # unavailable_dummy_tools — 已移除
@@ -2348,7 +2351,7 @@ default_tools_enabled = true
 default_tools_approval_mode = "auto"
 
 # approvals_reviewer — 类型: 字符串 (可选) | 默认: 继承顶层 approvals_reviewer
-# 可选值: "user" | "auto_review" | "guardian_subagent"
+# 可选值: "user" | "auto_review"; "guardian_subagent" 是旧兼容别名
 # 作用: 为此 App 的审批提示单独指定审查者
 # 说明: 设为 "user" 会让此 App 的审批提示直接交给用户;
 #       设为 "auto_review" 会在配置要求允许时交给 Auto-review 审查
