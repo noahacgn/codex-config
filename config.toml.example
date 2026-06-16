@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.139.0 (发布于 2026-06-09)                     #
+#  适用版本: Codex CLI rust-v0.140.0 (发布于 2026-06-15)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -25,9 +25,9 @@
 # 类型: 字符串 (可选)
 # 默认: 无 (由 Codex 自动选择)
 # 作用: 指定主力模型的名称 (即 model slug)
-# 示例: "gpt-5.4"、"o4-mini"、"gpt-4o" 等
+# 示例: "gpt-5.5"、"o4-mini"、"gpt-4o" 等
 # 说明: 如果不设置, Codex 会使用内置模型目录中的默认模型
-model = "gpt-5.4"
+model = "gpt-5.5"
 
 # ── review_model ───────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
@@ -35,7 +35,7 @@ model = "gpt-5.4"
 # 作用: 专门用于 /review 功能的模型
 # 说明: 当你使用 /review 命令进行代码审查时, 会调用此模型而不是主力模型
 #       如果不设置, /review 将使用上面的 model
-review_model = "gpt-5.4"
+review_model = "gpt-5.5"
 
 # ── model_provider ─────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
@@ -557,6 +557,14 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # 作用: 覆盖实时语音 WebSocket 的连接地址 (不影响普通 HTTP 请求)
 # experimental_realtime_ws_base_url = "wss://api.openai.com/v1/realtime"
 
+# ── experimental_realtime_webrtc_call_base_url ────────────────────────────
+# 类型: 字符串 (可选)
+# 默认: 无
+# 作用: 仅覆盖 WebRTC realtime call 创建请求的 HTTP base URL
+# 说明: 与 experimental_realtime_ws_base_url 分开配置; WebRTC call 创建走 HTTP,
+#       sideband 控制才走 WebSocket
+# experimental_realtime_webrtc_call_base_url = "https://api.openai.com/v1"
+
 # ── experimental_realtime_ws_model ─────────────────────────────────────────
 # 类型: 字符串 (可选)
 # 默认: 无
@@ -600,6 +608,11 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # 说明: 从 v0.119.0 起, 默认体验切换为 v2 + WebRTC
 
 # [realtime]
+# architecture — 类型: 字符串 | 默认: "realtimeapi"
+# 可选值: "realtimeapi" | "avas"
+# 选择 realtime 会话后端架构; avas 仅适用于 v1 + webrtc + conversational 组合
+# architecture = "realtimeapi"
+
 # version — 类型: 字符串 | 默认: "v2"
 # 可选值: "v1" | "v2"
 # 选择 realtime 会话协议版本
@@ -936,11 +949,11 @@ disable_on_external_context = false
 
 # extract_model — 类型: 字符串 (可选) | 默认: 使用系统默认模型
 # 指定用于从会话中提取记忆的模型
-# extract_model = "gpt-5.4"
+# extract_model = "gpt-5.5"
 
 # consolidation_model — 类型: 字符串 (可选) | 默认: 使用系统默认模型
 # 指定用于合并/整理记忆的模型
-# consolidation_model = "gpt-5.4"
+# consolidation_model = "gpt-5.5"
 
 # max_raw_memories_for_consolidation — 类型: 整数 | 默认: 256 | 最大: 4096
 # 参与全局整理的原始记忆最大条数
@@ -1463,6 +1476,10 @@ terminal_resize_reflow_max_rows = 9000
 # 启用默认的 shell 工具, 让模型能够执行命令
 shell_tool = true
 
+# secret_auth_storage — 默认: Windows 为 true, 其他平台为 false | 稳定
+# 使用本地加密 secrets 文件保存认证载荷, 并把文件密钥存入 OS keyring
+secret_auth_storage = true
+
 # unified_exec — 默认: true (非Windows) / false (Windows) | 稳定
 # 别名: experimental_use_unified_exec_tool
 # 使用统一的 PTY-backed 执行工具来替代多个 shell 工具
@@ -1658,6 +1675,10 @@ mentions_v2 = true
 # 用独立 image-generation extension 替代托管图片生成路径
 # imagegenext = false
 
+# resize_all_images — 默认: false | 开发中
+# 对本地图片和 view_image 返回图片统一走 resize/preparation 路径
+# resize_all_images = false
+
 # chronicle — 默认: false | 开发中 (历史别名: telepathy)
 # 启用 Chronicle sidecar, 以被动屏幕上下文的形式扩展记忆能力
 # chronicle = false
@@ -1744,6 +1765,10 @@ mentions_v2 = true
 # default_mode_request_user_input — 默认: false | 开发中
 # 在 Default 模式 (非 Plan 模式) 中允许 request_user_input
 # default_mode_request_user_input = false
+
+# token_budget — 默认: false | 开发中
+# 在模型上下文中注入当前 context window 的剩余 token 预算提示
+# token_budget = false
 
 # auth_elicitation — 默认: false | 开发中
 # 支持通过 MCP elicitation 触发 Apps/Connector 认证流程
@@ -2327,6 +2352,11 @@ tool_timeout_sec = 120
 # 所有 App 的全局开关
 enabled = true
 
+# approvals_reviewer — 类型: 字符串 (可选) | 默认: 继承顶层 approvals_reviewer
+# 可选值: "user" | "auto_review"; "guardian_subagent" 是旧兼容别名
+# 为所有 App 的审批提示设置默认审查者; 单个 App 可覆盖此值
+approvals_reviewer = "user"
+
 # destructive_enabled — 类型: 布尔值 | 默认: true
 # 是否允许具有 "destructive" 标记的工具 (如删除操作)
 destructive_enabled = true
@@ -2497,7 +2527,7 @@ trust_level = "trusted"
 #       <名称>.config.toml 并移除旧式 selector/table。
 
 # ── 预设文件示例: $CODEX_HOME/default.config.toml ────────────────────────
-# model = "gpt-5.4"
+# model = "gpt-5.5"
 # approval_policy = "on-request"
 # sandbox_mode = "workspace-write"
 # web_search = "cached"
@@ -2532,7 +2562,7 @@ trust_level = "trusted"
 # allowed_domains = ["docs.python.org"]
 
 # ── 预设文件示例: $CODEX_HOME/fast.config.toml ───────────────────────────
-# model = "gpt-5.4"
+# model = "gpt-5.5"
 # approval_policy = "never"
 # sandbox_mode = "danger-full-access"
 # web_search = "live"
@@ -2548,7 +2578,7 @@ trust_level = "trusted"
 # unified_exec = true
 
 # ── 预设文件示例: $CODEX_HOME/safe.config.toml ───────────────────────────
-# model = "gpt-5.4"
+# model = "gpt-5.5"
 # approval_policy = "untrusted"
 # sandbox_mode = "read-only"
 # web_search = "disabled"
