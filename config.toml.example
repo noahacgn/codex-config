@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.140.0 (发布于 2026-06-15)                     #
+#  适用版本: Codex CLI rust-v0.141.0 (发布于 2026-06-18)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -1574,24 +1574,23 @@ workspace_dependencies = true
 # 启用持久化 /goal 工作流、自动延续与 TUI 控件
 goals = true
 
+# mentions_v2 — 默认: true | 稳定
+# 使用统一的 @ mention 弹窗搜索文件、目录、Apps、插件和 Skills
+mentions_v2 = true
+
+# remote_compaction_v2 — 默认: true | 稳定
+# 启用远端 compaction v2 Responses 客户端路径
+remote_compaction_v2 = true
+
 # ── 实验功能 (Experimental) ────────────────────────────────────────────────
 
 # memories — 默认: false | 实验 (别名: memory_tool)
 # 启用记忆系统 (从会话中提取经验, 在未来会话中注入)
 memories = true
 
-# external_migration — 默认: false | 实验
-# 当检测到可迁移的外部 Agent 配置时, 在启动时显示迁移提示
-# external_migration = false
-
 # prevent_idle_sleep — 默认: false | 实验 (macOS/Linux/Windows)
 # 防止系统在 Codex 活跃时进入休眠
 prevent_idle_sleep = true
-
-# terminal_resize_reflow — 默认: true | 实验
-# 当终端宽度变化时重新排版 Codex 管理的 transcript scrollback
-# 细节可用 [tui] terminal_resize_reflow_max_rows 控制
-terminal_resize_reflow = true
 
 # network_proxy — 默认: false | 实验
 # 为已经具备网络访问权限的沙箱会话启用托管网络代理限制
@@ -1666,10 +1665,6 @@ terminal_resize_reflow = true
 #       若 [features.code_mode].excluded_tool_namespaces 包含 "web",
 #       code_mode 中仍会隐藏该工具。
 # standalone_web_search = false
-
-# mentions_v2 — 默认: false | 开发中
-# 使用统一的 @ mention 弹窗搜索文件、目录、Apps、插件和 Skills
-mentions_v2 = true
 
 # imagegenext — 默认: false | 开发中
 # 用独立 image-generation extension 替代托管图片生成路径
@@ -1770,6 +1765,10 @@ mentions_v2 = true
 # 在模型上下文中注入当前 context window 的剩余 token 预算提示
 # token_budget = false
 
+# sleep_tool — 默认: false | 开发中
+# 暴露可被当前 turn 新输入打断的 sleep 工具, 最长睡眠 3600000 毫秒
+# sleep_tool = false
+
 # auth_elicitation — 默认: false | 开发中
 # 支持通过 MCP elicitation 触发 Apps/Connector 认证流程
 # auth_elicitation = false
@@ -1791,14 +1790,6 @@ mentions_v2 = true
 # 启用 MCP Apps 路径
 # enable_mcp_apps = false
 
-# apps_mcp_path_override — 默认: false | 开发中
-# 覆盖内置 Apps MCP server 的路径; 可以写布尔值, 也可以写对象形式
-# apps_mcp_path_override = false
-#
-# [features.apps_mcp_path_override]
-# enabled = true
-# path = 'C:\Users\you\.codex\apps-mcp-server.exe'
-
 # realtime_conversation — 默认: false | 开发中
 # 启用实验性实时语音对话模式 (默认走 v2 + WebRTC)
 # realtime_conversation = false
@@ -1811,9 +1802,9 @@ mentions_v2 = true
 # 在 TUI developer instructions 中追加终端可视化相关指导
 # terminal_visualization_instructions = false
 
-# remote_compaction_v2 — 默认: false | 开发中
-# 启用远端 compaction v2 Responses 客户端路径
-# remote_compaction_v2 = false
+# artifact — 默认: false | 开发中
+# 启用原生 artifact 工具
+# artifact = false
 
 # enable_fanout — 默认: false | 开发中
 # 启用 SpawnCsv 扇出能力, 允许 Agent 批量派生子任务
@@ -1845,6 +1836,8 @@ mentions_v2 = true
 # responses_websockets_v2 — 已移除
 # remote_control          — 已移除
 # workspace_owner_usage_nudge — 已移除
+# external_migration      — 已移除
+# terminal_resize_reflow  — 已移除 (transcript scrollback 重排已成为默认行为)
 # experimental_windows_sandbox  — 已移除 (用 [windows].sandbox 替代)
 # enable_experimental_windows_sandbox — 历史别名, 现已移除 (用 [windows].sandbox 替代)
 # elevated_windows_sandbox      — 已移除 (用 [windows].sandbox 替代)
@@ -1853,6 +1846,7 @@ mentions_v2 = true
 # tui_app_server                — 已移除 (始终启用)
 # image_detail_original         — 已移除 (兼容旧包装器的空操作标志)
 # tool_search                   — 已移除 (现在始终可用, 配置项为空操作)
+# apps_mcp_path_override        — 已移除
 # skill_env_var_dependency_prompt — 已移除 (缺失 Skill 环境变量提示已删除)
 # plugin_hooks                  — 已移除 (插件 hooks 不再由 feature flag 控制)
 
