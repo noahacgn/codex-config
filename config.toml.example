@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.141.0 (发布于 2026-06-18)                     #
+#  适用版本: Codex CLI rust-v0.142.0 (发布于 2026-06-23)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -116,6 +116,7 @@ sandbox_mode = "workspace-write"
 # 可选值:
 #   "disabled" — 完全禁用网络搜索功能
 #   "cached"   — 允许模型使用网络搜索, 但返回缓存内容 (节省流量, 结果可能不是最新)
+#   "indexed"  — 使用服务端索引检索模式, 不执行实时网页访问
 #   "live"     — 允许模型进行实时网络搜索, 获取最新内容
 # 说明: 控制模型是否可以上网搜索信息来辅助回答
 web_search = "cached"
@@ -605,14 +606,11 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 
 # ── [realtime] — 实时语音会话配置 ────────────────────────────────────────
 # 作用: 统一配置 realtime 会话的协议版本、会话类型、传输方式与语音
-# 说明: 从 v0.119.0 起, 默认体验切换为 v2 + WebRTC
+# 说明: 从 v0.119.0 起, 默认体验切换为 v2 + WebRTC;
+#       v0.142.0 起 WebRTC 调用固定使用 AVAS, architecture 已不再可配置。
+#       若仍设置 realtime.architecture, 配置解析会因未知字段而失败。
 
 # [realtime]
-# architecture — 类型: 字符串 | 默认: "realtimeapi"
-# 可选值: "realtimeapi" | "avas"
-# 选择 realtime 会话后端架构; avas 仅适用于 v1 + webrtc + conversational 组合
-# architecture = "realtimeapi"
-
 # version — 类型: 字符串 | 默认: "v2"
 # 可选值: "v1" | "v2"
 # 选择 realtime 会话协议版本
@@ -1582,6 +1580,10 @@ mentions_v2 = true
 # 启用远端 compaction v2 Responses 客户端路径
 remote_compaction_v2 = true
 
+# auto_compaction — 默认: true | 稳定
+# 在 turn 开始前或执行期间自动压缩接近上下文上限的历史记录
+auto_compaction = true
+
 # ── 实验功能 (Experimental) ────────────────────────────────────────────────
 
 # memories — 默认: false | 实验 (别名: memory_tool)
@@ -1643,6 +1645,9 @@ prevent_idle_sleep = true
 # [features.code_mode]
 # enabled = true
 # excluded_tool_namespaces = ["web", "image_gen"]
+# direct_only_tool_namespaces = ["image_gen"]
+# direct_only_tool_namespaces 中的命名空间只作为模型顶层工具暴露:
+# 它们绕过延迟加载, 并从 code_mode 的嵌套工具面中移除
 
 # code_mode_only — 默认: false | 开发中
 # 仅向模型暴露 code_mode 工具 (需要 code_mode 已启用)
@@ -1657,6 +1662,10 @@ prevent_idle_sleep = true
 # 说明: 这是组合开关; 单独开启不会自动启用 unified_exec 或 shell_zsh_fork
 # unified_exec_zsh_fork = false
 
+# deferred_executor — 默认: false | 开发中
+# 允许 turn 在选定的 executor 仍处于启动阶段时先行开始
+# deferred_executor = false
+
 # standalone_web_search — 默认: false | 开发中
 # 通过扩展工具面暴露独立 web_search 工具
 # 说明: 仅在 OpenAI 模型提供商且顶层 web_search 未禁用时生效。
@@ -1670,9 +1679,9 @@ prevent_idle_sleep = true
 # 用独立 image-generation extension 替代托管图片生成路径
 # imagegenext = false
 
-# resize_all_images — 默认: false | 开发中
-# 对本地图片和 view_image 返回图片统一走 resize/preparation 路径
-# resize_all_images = false
+# item_ids — 默认: false | 开发中
+# 为客户端创建并写入历史记录的 Responses API item 生成 ID
+# item_ids = false
 
 # chronicle — 默认: false | 开发中 (历史别名: telepathy)
 # 启用 Chronicle sidecar, 以被动屏幕上下文的形式扩展记忆能力
@@ -1710,9 +1719,8 @@ prevent_idle_sleep = true
 # wait_agent 未显式传 timeout 时使用的默认等待时间 (毫秒)
 # default_wait_timeout_ms = 30000
 #
-# usage_hint_enabled — 类型: 布尔值 | 默认: true
-# 是否在 spawn_agent / send_message 等工具说明中展示用法提示
-# usage_hint_enabled = true
+# usage_hint_enabled — 已弃用兼容字段
+# v0.142.0 起该值会被忽略; 请删除此项, 用下方提示文本字段控制内容
 #
 # usage_hint_text — 类型: 字符串 (可选)
 # 自定义追加到子 Agent 相关工具说明中的提示文本
@@ -1741,10 +1749,6 @@ prevent_idle_sleep = true
 # 是否仅在非 code mode 中暴露 Multi-Agent V2 工具
 # non_code_mode_only = false
 
-# child_agents_md — 默认: false | 开发中
-# 为子 Agent 注入额外的 AGENTS.md 指导
-# child_agents_md = false
-
 # apply_patch_streaming_events — 默认: false | 开发中
 # 在生成 apply_patch 输入时流式展示结构化进度
 # apply_patch_streaming_events = false
@@ -1762,8 +1766,54 @@ prevent_idle_sleep = true
 # default_mode_request_user_input = false
 
 # token_budget — 默认: false | 开发中
-# 在模型上下文中注入当前 context window 的剩余 token 预算提示
+# 向模型提供上下文窗口标识、剩余 token 查询工具和新窗口工具;
+# 配置阈值后, 还会在接近自动压缩时向模型注入一次收尾提醒
+# 可写成布尔值, 也可写成对象以配置新增提醒的阈值与文案
 # token_budget = false
+#
+# [features.token_budget]
+# enabled = true
+# reminder_threshold_tokens — 类型: 正整数 (可选) | 默认: 无
+# 剩余 token 小于等于该值时注入提醒; 不设置时不会触发阈值提醒
+# reminder_threshold_tokens = 16000
+# reminder_message_template — 类型: 非空字符串 (可选) | 最长: 1000 字节
+# {n_remaining} 会替换为距离自动压缩还剩多少 token
+# reminder_message_template = "上下文即将压缩, 还剩 {n_remaining} token, 请先整理关键进展。"
+
+# rollout_budget — 默认: false | 开发中
+# 为根线程及其所有子 Agent 设置共享的加权 token 总预算;
+# 达到预算时中止当前 turn, 并可在跨过指定剩余额度时向各线程注入提醒
+# 该功能启用时必须使用对象形式并设置 limit_tokens 和
+# reminder_at_remaining_tokens, 不能只写 rollout_budget = true
+#
+# [features.rollout_budget]
+# enabled = true
+# limit_tokens — 类型: 正整数 (必填)
+# limit_tokens = 100000
+# reminder_at_remaining_tokens — 类型: 整数数组 (必填)
+# 每项必须大于 0 且小于 limit_tokens; 空数组表示不发送阶段提醒
+# reminder_at_remaining_tokens = [50000, 25000, 10000]
+# sampling_token_weight — 类型: 非负有限浮点数 | 默认: 1.0
+# 输出 token 的计费权重
+# sampling_token_weight = 1.0
+# prefill_token_weight — 类型: 非负有限浮点数 | 默认: 1.0
+# 非缓存输入 token 的计费权重
+# prefill_token_weight = 0.25
+
+# current_time_reminder — 默认: false | 开发中
+# 按模型请求次数向上下文注入当前 UTC 时间, 并暴露当前时间工具;
+# 每个新上下文窗口也会立即注入一次
+# 可写成布尔值, 也可写成对象配置提醒间隔与时钟来源
+# current_time_reminder = false
+#
+# [features.current_time_reminder]
+# enabled = true
+# reminder_interval_model_requests — 类型: 正整数 | 默认: 1
+# reminder_interval_model_requests = 5
+# clock_source — 类型: 字符串 | 默认: "system"
+# 可选值: "system" | "external"
+# external 仅供提供了外部时间源的宿主集成使用; 普通 CLI 设置它会加载失败
+# clock_source = "system"
 
 # sleep_tool — 默认: false | 开发中
 # 暴露可被当前 turn 新输入打断的 sleep 工具, 最长睡眠 3600000 毫秒
@@ -1772,6 +1822,10 @@ prevent_idle_sleep = true
 # auth_elicitation — 默认: false | 开发中
 # 支持通过 MCP elicitation 触发 Apps/Connector 认证流程
 # auth_elicitation = false
+
+# use_agent_identity — 默认: false | 开发中
+# 让使用 ChatGPT 认证的会话采用 Agent Identity
+# use_agent_identity = false
 
 # tool_search_always_defer_mcp_tools — 默认: false | 开发中
 # 始终将 MCP 工具放到 tool_search 后按需发现, 不直接暴露小规模工具集
@@ -1797,6 +1851,10 @@ prevent_idle_sleep = true
 # runtime_metrics — 默认: false | 开发中
 # 启用运行时性能指标快照
 # runtime_metrics = false
+
+# respect_system_proxy — 默认: false | 开发中
+# 让 Codex 自有网络客户端遵循宿主系统代理设置
+# respect_system_proxy = false
 
 # terminal_visualization_instructions — 默认: false | 开发中
 # 在 TUI developer instructions 中追加终端可视化相关指导
@@ -1834,6 +1892,9 @@ prevent_idle_sleep = true
 # unavailable_dummy_tools — 已移除
 # responses_websockets    — 已移除
 # responses_websockets_v2 — 已移除
+# child_agents_md          — 已移除, 不再向子 Agent 注入额外 AGENTS.md
+# multi_agent_mode         — 已移除兼容标志, 当前值不会改变运行时模式
+# resize_all_images        — 已移除兼容标志, 图片预处理现已始终统一执行
 # remote_control          — 已移除
 # workspace_owner_usage_nudge — 已移除
 # external_migration      — 已移除
@@ -2351,6 +2412,13 @@ enabled = true
 # 为所有 App 的审批提示设置默认审查者; 单个 App 可覆盖此值
 approvals_reviewer = "user"
 
+# default_tools_approval_mode — 类型: 字符串 (可选) | 有效默认: "auto"
+# 可选值: "auto" | "prompt" | "approve"
+# 为所有 App 工具设置默认审批方式; 优先级从高到低为:
+# 托管要求 > 单工具 approval_mode > 单 App default_tools_approval_mode
+# > 此全局默认 > 内置 "auto"
+default_tools_approval_mode = "auto"
+
 # destructive_enabled — 类型: 布尔值 | 默认: true
 # 是否允许具有 "destructive" 标记的工具 (如删除操作)
 destructive_enabled = true
@@ -2397,7 +2465,22 @@ approval_mode = "prompt"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 23 节: Desktop 端设置                            ║
+# ║                     第 23 节: Orchestrator 功能开关                     ║
+# ╚═══════════════════════════════════════════════════════════════════════════╝
+# 作用: 控制由宿主 orchestrator 提供的 Skills 和 MCP 工具是否暴露给模型
+# 默认: 两项均为 true
+# 说明: 这里只控制 orchestrator 拥有的能力, 不等同于 [skills]、
+#       [mcp_servers] 或 [features].apps 等普通用户配置。
+
+[orchestrator.skills]
+enabled = true
+
+[orchestrator.mcp]
+enabled = true
+
+
+# ╔═══════════════════════════════════════════════════════════════════════════╗
+# ║                     第 24 节: Desktop 端设置                            ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 存放桌面端 / 宿主应用写入的 opaque 设置
 # 说明: Codex 不解释这些键的业务语义, 只负责在 config.toml 中保留与往返读写
@@ -2412,7 +2495,7 @@ lastProject = 'C:\Users\you\workspace'
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 24 节: OpenTelemetry 可观测性配置                ║
+# ║                     第 25 节: OpenTelemetry 可观测性配置                ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 配置 Codex 的 OpenTelemetry 遥测数据导出 (Traces / Metrics / Logs)
 # 说明: 适合需要对 Codex 进行性能监控或集成到公司可观测性平台的场景
@@ -2493,7 +2576,7 @@ headers = {}
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 25 节: 项目信任映射                              ║
+# ║                     第 26 节: 项目信任映射                              ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 为不同的项目目录设置信任级别
 # 说明:
@@ -2510,7 +2593,7 @@ trust_level = "trusted"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 26 节: 配置预设 (Profiles)                       ║
+# ║                     第 27 节: 配置预设 (Profiles)                       ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 将多个配置打包成独立预设文件, 通过 --profile 一键切换使用场景
 # 激活: 创建 $CODEX_HOME/<名称>.config.toml, 然后运行 codex --profile <名称>
@@ -2584,7 +2667,7 @@ trust_level = "trusted"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 27 节: 审批策略对象形式 (高级)                   ║
+# ║                     第 28 节: 审批策略对象形式 (高级)                   ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 除了字符串形式的 approval_policy, 还支持对象形式, 可以细粒度控制审批
 # 说明: 使用此形式时, 必须删除顶层的字符串形式 approval_policy
