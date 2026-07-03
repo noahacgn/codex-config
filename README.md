@@ -2,7 +2,7 @@
 
 ## 同步到 Codex
 
-运行脚本可将仓库中的 `agents/`、`hooks/`、`skills/`、`AGENTS.md` 同步到当前用户的 `~/.codex`。根目录 `config.toml` 是本地配置，不会同步。
+运行脚本可将仓库中的 `agents/`、`hooks/`、`skills/`、`AGENTS.md` 同步到当前用户的 `~/.codex`。
 
 同步策略是覆盖 `~/.codex` 中的同名文件，同时保留目标目录里的其他文件，例如认证、会话、日志、缓存和运行状态。
 
