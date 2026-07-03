@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 DIRECTORIES = ("agents", "hooks", "skills")
-FILES = ("AGENTS.md", "config.toml")
+FILES = ("AGENTS.md",)
 
 
 class SyncError(RuntimeError):
