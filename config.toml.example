@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.142.0 (发布于 2026-06-23)                     #
+#  适用版本: Codex CLI rust-v0.143.0 (发布于 2026-07-08)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -50,19 +50,18 @@ model_provider = "custom"
 
 # ── approval_policy ────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
-# 默认: "on-request"
+# 默认: untrusted 项目使用 "untrusted"; 其他项目使用 "on-request"
+#       企业 requirements 可以限制可用值或改变最终默认值
 # 可选值:
 #   "untrusted"  — 最严格: 只有已知安全的只读命令(如 ls、cat)会自动执行,
 #                  其他所有命令都需要你手动批准才能运行
-#   "on-failure" — (已弃用) 所有命令先在沙箱中自动运行; 如果失败了才弹出提示
-#                  让你决定是否在沙箱外重新运行
-#   "on-request" — 推荐默认值: 模型自行判断何时需要你的许可
-#                  - 在 read-only/workspace-write 沙箱中, 非危险命令自动运行
-#                  - 危险命令(如 rm -rf)或需要提升权限时, 会弹出提示
-#   "never"      — 最宽松: 永远不弹出审批提示; 如果命令失败, 错误信息直接返回
-#                  给模型; 危险命令会被直接禁止(因为没有审批途径)
+#   "on-request" — 模型自行判断何时请求审批; 未请求时, 命令仍会在
+#                  当前沙箱和权限 profile 内直接执行
+#   "never"      — 永远不弹出审批提示; 命令在当前沙箱权限内直接执行,
+#                  越界或失败信息直接返回给模型, 无法通过审批提权
 # 说明: 这个选项控制的是 "Codex 执行 shell 命令前是否需要你点确认"
-#       安全程度: untrusted > on-request > on-failure > never
+#       审批严格度通常为 untrusted > on-request > never; 实际可执行范围
+#       仍由 sandbox_mode / permissions 决定
 approval_policy = "on-request"
 
 # ── approvals_reviewer ────────────────────────────────────────────────────
@@ -695,10 +694,10 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 
 # ── [analytics] — 数据分析 ──────────────────────────────────────────────────
-# 作用: 控制是否向 Codex 发送匿名使用数据, 帮助改进产品
+# 作用: 控制 Codex 各产品界面的分析数据收集
 [analytics]
-# enabled — 类型: 布尔值 | 默认: true
-# 设为 false 可完全禁止发送任何分析数据
+# enabled — 类型: 布尔值 (可选) | 默认: 未设置, 由客户端决定
+# 显式设为 false 可禁用 Codex 产品界面的分析数据收集
 enabled = true
 
 # ── [feedback] — 反馈收集 ──────────────────────────────────────────────────
@@ -1086,13 +1085,14 @@ notification_condition = "unfocused"
 # 作用: 配置 TUI 使用什么方式发出终端通知
 notification_method = "auto"
 
-# notifications — 类型: 布尔值 或 字符串数组 | 默认: true
+# notifications — 类型: 布尔值 或通知类型字符串数组 | 默认: true
 # 可选值:
 #   true   — 启用通知
 #   false  — 禁用通知
-#   ["cmd", "arg"] — 使用自定义命令发送通知
+#   ["agent-turn-complete", "approval-requested", "plan-mode-prompt"]
+#          — 只启用列出的通知类型; 可以只列其中一部分
 # 说明: 是否真正发出通知还取决于上面的 notification_condition;
-#       如果设为命令数组, Codex 会执行该命令来完成通知
+#       这里的数组不是命令; 如需外部通知命令, 使用顶层 notify
 notifications = true
 
 # show_tooltips — 类型: 布尔值 | 默认: true
@@ -1320,7 +1320,7 @@ terminal_resize_reflow_max_rows = 9000
 #       ":workspace_roots" — 所有工作区根目录 (支持子路径作用域)
 #       ":tmpdir"        — 临时目录
 #   [permissions.<profile-name>.network]
-#     控制网络代理行为 (字段见下方示例)
+#     控制沙箱网络权限, 并提供可选的托管代理参数 (字段见下方)
 #
 # 使用: 在顶层设置 default_permissions = "<profile-name>" 来激活
 
@@ -1381,8 +1381,9 @@ terminal_resize_reflow_max_rows = 9000
 # 以下字段可以在任何 [permissions.<profile>.network] 中设置:
 #
 # enabled — 类型: 布尔值 | 默认: false
-#   总开关: 是否启动托管的网络代理
-#   设为 true 后沙箱中的进程可以通过代理进行网络访问
+#   控制该 profile 是否授予沙箱网络访问权限
+#   它本身不启动托管代理; 只有同时启用 [features] network_proxy 时,
+#   下方代理、域名、MITM 和 Unix socket 策略才会用于托管代理
 #
 # mode — 类型: 字符串 | 默认: "full"
 #   可选值:
@@ -1523,6 +1524,10 @@ tool_suggest = true
 # 启用插件系统
 plugins = true
 
+# remote_plugin — 默认: true | 稳定
+# 启用远程插件目录、npm marketplace 来源及远程/本地版本展示
+remote_plugin = true
+
 # plugin_sharing — 默认: true | 稳定
 # 启用插件分享 / 签出相关工作流
 plugin_sharing = true
@@ -1536,6 +1541,11 @@ plugin_sharing = true
 # 启用 browser-use 浏览器自动化工具
 # 说明: 这是 requirements 管理的能力门禁, 通常不应在用户 config.toml 中手动设置
 # browser_use = true
+
+# browser_use_full_cdp_access — 默认: true | 稳定
+# 允许 browser-use 使用完整的 Chrome DevTools Protocol 能力
+# 说明: 这是 requirements 管理的能力门禁, 通常不应在用户 config.toml 中手动设置
+# browser_use_full_cdp_access = true
 
 # browser_use_external — 默认: true | 稳定
 # 允许 browser-use 使用外部浏览器集成路径
@@ -1579,10 +1589,6 @@ mentions_v2 = true
 # remote_compaction_v2 — 默认: true | 稳定
 # 启用远端 compaction v2 Responses 客户端路径
 remote_compaction_v2 = true
-
-# auto_compaction — 默认: true | 稳定
-# 在 turn 开始前或执行期间自动压缩接近上下文上限的历史记录
-auto_compaction = true
 
 # ── 实验功能 (Experimental) ────────────────────────────────────────────────
 
@@ -1649,6 +1655,10 @@ prevent_idle_sleep = true
 # direct_only_tool_namespaces 中的命名空间只作为模型顶层工具暴露:
 # 它们绕过延迟加载, 并从 code_mode 的嵌套工具面中移除
 
+# code_mode_host — 默认: false | 开发中
+# 在独立宿主进程中运行 JavaScript code mode
+# code_mode_host = false
+
 # code_mode_only — 默认: false | 开发中
 # 仅向模型暴露 code_mode 工具 (需要 code_mode 已启用)
 # code_mode_only = false
@@ -1682,6 +1692,10 @@ prevent_idle_sleep = true
 # item_ids — 默认: false | 开发中
 # 为客户端创建并写入历史记录的 Responses API item 生成 ID
 # item_ids = false
+
+# concurrent_reasoning_summaries — 默认: false | 开发中
+# 请求按顺序发送截止点 reasoning summary
+# concurrent_reasoning_summaries = false
 
 # chronicle — 默认: false | 开发中 (历史别名: telepathy)
 # 启用 Chronicle sidecar, 以被动屏幕上下文的形式扩展记忆能力
@@ -1734,20 +1748,25 @@ prevent_idle_sleep = true
 # 仅追加到子 Agent 看到的 Multi-Agent V2 用法提示
 # subagent_usage_hint_text = "子 Agent 只处理被分配的范围, 不要改动其他人的文件。"
 #
-# tool_namespace — 类型: 字符串 (可选) | 默认: 无
+# multi_agent_mode_hint_text — 类型: 字符串 (可选) | 默认: 无
+# 自定义多 Agent 模式提示; 设置后覆盖按 reasoning effort 推导的内置模式
+# 空字符串也视为显式自定义值
+# multi_agent_mode_hint_text = "仅在用户明确要求时派生子 Agent。"
+#
+# tool_namespace — 类型: 字符串 (可选) | 默认: "collaboration"
 # 作用: 为 Multi-Agent V2 工具指定自定义工具命名空间
 # 约束: 1-64 个字符, 只能包含 ASCII 字母、数字、下划线和连字符
 #       不能使用 mcp、mcp__ 前缀, 也不能使用 Responses API 保留命名空间
 # 示例: 将 spawn_agent / wait_agent 等工具暴露为 agents.spawn_agent 等名称
 # tool_namespace = "agents"
 #
-# hide_spawn_agent_metadata — 类型: 布尔值 | 默认: false
+# hide_spawn_agent_metadata — 类型: 布尔值 | 默认: true
 # 是否隐藏 spawn_agent 返回中的 agent 类型 / 模型 / reasoning 元信息
-# hide_spawn_agent_metadata = false
+# hide_spawn_agent_metadata = true
 #
-# non_code_mode_only — 类型: 布尔值 | 默认: false
+# non_code_mode_only — 类型: 布尔值 | 默认: true
 # 是否仅在非 code mode 中暴露 Multi-Agent V2 工具
-# non_code_mode_only = false
+# non_code_mode_only = true
 
 # apply_patch_streaming_events — 默认: false | 开发中
 # 在生成 apply_patch 输入时流式展示结构化进度
@@ -1776,9 +1795,13 @@ prevent_idle_sleep = true
 # reminder_threshold_tokens — 类型: 正整数 (可选) | 默认: 无
 # 剩余 token 小于等于该值时注入提醒; 不设置时不会触发阈值提醒
 # reminder_threshold_tokens = 16000
-# reminder_message_template — 类型: 非空字符串 (可选) | 最长: 1000 字节
+# reminder_message_template — 类型: 非空字符串 (可选) | 最长: 2000 字节
 # {n_remaining} 会替换为距离自动压缩还剩多少 token
 # reminder_message_template = "上下文即将压缩, 还剩 {n_remaining} token, 请先整理关键进展。"
+# guidance_message — 类型: 字符串 (可选) | 最长: 2000 字节
+# 以 developer message 形式追加到上下文窗口元数据中的指导文本
+# 空白字符串会被视为未设置
+# guidance_message = "压缩前保留关键状态、未完成任务和验证结果。"
 
 # rollout_budget — 默认: false | 开发中
 # 为根线程及其所有子 Agent 设置共享的加权 token 总预算;
@@ -1801,22 +1824,27 @@ prevent_idle_sleep = true
 # prefill_token_weight = 0.25
 
 # current_time_reminder — 默认: false | 开发中
-# 按模型请求次数向上下文注入当前 UTC 时间, 并暴露当前时间工具;
+# 按经过时间向上下文注入当前 UTC 时间, 并暴露当前时间工具;
 # 每个新上下文窗口也会立即注入一次
-# 可写成布尔值, 也可写成对象配置提醒间隔与时钟来源
+# 可写成布尔值, 也可写成对象配置提醒间隔、投递边界、时钟来源和 sleep 工具
 # current_time_reminder = false
 #
 # [features.current_time_reminder]
 # enabled = true
-# reminder_interval_model_requests — 类型: 正整数 | 默认: 1
-# reminder_interval_model_requests = 5
+# reminder_interval_seconds — 类型: 非负整数 | 默认: 1
+# 距离上次提醒至少经过多少秒后才允许再次提醒; 0 表示每个允许的边界都可提醒
+# reminder_interval_seconds = 5
 # clock_source — 类型: 字符串 | 默认: "system"
 # 可选值: "system" | "external"
 # external 仅供提供了外部时间源的宿主集成使用; 普通 CLI 设置它会加载失败
 # clock_source = "system"
-
-# sleep_tool — 默认: false | 开发中
-# 暴露可被当前 turn 新输入打断的 sleep 工具, 最长睡眠 3600000 毫秒
+# delivery_mode — 类型: 字符串 | 默认: "any_inference"
+# 可选值:
+#   "any_inference"             — 间隔到期后, 任意 inference 请求前都可提醒
+#   "after_user_or_tool_output" — 仅在用户输入或工具输出后提醒; 新上下文窗口仍强制提醒
+# delivery_mode = "any_inference"
+# sleep_tool — 类型: 布尔值 | 默认: false
+# 暴露可被当前 turn 新输入打断的 clock.sleep 工具, 最长睡眠 3600000 毫秒
 # sleep_tool = false
 
 # auth_elicitation — 默认: false | 开发中
@@ -1827,18 +1855,10 @@ prevent_idle_sleep = true
 # 让使用 ChatGPT 认证的会话采用 Agent Identity
 # use_agent_identity = false
 
-# tool_search_always_defer_mcp_tools — 默认: false | 开发中
-# 始终将 MCP 工具放到 tool_search 后按需发现, 不直接暴露小规模工具集
-# tool_search_always_defer_mcp_tools = false
-
 # non_prefixed_mcp_tool_names — 默认: false | 开发中
 # 暴露 MCP 工具命名空间时去掉历史 mcp__ 前缀
 # 说明: 例如把 mcp__rmcp__echo 暴露为 rmcp__echo; 仅用于新工具命名实验
 # non_prefixed_mcp_tool_names = false
-
-# remote_plugin — 默认: false | 开发中
-# 启用远程插件市场的列表与详情读取能力
-# remote_plugin = false
 
 # enable_mcp_apps — 默认: false | 开发中
 # 启用 MCP Apps 路径
@@ -1907,7 +1927,9 @@ prevent_idle_sleep = true
 # tui_app_server                — 已移除 (始终启用)
 # image_detail_original         — 已移除 (兼容旧包装器的空操作标志)
 # tool_search                   — 已移除 (现在始终可用, 配置项为空操作)
+# tool_search_always_defer_mcp_tools — 已移除 (tool_search 可用时 MCP 工具始终延迟加载)
 # apps_mcp_path_override        — 已移除
+# auto_compaction               — 已移除 (上下文接近上限时始终自动压缩)
 # skill_env_var_dependency_prompt — 已移除 (缺失 Skill 环境变量提示已删除)
 # plugin_hooks                  — 已移除 (插件 hooks 不再由 feature flag 控制)
 
@@ -2165,11 +2187,13 @@ sparse_paths = ["marketplaces/openai-curated"]
 # region = "us-west-2"
 
 [model_providers.custom]
-# name — 类型: 字符串 (必填)
+# name — 类型: 字符串 (可选) | 默认: ""
 # 提供商的显示名称
 name = "custom"
 
-# base_url — 类型: 字符串 (可选) | 默认: "https://api.openai.com/v1" (openai)
+# base_url — 类型: 字符串 (可选)
+# 默认: ChatGPT 认证使用 "https://chatgpt.com/backend-api/codex";
+#       其他认证方式使用 "https://api.openai.com/v1"
 # API 基础 URL; 对于自定义提供商, 通常指向你的本地代理或第三方 API
 base_url = "http://127.0.0.1:8317/v1"
 
@@ -2312,7 +2336,8 @@ required = false
 # environment_id — 类型: 字符串 (可选) | 默认: "local"
 # 作用: 指定在哪个执行环境中启动/连接此 MCP 服务器
 # 说明: "local" 表示当前本地环境; 其他值需对应已配置/可用的执行环境。
-#       对 stdio 传输, 当 environment_id 不是 "local" 时, cwd 必须是绝对路径。
+#       cwd 会保留原始路径文本并交给目标环境解释, 因此远端 stdio 可以使用
+#       与本机不同的 Windows 或 POSIX 路径格式。
 # environment_id = "remote"
 
 # supports_parallel_tool_calls — 类型: 布尔值 | 默认: false
@@ -2332,8 +2357,11 @@ startup_timeout_ms = 20000
 # 单次工具调用的默认超时
 tool_timeout_sec = 120
 
-# default_tools_approval_mode — 类型: 字符串 (可选) | 默认: 无
-# 可选值: "auto" | "prompt" | "approve"
+# default_tools_approval_mode — 类型: 字符串 (可选) | 有效默认: "auto"
+# 可选值:
+#   "auto"    — 按工具 annotations 决定是否询问, 并可记住会话级批准
+#   "prompt"  — 每次调用前询问, 不记住会话级批准
+#   "approve" — 自动批准, 不弹出询问
 # 为该服务器暴露的全部工具设置默认审批方式
 # 若某个工具在 [mcp_servers.<name>.tools.<tool>] 中单独配置 approval_mode,
 # 则单工具配置优先
@@ -2355,7 +2383,7 @@ disabled_tools = ["delete_file"]
 
 # ── 单个 MCP 工具审批覆盖 (可选) ──────────────────────────────────────────
 # [mcp_servers.filesystem.tools.read_file]
-# approval_mode — 类型: 字符串 | 可选值: "auto" | "prompt" | "approve"
+# approval_mode — 类型: 字符串 | 语义同上方 default_tools_approval_mode
 # 仅覆盖这个 MCP 工具的审批方式
 # approval_mode = "approve"
 
@@ -2367,6 +2395,15 @@ url = "https://api.githubcopilot.com/mcp/"
 
 enabled = true
 required = false
+
+# auth — 类型: 字符串 | 默认: "oauth" (仅 streamable_http)
+# 可选值:
+#   "oauth"   — 使用已存储的 MCP OAuth 凭证; 发起 OAuth 登录是单独操作
+#   "chatgpt" — 对可信的第一方 ChatGPT 地址使用当前 ChatGPT 会话;
+#               会话提供方不可用时仍可回退到已存储的 OAuth 凭证
+# 已配置的 bearer token 或 Authorization header 始终优先于此认证流程;
+# 两种模式最终都允许回退到未认证连接。
+# auth = "oauth"
 
 # bearer_token_env_var — 类型: 字符串 (可选)
 # 存储 bearer token 的环境变量名;
@@ -2413,7 +2450,10 @@ enabled = true
 approvals_reviewer = "user"
 
 # default_tools_approval_mode — 类型: 字符串 (可选) | 有效默认: "auto"
-# 可选值: "auto" | "prompt" | "approve"
+# 可选值:
+#   "auto"    — 按工具 annotations 决定是否询问, 并可记住会话级批准
+#   "prompt"  — 每次调用前询问, 不记住会话级批准
+#   "approve" — 自动批准, 不弹出询问
 # 为所有 App 工具设置默认审批方式; 优先级从高到低为:
 # 托管要求 > 单工具 approval_mode > 单 App default_tools_approval_mode
 # > 此全局默认 > 内置 "auto"
@@ -2437,9 +2477,9 @@ default_tools_enabled = true
 
 # default_tools_approval_mode — 类型: 字符串 (可选) | 默认: "auto"
 # 可选值:
-#   "auto"    — 自动审批 (不弹提示)
-#   "prompt"  — 每次使用前弹出提示让用户确认
-#   "approve" — 需要用户明确批准
+#   "auto"    — 按工具 annotations 决定是否询问, 并可记住会话级批准
+#   "prompt"  — 每次使用前弹出提示, 不记住会话级批准
+#   "approve" — 自动批准, 不弹出提示
 default_tools_approval_mode = "auto"
 
 # approvals_reviewer — 类型: 字符串 (可选) | 默认: 继承顶层 approvals_reviewer
@@ -2456,7 +2496,7 @@ open_world_enabled = true
 [apps.github.tools.search_issues]
 # enabled — 类型: 布尔值 | 是否启用此工具
 enabled = true
-# approval_mode — 类型: 字符串 | 可选值: "auto" | "prompt" | "approve"
+# approval_mode — 类型: 字符串 | 语义同上方 default_tools_approval_mode
 approval_mode = "auto"
 
 [apps.github.tools.create_issue]
@@ -2533,7 +2573,7 @@ beta = "two"
 #   otlp-http 或 otlp-grpc 对象 — 自定义 OTLP 导出
 #
 # exporter         — 日志导出器 | 默认: "none"
-# trace_exporter   — 链路追踪导出器 | 默认: 跟随 exporter
+# trace_exporter   — 链路追踪导出器 | 默认: "none" (不跟随 exporter)
 # metrics_exporter — 指标导出器 | 默认: "statsig"
 
 # ── 自定义 OTLP-HTTP 链路追踪导出器 ────────────────────────────────────────
@@ -2580,8 +2620,11 @@ headers = {}
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 为不同的项目目录设置信任级别
 # 说明:
-#   "trusted"   — 受信任: 使用 workspace-write 沙箱, 审批策略较宽松
-#   "untrusted" — 不受信任: 使用 read-only 沙箱, 审批策略较严格
+#   "trusted"   — 默认审批策略为 "on-request"
+#   "untrusted" — 默认审批策略为 "untrusted", 审批更严格
+# 沙箱说明: 在 macOS/Linux 上, 两种已记录的 trust 状态都默认派生
+#             workspace-write; Windows 只有配置了 [windows].sandbox 才如此,
+#             否则回落到 read-only。trust_level 本身不授予全磁盘或网络权限。
 # 提示: Codex 会在你首次打开新项目时自动询问信任级别, 结果保存在这里
 
 [projects.'C:\Users\you']
