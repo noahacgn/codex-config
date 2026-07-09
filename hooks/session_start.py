@@ -9,7 +9,19 @@ def main() -> int:
         sys.stdin.read()
 
         home = Path(os.environ.get("USERPROFILE") or Path.home())
-        skill = home / ".codex" / "skills" / "using-agent-skills" / "SKILL.md"
+
+        skill = (
+                home
+                / ".codex"
+                / "plugins"
+                / "cache"
+                / "agent-skills"
+                / "agent-skills"
+                / "1.0.0"
+                / "skills"
+                / "using-agent-skills"
+                / "SKILL.md"
+        )
 
         if not skill.is_file():
             print(
@@ -23,11 +35,11 @@ def main() -> int:
         content = skill.read_text(encoding="utf-8", errors="replace")
 
         important_context = (
-            "<IMPORTANT>\n"
-            "agent-skills loaded. Use the skill discovery flowchart to find "
-            "the right skill for your task.\n\n"
-            + content +
-            "\n</IMPORTANT>"
+                "<IMPORTANT>\n"
+                "agent-skills loaded. Use the skill discovery flowchart to find "
+                "the right skill for your task.\n\n"
+                + content
+                + "\n</IMPORTANT>"
         )
 
         print(json.dumps({
