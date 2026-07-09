@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.143.0 (发布于 2026-07-08)                     #
+#  适用版本: Codex CLI rust-v0.144.0 (发布于 2026-07-09)                     #
 #  说    明: 本文件列出了 Codex CLI 的 **所有** 可配置项, 并附带详细中文注释  #
 #            每一项均标注了: 类型 / 默认值 / 可选值 / 作用说明                #
 #            直接复制本文件后按需修改即可使用                                  #
@@ -2361,6 +2361,7 @@ tool_timeout_sec = 120
 # 可选值:
 #   "auto"    — 按工具 annotations 决定是否询问, 并可记住会话级批准
 #   "prompt"  — 每次调用前询问, 不记住会话级批准
+#   "writes"  — 只对非只读工具询问; 不记住会话级批准
 #   "approve" — 自动批准, 不弹出询问
 # 为该服务器暴露的全部工具设置默认审批方式
 # 若某个工具在 [mcp_servers.<name>.tools.<tool>] 中单独配置 approval_mode,
@@ -2453,6 +2454,7 @@ approvals_reviewer = "user"
 # 可选值:
 #   "auto"    — 按工具 annotations 决定是否询问, 并可记住会话级批准
 #   "prompt"  — 每次调用前询问, 不记住会话级批准
+#   "writes"  — 只对非只读工具询问; 不记住会话级批准
 #   "approve" — 自动批准, 不弹出询问
 # 为所有 App 工具设置默认审批方式; 优先级从高到低为:
 # 托管要求 > 单工具 approval_mode > 单 App default_tools_approval_mode
@@ -2479,6 +2481,7 @@ default_tools_enabled = true
 # 可选值:
 #   "auto"    — 按工具 annotations 决定是否询问, 并可记住会话级批准
 #   "prompt"  — 每次使用前弹出提示, 不记住会话级批准
+#   "writes"  — 只对非只读工具询问; 不记住会话级批准
 #   "approve" — 自动批准, 不弹出提示
 default_tools_approval_mode = "auto"
 
