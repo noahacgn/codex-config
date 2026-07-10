@@ -64,11 +64,6 @@ When adding dependencies, CI actions, or tool versions, always look up the curre
 
 Strongly prefer using the `request_user_input` tool to ask any questions.
 
-## Subagents
-
-- ALWAYS wait for all subagents to complete before yielding
-- Do not combine `fork_context: true` with `agent_type`, `model`, or `reasoning_effort`
-
 ## Miscellaneous
 
 - Think in English, respond in Simplified Chinese (including docs).
