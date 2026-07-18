@@ -60,10 +60,6 @@ When adding dependencies, CI actions, or tool versions, always look up the curre
 | `ast-grep` | - | `ast-grep --pattern '$FUNC($$$)' --lang py` - AST-based code search |
 | `jq` | grep / awk (for JSON) | `jq '.key[]' file.json` - command-line JSON processor |
 
-## Asking questions
-
-Strongly prefer using the `request_user_input` tool to ask any questions.
-
 ## Miscellaneous
 
 - Think in English, respond in Simplified Chinese (including docs).
