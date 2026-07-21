@@ -26,7 +26,7 @@ def main() -> int:
         if not skill.is_file():
             print(
                 f"<INFO>\n"
-                f"agent-skills: meta-skill not found at {skill}. "
+                f"using-agent-skills: meta-skill not found at {skill}. "
                 "Hook ran successfully, but no skill context was injected."
                 f"\n</INFO>"
             )
@@ -36,7 +36,7 @@ def main() -> int:
 
         important_context = (
                 "<IMPORTANT>\n"
-                "agent-skills loaded. Use the skill discovery flowchart to find "
+                "using-agent-skills loaded. Use the skill discovery flowchart to find "
                 "the right skill for your task.\n\n"
                 + content
                 + "\n</IMPORTANT>"
@@ -52,7 +52,7 @@ def main() -> int:
     except Exception as exc:
         print(
             f"<INFO>\n"
-            f"agent-skills hook error ignored: {type(exc).__name__}: {exc}"
+            f"using-agent-skills hook error ignored: {type(exc).__name__}: {exc}"
             f"\n</INFO>",
             file=sys.stderr,
         )
