@@ -1,6 +1,6 @@
 # Global Development Standards
 
-Think in English, respond in Simplified Chinese (including docs).
+Global instructions for all projects.
 
 ## Philosophy
 
@@ -58,3 +58,9 @@ When adding dependencies, CI actions, or tool versions, always look up the curre
 | `rg` (ripgrep) | grep | `rg "pattern"` - 10x faster regex search |
 | `fd` | find | `fd "*.py"` - fast file finder |
 | `ast-grep` | - | `ast-grep --pattern '$FUNC($$$)' --lang py` - AST-based code search |
+| `jq` | grep / awk (for JSON) | `jq '.key[]' file.json` - command-line JSON processor |
+
+## Miscellaneous
+
+- Think in English, respond in Simplified Chinese (including docs).
+- Write Conventional Commits every time you have something stable — do not wait to be asked. Never bundle multiple changes into a single commit.
