@@ -1,6 +1,6 @@
 # Global Development Standards
 
-Global instructions for all projects.
+Think in English, respond in Simplified Chinese (including docs).
 
 ## Philosophy
 
@@ -23,7 +23,7 @@ Fix every warning from every tool — linters, type checkers, compilers, tests. 
 
 ### Comments
 
-Code should be self-documenting. No commented-out code—delete it. If you need a comment to explain WHAT the code does, refactor the code instead. Use Simplified Chinese for comments.
+Code should be self-documenting. No commented-out code—delete it. If you need a comment to explain WHAT the code does, refactor the code instead.
 
 ### Error handling
 
@@ -58,9 +58,3 @@ When adding dependencies, CI actions, or tool versions, always look up the curre
 | `rg` (ripgrep) | grep | `rg "pattern"` - 10x faster regex search |
 | `fd` | find | `fd "*.py"` - fast file finder |
 | `ast-grep` | - | `ast-grep --pattern '$FUNC($$$)' --lang py` - AST-based code search |
-| `jq` | grep / awk (for JSON) | `jq '.key[]' file.json` - command-line JSON processor |
-
-## Miscellaneous
-
-- Think in English, respond in Simplified Chinese (including docs).
-- Write Conventional Commits (`type(scope): <description in Simplified Chinese>`) every time you have something stable — do not wait to be asked. Never bundle multiple changes into a single commit.
