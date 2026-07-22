@@ -1,44 +1,16 @@
 import json
-import os
 import sys
-from pathlib import Path
 
 
 def main() -> int:
     try:
+        # Consume the hook event payload; this hook does not currently use it.
         sys.stdin.read()
-
-        home = Path(os.environ.get("USERPROFILE") or Path.home())
-
-        skill = (
-                home
-                / ".codex"
-                / "plugins"
-                / "cache"
-                / "agent-skills"
-                / "agent-skills"
-                / "1.0.0"
-                / "skills"
-                / "using-agent-skills"
-                / "SKILL.md"
-        )
-
-        if not skill.is_file():
-            print(
-                f"<INFO>\n"
-                f"agent-skills: meta-skill not found at {skill}. "
-                "Hook ran successfully, but no skill context was injected."
-                f"\n</INFO>"
-            )
-            return 0
-
-        content = skill.read_text(encoding="utf-8", errors="replace")
 
         important_context = (
                 "<IMPORTANT>\n"
-                "agent-skills loaded. Use the skill discovery flowchart to find "
-                "the right skill for your task.\n\n"
-                + content
+                "agent-skills installed. Use the skill discovery flowchart to find "
+                "the right skill for your task."
                 + "\n</IMPORTANT>"
         )
 
