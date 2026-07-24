@@ -1,6 +1,6 @@
 # Global Development Standards
 
-Global instructions for all projects.
+Think in English, respond in Simplified Chinese (including docs).
 
 ## Philosophy
 
@@ -49,18 +49,12 @@ For each issue: describe concretely with file:line references, present options w
 
 ## Development
 
-When adding dependencies, CI actions, or tool versions, always look up the current stable version — never assume from memory unless the user provides one.
-
-### CLI tools
-
-| tool | replaces | usage |
-|------|----------|-------|
-| `rg` (ripgrep) | grep | `rg "pattern"` - 10x faster regex search |
-| `fd` | find | `fd "*.py"` - fast file finder |
-| `ast-grep` | - | `ast-grep --pattern '$FUNC($$$)' --lang py` - AST-based code search |
-| `jq` | grep / awk (for JSON) | `jq '.key[]' file.json` - command-line JSON processor |
-
-## Miscellaneous
-
-- Think in English, respond in Simplified Chinese (including docs).
+- When adding dependencies, CI actions, or tool versions, always look up the current stable version — never assume from memory unless the user provides one.
 - Write Conventional Commits every time you have something stable — do not wait to be asked. Never bundle multiple changes into a single commit.
+
+## Workflow
+
+**Before committing:**
+1. Re-read your changes for unnecessary complexity, redundant code, and unclear naming
+2. Run relevant tests — not the full suite
+3. Run linters and type checker — fix everything before committing
