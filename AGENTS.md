@@ -21,7 +21,7 @@ Global instructions for all projects.
 
 Fix every warning from every tool — linters, type checkers, compilers, tests. If a warning truly can't be fixed, add an inline ignore with a justification comment. Never leave warnings unaddressed; a clean output is the baseline, not the goal.
 
-### Comments
+### Comments (English Only)
 
 Code should be self-documenting. No commented-out code—delete it. If you need a comment to explain WHAT the code does, refactor the code instead.
 
