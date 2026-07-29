@@ -1804,7 +1804,7 @@ prevent_idle_sleep = true
 # ── 开发中功能 (Under Development) ─────────────────────────────────────────
 
 # code_mode — 默认: false | 开发中
-# 启用基于进程内 V8 运行时的最小 JavaScript 模式
+# 启用基于 V8 的最小 JavaScript 模式; 执行宿主与进程内回退由 code_mode_host 控制
 # 简单写法:
 # code_mode = false
 #
