@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.145.0 (发布于 2026-07-21)                     #
+#  适用版本: Codex CLI rust-v0.146.0 (发布于 2026-07-28)                     #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -25,9 +25,9 @@
 # 类型: 字符串 (可选)
 # 默认: 无 (由 Codex 自动选择)
 # 作用: 指定主力模型的名称 (即 model slug)
-# 示例: "gpt-5.5"、"o4-mini"、"gpt-4o" 等
+# 示例: "gpt-5.6-sol"、"o4-mini"、"gpt-4o" 等
 # 说明: 如果不设置, Codex 会使用内置模型目录中的默认模型
-model = "gpt-5.5"
+model = "gpt-5.6-sol"
 
 # ── review_model ───────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
@@ -35,7 +35,7 @@ model = "gpt-5.5"
 # 作用: 专门用于 /review 功能的模型
 # 说明: 当你使用 /review 命令进行代码审查时, 会调用此模型而不是主力模型
 #       如果不设置, /review 将使用上面的 model
-review_model = "gpt-5.5"
+review_model = "gpt-5.6-sol"
 
 # ── model_provider ─────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
@@ -224,7 +224,8 @@ model_verbosity = "medium"
 # 默认: true
 # 作用: 是否允许模型请求使用 "登录 shell" 来执行命令
 # 说明: 登录 shell 会加载你的 .bashrc/.zshrc 等配置, 环境更完整;
-#       设为 false 则强制使用非登录 shell (环境更干净但可能缺少某些配置)
+#       设为 false 则强制使用非登录 shell (环境更干净但可能缺少某些配置)。
+#       管理员可以通过 requirements.toml 强制此值, 用户配置无法覆盖
 allow_login_shell = true
 
 # ── check_for_update_on_startup ────────────────────────────────────────────
@@ -233,7 +234,8 @@ allow_login_shell = true
 # 作用: 是否允许发布版 TUI 在启动时检查并提示 Codex CLI 新版本
 # 说明: 源码构建会跳过检查; 网络刷新仅在缓存缺失或超过 20 小时时于后台执行,
 #       当前启动使用已有缓存, 新结果通常在下次启动时显示。设为 false 会同时
-#       关闭后台刷新和启动时更新提示
+#       关闭后台刷新和启动时更新提示。管理员可以通过 requirements.toml
+#       强制此值, 用户配置无法覆盖
 check_for_update_on_startup = true
 
 # ── suppress_unstable_features_warning ─────────────────────────────────────
@@ -310,7 +312,7 @@ model_auto_compact_token_limit_scope = "total"
 # 说明: 上下文窗口决定了模型一次能 "看到" 多少内容 (包括对话历史 + 工具输出);
 #       配置值高于模型目录的 max_context_window 时会被截到模型上限。
 #       通常不需要手动设置, 除非你使用自定义模型或需要覆盖默认值
-model_context_window = 256000
+model_context_window = 272000
 
 
 # ── 编辑器与凭证存储 ────────────────────────────────────────────────────────
@@ -470,12 +472,15 @@ include_environment_context = true
 # 类型: 路径 (可选)
 # 默认: $CODEX_HOME/log
 # 作用: 日志文件存储目录; 显式设置后也会启用 TUI 文本日志写入该目录
+# 说明: requirements.toml 可以强制此路径, 用户配置无法覆盖
 # log_dir = 'C:\Users\you\.codex\log'
 
 # ── sqlite_home ────────────────────────────────────────────────────────────
 # 类型: 路径 (可选)
 # 默认: $CODEX_SQLITE_HOME 环境变量; 若未设置则为 $CODEX_HOME
 # 作用: SQLite 状态数据库的存储目录
+# 说明: requirements.toml 可以强制此路径, 并覆盖用户配置和
+#       $CODEX_SQLITE_HOME 环境变量
 # sqlite_home = 'C:\Users\you\.codex\sqlite'
 
 # ── model_catalog_json ─────────────────────────────────────────────────────
@@ -483,7 +488,8 @@ include_environment_context = true
 # 默认: 无 (使用 Codex 内置的模型目录)
 # 作用: 指定一个自定义的 JSON 模型目录文件, 替代内置目录
 # 说明: 文件格式需符合 ModelsResponse; 至少包含一个模型条目;
-#       仅在启动时加载一次; 适合需要自定义模型列表的场景
+#       仅在启动时加载一次; 适合需要自定义模型列表的场景。
+#       requirements.toml 可以强制此路径, 用户配置无法覆盖
 # model_catalog_json = 'C:\Users\you\.codex\model_catalog.json'
 
 # ── model_instructions_file ────────────────────────────────────────────────
@@ -714,7 +720,7 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # 作用: 控制 Codex 是否弹出反馈收集界面
 [feedback]
 # enabled — 类型: 布尔值 | 默认: true
-# 设为 false 可禁用反馈收集流程
+# 设为 false 可禁用反馈收集流程; requirements.toml 可以强制此值
 enabled = true
 
 # ── [audio] — 实时语音设备 ──────────────────────────────────────────────────
@@ -841,7 +847,8 @@ sandbox = "elevated"
 # sandbox_private_desktop — 类型: 布尔值 | 默认: true
 # 是否让 Windows 沙箱中的最终子进程使用私有桌面;
 # 同时适用于 "elevated" 和 "unelevated"
-# 设为 false 时, 子进程将在 Winsta0\Default 桌面上运行
+# 设为 false 时, 子进程将在 Winsta0\Default 桌面上运行;
+# requirements.toml 可以强制此值
 # sandbox_private_desktop = true
 
 
@@ -879,7 +886,8 @@ exclude_tmpdir_env_var = false
 # ╚═══════════════════════════════════════════════════════════════════════════╝
 # 作用: 控制模型执行 shell 命令时可以 "看到" 哪些环境变量
 # 说明: 这对安全性很重要 — 你不希望模型看到包含密码或 API Key 的环境变量
-# 过滤算法按以下顺序执行: inherit → ignore_default_excludes → exclude → set → include_only
+# 过滤算法按以下顺序执行: inherit → ignore_default_excludes →
+# filters 中的 exclude → set → filters 中的 include
 
 [shell_environment_policy]
 # inherit — 类型: 字符串 | 默认: "all"
@@ -897,25 +905,30 @@ inherit = "core"
 # 说明: 建议设为 false 以获得更好的安全性
 ignore_default_excludes = false
 
-# exclude — 类型: 字符串数组 | 默认: [] (空数组)
-# 使用通配符模式排除匹配的环境变量 (不区分大小写)
-# 匹配的变量会被移除; 支持 * 和 ? 通配符
-exclude = ['*secret*', '*token*', '*password*', '*key*']
+# filters — 类型: 模式到动作的映射 | 默认: {} (空)
+# 动作可选值:
+#   "exclude" — 排除匹配的环境变量
+#   "include" — 只保留匹配至少一个 include 模式的环境变量
+# 模式匹配不区分大小写, 支持 * 和 ? 通配符。include 不会重新加入已被
+# exclude 移除的变量; 模式键跨配置层按不区分大小写的方式合并
+filters.'*secret*' = "exclude"
+filters.'*token*' = "exclude"
+filters.'*password*' = "exclude"
+filters.'*key*' = "exclude"
+# 若需要最终白名单, 可添加 include 动作:
+# filters.'PATH' = "include"
+# filters.'HOME' = "include"
+# filters.'USERPROFILE' = "include"
+# filters.'TMP' = "include"
+# filters.'TEMP' = "include"
+# filters.'SystemRoot' = "include"
 
 # set — 类型: 键值对 | 默认: {} (空)
-# 强制设置的环境变量 (在 exclude 之后应用, 但后续 include_only 仍可过滤)
+# 强制设置的环境变量 (在 exclude 动作之后应用, 但后续 include 动作仍可过滤)
 set = { LANG = "en_US.UTF-8" }
-
-# include_only — 类型: 字符串数组 | 默认: [] (空数组)
-# 如果非空, 只保留匹配这些通配符模式的变量 (最终过滤)
-# 说明: 这是最严格的配置过滤。运行时随后仍会注入 CODEX_THREAD_ID;
-#       选择权限 profile 时还会注入 CODEX_PERMISSION_PROFILE, Windows 会保留
-#       或恢复 PATHEXT, 这些变量不受 include_only 限制
-# include_only = ['PATH', 'HOME', 'USERPROFILE', 'TMP', 'TEMP', 'SystemRoot']
-
-# experimental_use_profile — 旧兼容字段 | 当前无运行时效果
-# 登录 shell 由顶层 allow_login_shell 和具体执行请求决定, 不读取本字段
-# experimental_use_profile = false
+# 运行时随后仍会注入 CODEX_THREAD_ID; 选择权限 profile 时还会注入
+# CODEX_PERMISSION_PROFILE, Windows 会保留或恢复 PATHEXT, 这些变量不受
+# include 动作限制
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -950,12 +963,12 @@ disable_on_external_context = false
 # extract_model — 类型: 字符串 (可选)
 # 默认: 当前 provider 为记忆提取阶段配置的首选模型
 # 指定用于从会话中提取记忆的模型
-# extract_model = "gpt-5.5"
+# extract_model = "gpt-5.6-luna"
 
 # consolidation_model — 类型: 字符串 (可选)
 # 默认: 当前 provider 为记忆整理阶段配置的首选模型
 # 指定用于合并/整理记忆的模型
-# consolidation_model = "gpt-5.5"
+# consolidation_model = "gpt-5.6-terra"
 
 # max_raw_memories_for_consolidation — 类型: 整数 | 默认: 256 | 范围: 1-4096
 # 参与全局整理的原始记忆最大条数
@@ -1024,6 +1037,13 @@ min_rate_limit_remaining_percent = 25
 #       [features] default_mode_request_user_input 控制
 
 [tools.experimental_request_user_input]
+# enabled — 类型: 布尔值 | 默认: true
+enabled = true
+
+# ── [tools.update_plan] — update_plan 工具开关 ─────────────────────────────
+# 类型: 对象 (可选) | 默认: 未设置时启用
+# 作用: 控制是否向模型注册 update_plan 工具; 设为 false 会完全隐藏该工具
+[tools.update_plan]
 # enabled — 类型: 布尔值 | 默认: true
 enabled = true
 
@@ -1236,7 +1256,8 @@ terminal_resize_reflow_max_rows = 9000
 # 常用上下文:
 #   global   — 全局动作: open_transcript, open_external_editor, copy,
 #              clear_terminal, submit, queue, toggle_shortcuts,
-#              toggle_vim_mode, toggle_fast_mode, toggle_raw_output
+#              toggle_vim_mode, toggle_fast_mode, toggle_raw_output,
+#              toggle_side_conversation
 #   chat     — 聊天区动作: increase_reasoning_effort, decrease_reasoning_effort,
 #              edit_queued_message, interrupt_turn
 #   composer — 输入框动作: submit, queue, toggle_shortcuts,
@@ -1272,6 +1293,9 @@ terminal_resize_reflow_max_rows = 9000
 # [tui.keymap.global]
 # open_transcript = "ctrl-t"
 # copy = ["ctrl-y", "alt-y"]
+# toggle_side_conversation = "f12"
+# 内置默认键是 ctrl-/, 并把终端可能上报的 ctrl-7 视为兼容别名;
+# 若用户把该键显式分配给其他动作, 默认切换键会让位
 #
 # [tui.keymap.chat]
 # interrupt_turn = "esc"
@@ -1518,8 +1542,12 @@ secret_auth_storage = true
 unified_exec = true
 
 # code_mode_host — 默认: true | 稳定
-# 在独立宿主进程中运行 JavaScript code mode
-# code_mode_host = true
+# 在独立宿主进程中运行 JavaScript code mode; 使用规范对象写法可控制宿主
+# 不可用时是否允许回退到进程内 V8
+# code_mode_host.enabled = true
+# disable_in_process_fallback — 类型: 布尔值 | 默认: false
+# 设为 true 后, 独立宿主不可用时直接失败, 不再运行内嵌 V8
+# code_mode_host.disable_in_process_fallback = false
 
 # shell_snapshot — 默认: true | 稳定
 # 启用 shell 快照 (环境变量捕获)
@@ -1620,6 +1648,10 @@ multi_agent = true
 # 是否在 spawn_agent 上暴露 model / reasoning_effort 参数并注入相应用法提示
 # multi_agent_v2.expose_spawn_agent_model_overrides = true
 #
+# wait_agent_enabled — 类型: 布尔值 | 默认: true
+# 是否暴露 wait_agent 工具; 设为 false 会从 Multi-Agent V2 工具面中移除它
+# multi_agent_v2.wait_agent_enabled = true
+#
 # non_code_mode_only — 类型: 布尔值 | 默认: true
 # 是否只把 Multi-Agent V2 工具作为模型直连的顶层工具暴露, 不放入 code mode
 # 嵌套工具面; 在 code_mode_only 下仍保留顶层 namespaced 工具
@@ -1652,6 +1684,12 @@ plugin_sharing = true
 # 启用 Codex 内置浏览器能力
 # 说明: 这是 requirements 管理的能力门禁, 通常不应在用户 config.toml 中手动设置
 # in_app_browser = true
+
+# in_app_updates — 默认: true | 稳定
+# 允许桌面端执行应用内更新
+# 说明: 这是 requirements-only 管理门禁, 管理员可设为 false;
+#       不应在用户 config.toml 中手动设置
+# in_app_updates = true
 
 # browser_use — 默认: true | 稳定
 # 启用 browser-use 浏览器自动化工具
@@ -1799,18 +1837,21 @@ prevent_idle_sleep = true
 # 允许 turn 在选定的 executor 仍处于启动阶段时先行开始
 # deferred_executor = false
 
+# deferred_tool_world_state — 默认: false | 开发中
+# 把延迟加载工具命名空间的增删变化记录到模型可见 world state;
+# 启用后 tool_search 不再重复列出同一份来源清单
+# deferred_tool_world_state = false
+
 # standalone_web_search — 默认: false | 开发中
 # 通过扩展工具面暴露独立 web_search 工具
-# 说明: 仅在 OpenAI 模型提供商且顶层 web_search 未禁用时生效。
+# 说明: 仅在内置 OpenAI provider、使用 OpenAI actor authorization 的 provider,
+#       或自定义 provider 显式设置 supports_standalone_web_search = true,
+#       且顶层 web_search 未禁用时生效。
 #       rust-v0.139.0 起, code_mode 可直接调用该工具, 包括嵌套 JavaScript
 #       工具调用; 搜索结果以明文工具输出返回, 并会被视为外部上下文。
 #       若 [features.code_mode].excluded_tool_namespaces 包含 "web",
 #       code_mode 中仍会隐藏该工具。
 # standalone_web_search = false
-
-# item_ids — 默认: false | 开发中
-# 为客户端创建并写入历史记录的 Responses API item 生成 ID
-# item_ids = false
 
 # concurrent_reasoning_summaries — 默认: false | 开发中
 # 请求按顺序发送截止点 reasoning summary
@@ -1922,14 +1963,27 @@ prevent_idle_sleep = true
 # 让使用 ChatGPT 认证的会话采用 Agent Identity
 # use_agent_identity = false
 
+# guardianv2 — 默认: false | 开发中
+# Guardian V2 的预留功能门禁; 当前仓库仅注册该开关, 尚无独立运行时消费者
+# guardianv2 = false
+
 # non_prefixed_mcp_tool_names — 默认: false | 开发中
-# 暴露 MCP 工具命名空间时去掉历史 mcp__ 前缀
-# 说明: 例如把 mcp__rmcp__echo 暴露为 rmcp__echo; 仅用于新工具命名实验
-# non_prefixed_mcp_tool_names = false
+# 使用规范对象写法, 可为全部或指定 MCP 服务器去掉历史 mcp__ 前缀
+# 例如把 mcp__filesystem__read_file 暴露为 filesystem__read_file
+# non_prefixed_mcp_tool_names.enabled = true
+# server_names — 类型: 字符串数组 (可选)
+# 设置后只影响列出的服务器; 省略时影响全部 MCP 服务器; 空数组不影响任何服务器。
+# enabled = false 时该列表不生效
+# non_prefixed_mcp_tool_names.server_names = ["filesystem", "github"]
 
 # enable_mcp_apps — 默认: false | 开发中
 # 启用 MCP Apps 路径
 # enable_mcp_apps = false
+
+# mcp_2026_07_28 — 默认: false | 开发中
+# MCP 2026-07-28 能力试验的预留门禁; 当前仓库仅注册该开关并允许 app-server
+# 写入, 尚无独立运行时消费者
+# mcp_2026_07_28 = false
 
 # realtime_conversation — 默认: false | 开发中
 # 启用实验性实时语音会话 API; 协议版本、会话类型与语音由 [realtime]
@@ -1986,6 +2040,7 @@ prevent_idle_sleep = true
 # use_linux_sandbox_bwrap       — 已移除
 # tui_app_server                — 已移除 (始终启用)
 # image_detail_original         — 已移除 (兼容旧包装器的空操作标志)
+# item_ids                     — 已移除 (Responses API item 现在始终生成 ID)
 # tool_search                   — 已移除 (现在始终可用, 配置项为空操作)
 # tool_search_always_defer_mcp_tools — 已移除 (tool_search 可用时 MCP 工具始终延迟加载)
 # apps_mcp_path_override        — 已移除
@@ -2343,6 +2398,11 @@ requires_openai_auth = false
 # supports_websockets — 类型: 布尔值 | 默认: false
 # 是否支持 Responses API WebSocket 传输
 supports_websockets = false
+
+# supports_standalone_web_search — 类型: 布尔值 | 默认: false
+# 是否支持独立 web-search endpoint; 自定义 provider 必须显式设为 true,
+# [features].standalone_web_search 才会为它暴露独立搜索工具
+supports_standalone_web_search = false
 
 # request_max_retries — 类型: 整数 | 有效默认: 4 | 有效上限: 100
 # HTTP 请求失败时的最大重试次数; 更大的配置值会被截到 100
@@ -2790,7 +2850,7 @@ trust_level = "trusted"
 #       以下三段必须分别复制到独立文件, 不能在本文件原地取消注释。
 
 # ── 预设文件示例: $CODEX_HOME/default.config.toml ────────────────────────
-# model = "gpt-5.5"
+# model = "gpt-5.6-sol"
 # approval_policy = "on-request"
 # sandbox_mode = "workspace-write"
 # web_search = "cached"
@@ -2825,7 +2885,7 @@ trust_level = "trusted"
 # allowed_domains = ["docs.python.org"]
 
 # ── 预设文件示例: $CODEX_HOME/fast.config.toml ───────────────────────────
-# model = "gpt-5.5"
+# model = "gpt-5.6-sol"
 # approval_policy = "never"
 # sandbox_mode = "danger-full-access"
 # web_search = "live"
@@ -2841,7 +2901,7 @@ trust_level = "trusted"
 # unified_exec = true
 
 # ── 预设文件示例: $CODEX_HOME/safe.config.toml ───────────────────────────
-# model = "gpt-5.5"
+# model = "gpt-5.6-sol"
 # approval_policy = "untrusted"
 # sandbox_mode = "read-only"
 # web_search = "disabled"
