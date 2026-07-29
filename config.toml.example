@@ -497,7 +497,7 @@ include_environment_context = true
 # 默认: 无
 # 作用: 指定一个文件, 其内容将覆盖 Codex 内置的模型指令
 # ⚠️ 警告: 强烈不建议使用, 可能导致模型性能下降
-# 迁移说明: 旧键 experimental_instructions_file 已弃用, 请改用本键
+# 迁移说明: 旧键 experimental_instructions_file 已移除且不再受支持, 请改用本键
 # model_instructions_file = 'C:\Users\you\.codex\model_instructions.md'
 
 # ── experimental_compact_prompt_file ───────────────────────────────────────
