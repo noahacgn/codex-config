@@ -1,6 +1,6 @@
 # Global Development Standards
 
-- Technical text: ASD-STE100 style. Respond and write Markdown documentation in Simplified Chinese; use English for code comments and commit messages.
-- Replace, don't deprecate: When a new implementation replaces an old one, remove the old one entirely. No backward-compatible shims, dual config formats, or migration paths. Proactively flag dead code — it adds maintenance burden and misleads both developers and LLMs.
-- Use the browser plugin when you need to inspect the DOM, capture console errors, analyze network requests, profile performance, or verify visual output with real runtime data.
-- Write Conventional Commits every time you have something stable — do not wait to be asked. Never bundle multiple changes into a single commit.
+- Technical text: Follow ASD-STE100. Use Simplified Chinese for responses and Markdown documentation. Use English for code comments and commit messages.
+- Replace, do not deprecate: When a new implementation replaces an old implementation, remove the old implementation entirely. Do not provide backward-compatible shims, dual configuration formats, or migration paths. Proactively flag dead code. Dead code increases the maintenance burden and misleads developers and LLMs.
+- Use the browser plugin when you need to inspect the DOM, capture console errors, analyze network requests, profile performance, or verify visual output with runtime data.
+- Create a Conventional Commit whenever you complete a stable change. Do not wait for a request. Do not bundle unrelated changes into one commit.
