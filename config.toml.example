@@ -929,12 +929,24 @@ filters.'*key*' = "exclude"
 # filters.'TEMP' = "include"
 # filters.'SystemRoot' = "include"
 
+# exclude / include_only — 仅为旧配置兼容保留的字符串数组 | 默认: []
+# 普通 config.toml 目前仍会解析这两个字段, 匹配同样不区分大小写并支持
+# * / ? 通配符: exclude 负责排除, include_only 负责最后的白名单过滤。
+# 一旦设置 filters（即使是空表）, 再设置 exclude 或 include_only 都会导致
+# 配置加载失败; requirements 也只接受规范的 filters 写法。新配置应只使用
+# filters, 并从旧配置中删除 exclude / include_only
+
 # set — 类型: 键值对 | 默认: {} (空)
 # 强制设置的环境变量 (在 exclude 动作之后应用, 但后续 include 动作仍可过滤)
 set = { LANG = "en_US.UTF-8" }
 # 运行时随后仍会注入 CODEX_THREAD_ID; 选择权限 profile 时还会注入
 # CODEX_PERMISSION_PROFILE, Windows 会保留或恢复 PATHEXT, 这些变量不受
 # include 动作限制
+
+# experimental_use_profile — 兼容字段 | 转换默认: false | 当前无运行时效果
+# 源码只把它复制到 ShellEnvironmentPolicy.use_profile, 当前仓库没有运行时
+# 读取该值; 登录 shell 由顶层 allow_login_shell 和具体执行请求决定。
+# 应从配置中删除, 不要依赖它加载 .bashrc、.zshrc 等 shell profile
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -2023,6 +2035,11 @@ prevent_idle_sleep = true
 # undo                   — 已移除, /undo 现在会报告不可用
 # js_repl                — 已移除, 相关 Node 路径配置也已忽略
 # js_repl_tools_only     — 已移除
+# 顶层 js_repl_node_path / js_repl_node_module_dirs 仅为反序列化兼容保留,
+# 被公开 Schema 略过且运行时忽略; 应从配置中删除
+# artifact               — 注册表仍标为 UnderDevelopment, 但公开 Schema 明确
+#                          跳过它, 原生 artifact 工具也已删除且没有运行时消费者;
+#                          这是残留死开关, 不应配置
 # steer                   — 始终启用
 # collaboration_modes     — 始终启用
 # sqlite                  — 始终启用
@@ -2198,6 +2215,9 @@ max_depth = 2
 # interrupt_message — 类型: 布尔值 | 默认: true
 # 子 Agent 回合被中断时, 是否记录一条模型可见的中断说明
 interrupt_message = true
+
+# job_max_runtime_seconds — 已移除的 Agent job 兼容字段
+# 公开 Schema 已略过该字段, 运行时为空操作; 应从旧配置中删除
 
 # ── 自定义 Agent 角色 ──────────────────────────────────────────────────────
 # 你可以定义多个 Agent 角色, 每个角色有独立的配置
