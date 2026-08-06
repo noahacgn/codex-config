@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.146.0 (发布于 2026-07-28)                     #
+#  适用版本: Codex CLI rust-v0.146.1 (发布于 2026-08-05)                     #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -76,7 +76,13 @@ approval_policy = "on-request"
 # 说明: 这不会禁用 ARC 等安全检查; guardian_approval 功能标志在 v0.124.0 起
 #       已稳定并默认启用, 只有显式关闭时才会隐藏 Auto-review 入口。
 #       Auto-review 仅路由 on-request 或 granular 策略实际产生的审批;
-#       untrusted 不走 Auto-review, never 不产生审批提示
+#       untrusted 不走 Auto-review, never 不产生审批提示。
+#       rust-v0.146.1 起, TUI 切换到模型目录中 model_specialty = "cyber" 的
+#       模型时, 会尝试为当前线程改用 :workspace + on-request。若
+#       guardian_approval 可用且 requirements 允许 auto_review, reviewer 会设为
+#       auto_review; 否则仅在 requirements 允许 user 时回退为 user。所需权限
+#       profile、审批策略或 reviewer 被 requirements 禁止时不会覆盖原线程设置。
+#       这是线程级运行时覆盖, 不会改写本配置项
 # approvals_reviewer = "user"
 
 # ── sandbox_mode ───────────────────────────────────────────────────────────
