@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.146.1 (发布于 2026-08-05)                     #
+#  适用版本: Codex CLI rust-v0.147.0 (发布于 2026-08-06)                     #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -83,6 +83,9 @@ approval_policy = "on-request"
 #       auto_review; 否则仅在 requirements 允许 user 时回退为 user。所需权限
 #       profile、审批策略或 reviewer 被 requirements 禁止时不会覆盖原线程设置。
 #       这是线程级运行时覆盖, 不会改写本配置项
+#       rust-v0.147.0 起, CLI 的 --approve-for-me 会为当前进程注入
+#       approvals_reviewer="auto_review"、approval_policy="on-request" 和
+#       sandbox_mode="workspace-write"; 它不会把这些覆盖写回 config.toml
 # approvals_reviewer = "user"
 
 # ── sandbox_mode ───────────────────────────────────────────────────────────
@@ -127,11 +130,14 @@ sandbox_mode = "workspace-write"
 # 默认: "cached"
 # 可选值:
 #   "disabled" — 完全禁用网络搜索功能
-#   "cached"   — 优先使用缓存搜索; danger-full-access 权限下会解析为 live
+#   "cached"   — 优先使用缓存搜索; 支持 live 的提供商在 danger-full-access
+#                权限下可将其解析为 live
 #   "indexed"  — 使用服务端索引检索模式, 不执行实时网页访问
 #   "live"     — 允许模型进行实时网络搜索, 获取最新内容
 # 说明: 控制模型是否可以上网搜索信息来辅助回答。若必须禁止实时网页访问,
-#       应使用 "disabled"; "cached" 不是强制离线保证
+#       应使用 "disabled"; "cached" 不是强制离线保证。最终模式还受提供商
+#       能力和 managed requirements 约束; Amazon Bedrock 仅支持 hosted cached
+#       搜索, 对 live / indexed 的请求会降为 cached, 或在 cached 不被允许时禁用
 web_search = "cached"
 
 # ── service_tier ───────────────────────────────────────────────────────────
@@ -352,7 +358,9 @@ cli_auth_credentials_store = "auto"
 #   "keyring" — 存储在操作系统密钥链中; 不可用则报错
 # 作用: 控制 MCP 服务器的 OAuth 凭证存储方式
 # 说明: 每个 MCP 客户端首次解析出具体存储位置后, 会在其生命周期内固定使用
-#       该位置; 刷新或重建连接时不会在 keyring 与 file 之间热切换
+#       该位置; 刷新或重建连接时不会在 keyring 与 file 之间热切换。
+#       非本地 environment_id 的凭证按执行环境和服务器隔离; executor 所有的
+#       MCP 连接不会复用主机或 local 环境的 OAuth 凭证
 mcp_oauth_credentials_store = "auto"
 
 
@@ -374,6 +382,9 @@ mcp_oauth_credentials_store = "auto"
 # 说明: 适合企业环境, 确保用户登录到正确的组织工作区
 # forced_chatgpt_workspace_id = "ws_xxx"
 # forced_chatgpt_workspace_id = ["ws_xxx", "ws_yyy"]
+# rust-v0.147.0 起, 本地 managed requirements 中的 allowed_login_methods 和
+# allowed_chatgpt_workspaces 会与上面两个 forced_* 限制取交集; 用户配置不能
+# 放宽管理员要求, 交集为空时对应登录方式不可用
 
 # ── chatgpt_base_url ───────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
@@ -1263,13 +1274,14 @@ terminal_resize_reflow_max_rows = 9000
 # ── [tui.keymap] — TUI 快捷键覆盖 ─────────────────────────────────────────
 # 作用: 覆盖 TUI 内置快捷键; 缺失项继承内置默认值
 # 写法:
-#   - 单个按键: action = "ctrl-a"
-#   - 多个按键: action = ["ctrl-a", "alt-a"]
+#   - 单键或最多两段 chord: action = "ctrl-a" / action = "ctrl-x ctrl-s"
+#   - 多个候选绑定: action = ["ctrl-a", "alt-a"] (数组元素彼此替代, 不是 chord)
 #   - 空数组: action = [] 表示显式解绑, 不再回退到全局或内置默认值
 # 支持按键:
 #   普通 ASCII 字符、f1-f24、enter、tab、backspace、esc、delete、up/down/left/right、
 #   home/end、page-up/page-down、space; 修饰键写在前面: ctrl-、alt-、shift-。
-#   连字符的名称是 minus; 带修饰键时写作 alt-minus、ctrl-minus 等
+#   连字符的名称是 minus; 带修饰键时写作 alt-minus、ctrl-minus 等。
+#   两段 chord 用一个空格分隔, 每一段都使用相同的按键语法
 #
 # 常用上下文:
 #   global   — 全局动作: open_transcript, open_external_editor, copy,
@@ -1310,6 +1322,7 @@ terminal_resize_reflow_max_rows = 9000
 #
 # [tui.keymap.global]
 # open_transcript = "ctrl-t"
+# open_external_editor = "ctrl-x ctrl-e"
 # copy = ["ctrl-y", "alt-y"]
 # toggle_side_conversation = "f12"
 # 内置默认键是 ctrl-/, 并把终端可能上报的 ctrl-7 视为兼容别名;
@@ -1542,11 +1555,23 @@ terminal_resize_reflow_max_rows = 9000
 
 [features]
 
+# ── tool_registry — 工具注册表策略 (结构化配置, 不是功能开关) ──────────────
+# error_on_tool_collisions — 类型: 布尔值 | 默认: false
+# false 时保留先注册的同名工具并跳过后续冲突项; true 时若同一命名空间出现
+# 重复的有效工具名, 会在采样前以 duplicate tool 错误终止当前 turn。
+# 不同命名空间中的同名工具不冲突
+# tool_registry.error_on_tool_collisions = false
+
 # ── 稳定功能 (Stable) ──────────────────────────────────────────────────────
 
 # shell_tool — 默认: true | 稳定
 # 启用默认的 shell 工具, 让模型能够执行命令
 shell_tool = true
+
+# view_image — 默认: true | 稳定
+# 启用内置的本地图片查看工具; 关闭后根 Agent、全新上下文子 Agent 和 Guardian
+# turn 都不会注册原生 view_image, 其他图片工具不受影响
+view_image = true
 
 # secret_auth_storage — 默认: Windows 为 true, 其他平台为 false | 稳定
 # 仅在凭证存储实际选择 keyring 时, 使用本地加密 secrets 文件保存认证载荷,
@@ -1560,11 +1585,12 @@ secret_auth_storage = true
 unified_exec = true
 
 # code_mode_host — 默认: true | 稳定
-# 在独立宿主进程中运行 JavaScript code mode; 使用规范对象写法可控制宿主
-# 不可用时是否允许回退到进程内 V8
+# 在独立宿主进程中运行 JavaScript code mode。Codex 进程内的 V8 实现已经移除;
+# 使用规范对象写法可控制独立宿主不可用时是否允许退回普通直连工具面
 # code_mode_host.enabled = true
 # disable_in_process_fallback — 类型: 布尔值 | 默认: false
-# 设为 true 后, 独立宿主不可用时直接失败, 不再运行内嵌 V8
+# 字段名为历史沿用: true 表示保持 fail-closed, 独立宿主不可用时直接失败;
+# false 允许可选 code mode 退回直连工具。code_mode_only 始终保持 fail-closed
 # code_mode_host.disable_in_process_fallback = false
 
 # shell_snapshot — 默认: true | 稳定
@@ -1645,6 +1671,12 @@ multi_agent = true
 # 替换子 Agent 收到的内置 Multi-Agent V2 用法提示; 空字符串会清除该提示
 # multi_agent_v2.subagent_usage_hint_text = "子 Agent 只处理被分配的范围, 不要改动其他人的文件。"
 #
+# subagent_developer_instructions — 类型: 字符串 (可选)
+# 为没有角色专属 developer instructions 的 V2 子 Agent 设置开发者指令。
+# 未设置时继承父 Agent 的开发者指令; 空字符串会显式清除继承内容;
+# 角色专属 developer instructions 的优先级更高
+# multi_agent_v2.subagent_developer_instructions = "只处理委派范围, 并用简洁中文汇报结果。"
+#
 # multi_agent_mode_hint_text — 类型: 字符串 (可选) | 默认: 无
 # 自定义多 Agent 模式提示; 设置后覆盖按 reasoning effort 推导的内置模式
 # 空字符串也视为显式自定义值
@@ -1684,6 +1716,11 @@ apps = true
 # 在满足工具搜索与请求条件时, 向模型暴露 Connector / Plugin 安装建议;
 # 候选来自 [tool_suggest].discoverables, 不是通用的“缺工具自动推荐”
 tool_suggest = true
+
+# recommended_plugins — 默认: false | 稳定
+# apps 与 plugins 启用后, 本项或 tool_suggest 任一启用即可把推荐插件候选注入
+# 模型可见上下文; request_plugin_install 工具本身仍只由 tool_suggest 控制
+# recommended_plugins = false
 
 # plugins — 默认: true | 稳定
 # 启用插件系统
@@ -1821,8 +1858,19 @@ prevent_idle_sleep = true
 
 # ── 开发中功能 (Under Development) ─────────────────────────────────────────
 
+# executed_tool_call_metadata — 默认: false | 开发中
+# 记录模型尝试的直连和 code mode 工具调用名称及参数, 并把有界、必要时截断的
+# 元数据附到下一次 Responses 请求中的匹配工具输出; 被阻止或失败的尝试也会记录
+# executed_tool_call_metadata = false
+
+# image_resize_notice — 默认: false | 开发中
+# 仅当提示词图片或工具输出图片确实被缩放时, 向模型插入包含图片位置及缩放前后
+# 尺寸的 developer message; 回放既有历史时不会补写过去未产生的通知
+# image_resize_notice = false
+
 # code_mode — 默认: false | 开发中
-# 启用基于 V8 的最小 JavaScript 模式; 执行宿主与进程内回退由 code_mode_host 控制
+# 启用由独立宿主进程执行的最小 JavaScript 模式; 宿主失败策略由
+# code_mode_host.disable_in_process_fallback 控制
 # 简单写法:
 # code_mode = false
 #
@@ -1915,8 +1963,15 @@ prevent_idle_sleep = true
 # token_budget = false
 #
 # token_budget.enabled = true
-# reminder_threshold_tokens — 类型: 正整数 (可选) | 默认: 无
-# 剩余 token 小于等于该值时注入提醒; 不设置时不会触发阈值提醒
+# mode — 类型: 字符串 | 默认: "thread" | 可选值: "thread" | "name"
+# thread 在上下文窗口元数据中显示线程 ID; name 显示 Agent task path
+# token_budget.mode = "thread"
+#
+# 仅显式设置 enabled 和/或 mode 时, 当前模型目录中的
+# model_messages.token_budget 可以提供阈值、文案和 fallback 默认值。
+# 一旦显式设置下方任一具体字段, 用户对象整体优先, 不再套用模型自带默认值
+# reminder_threshold_tokens — 类型: 正整数 (可选) | 配置默认: 无
+# 剩余 token 小于等于该值时注入提醒; 没有用户值或模型默认时不会触发阈值提醒
 # token_budget.reminder_threshold_tokens = 16000
 # reminder_message_template — 类型: 非空白字符串 (可选) | 最长: 2000 字节
 # {n_remaining} 会替换为距离自动压缩还剩多少 token
@@ -1999,8 +2054,10 @@ prevent_idle_sleep = true
 # enable_mcp_apps = false
 
 # mcp_2026_07_28 — 默认: false | 开发中
-# MCP 2026-07-28 能力试验的预留门禁; 当前仓库仅注册该开关并允许 app-server
-# 写入, 尚无独立运行时消费者
+# 启用 MCP 2026-07-28 发现协议。streamable HTTP 会使用 server/discover 并支持
+# 有界分页发现; 仅在端点明确表现为 legacy-only 时回退旧协议。
+# stdio 还要求对应服务器环境设置 CODEX_MCP_PROTOCOL_VERSION="2026-07-28";
+# 未设置该标记时继续使用旧协议, 未知版本标记会被拒绝
 # mcp_2026_07_28 = false
 
 # realtime_conversation — 默认: false | 开发中
@@ -2357,7 +2414,9 @@ config = [
 # 说明: 无需自行填写 name / base_url / wire_api 等字段, CLI 已内置这些默认值
 #       除下列五类字段外, 设置其他 provider 字段的非默认值会报错
 #       当前模型发现由具体 model provider 负责, Bedrock 账户状态也会
-#       暴露给 app 客户端; 使用 Bedrock 时通常只需要选择 provider 和 AWS 设置
+#       暴露给 app 客户端; 使用 Bedrock 时通常只需要选择 provider 和 AWS 设置。
+#       Web search 只走 hosted cached/text-only 路径; live 或 indexed 会降为
+#       cached, 若 managed requirements 不允许 cached 则禁用搜索
 #
 # 要使用它, 请把第 1 节现有的 model_provider 值改为 "amazon-bedrock"。
 #
@@ -2561,6 +2620,14 @@ required = false
 # 是否将此服务器暴露的所有工具都标记为“可安全并行调用”
 # 说明: 只有当这些工具并发运行不会读写冲突或破坏外部状态时才建议启用
 # supports_parallel_tool_calls = true
+
+# omit_tools_from — 类型: 字符串数组 (可选)
+# 按工具暴露表面隐藏此服务器的全部工具; 各值彼此独立:
+#   "direct"    — 初始直连工具列表
+#   "deferred"  — 后续通过 tool search 发现的工具列表
+#   "code_mode" — code mode 的嵌套工具列表
+# 省略时继承较低优先级配置; 显式 [] 会清除继承的排除项
+# omit_tools_from = ["deferred", "code_mode"]
 
 # startup_timeout_sec — 类型: 浮点数 (秒, 可选) | 有效默认: 30
 # 分别用于客户端/传输创建、MCP initialize 握手和首次 tools/list;
