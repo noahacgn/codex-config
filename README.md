@@ -14,7 +14,7 @@ python ./sync_codex.py
 
 ```bash
 # Install skills
-npx skills add https://github.com/mattpocock/skills -g -a codex
+npx skills add https://github.com/noahacgn/skills -g -a codex
 
 # List global skills
 npx skills ls -g
