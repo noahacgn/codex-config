@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.147.0 (发布于 2026-08-06)                     #
+#  适用版本: Codex CLI rust-v0.148.0 (发布于 2026-08-18)                     #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -41,8 +41,9 @@ review_model = "gpt-5.6-sol"
 # 类型: 字符串 (可选)
 # 默认: 无 (使用内置 "openai" 提供商)
 # 作用: 指定使用哪个模型提供商 (对应下方 [model_providers.xxx] 中定义的 key)
-# 示例: "openai"、"amazon-bedrock"、"custom"、"ollama"、"lmstudio"
-# 说明: 内置提供商有 openai / amazon-bedrock / ollama / lmstudio;
+# 示例: "openai"、"amazon-bedrock"、"amazon-bedrock-runtime"、"custom"、"ollama"、"lmstudio"
+# 说明: 内置提供商有 openai / amazon-bedrock / amazon-bedrock-runtime /
+#       ollama / lmstudio;
 #       amazon-bedrock 可覆盖 endpoint、HTTP headers、命令认证以及
 #       aws.profile / aws.region。未使用命令认证、托管 Bedrock API Key 或
 #       AWS_BEARER_TOKEN_BEDROCK 时, 请求鉴权才回退到 AWS SDK/SigV4
@@ -400,6 +401,15 @@ chatgpt_base_url = "https://chatgpt.com/backend-api/"
 # 说明: 主要供桌面端 / 宿主集成识别产品形态; 普通 CLI 用户通常不需要设置
 # apps_mcp_product_sku = "codex-desktop"
 
+# ── responses_api_metadata ─────────────────────────────────────────────────
+# 类型: 字符串键值对 (可选)
+# 默认: {} (空表)
+# 作用: 把产品自有元数据附加到每个 Responses API 请求
+# 约束: 最多 16 项; key 最多 64 字节, 必须以 ASCII 字母开头, 其余字符只能是
+#       ASCII 字母、数字、下划线、点或连字符; value 最多 128 字节。
+#       Codex 内置 metadata key 为保留键, 冲突会导致配置加载失败
+# responses_api_metadata = { product_surface = "desktop", deployment = "staging" }
+
 # ── openai_base_url ──────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
 # 默认: 无 (使用内置 openai 提供商的默认 URL)
@@ -529,10 +539,9 @@ include_environment_context = true
 # ── project_doc_max_bytes ──────────────────────────────────────────────────
 # 类型: 整数 (可选)
 # 默认: 32768 (32 KiB)
-# 作用: 在每个当前执行环境中, 为嵌入上下文的所有已发现项目文档设置共享的
-#       最大总字节数
-# 说明: 每个环境分别计算预算; 非空文档按项目根目录到当前工作目录的顺序加载
-#       并消耗预算, 超过剩余预算的内容会被截断, 预算耗尽后不再加载后续文档。
+# 作用: 为所有选中执行环境中的项目指令内容设置共享的最大总字节数
+# 说明: 非空文档按环境与项目目录顺序加载并共同消耗该预算, 超过剩余预算的
+#       内容会被截断, 预算耗尽后不再加载后续文档。
 #       增大此值可以让模型看到更多项目说明, 但会占用更多上下文空间
 project_doc_max_bytes = 262144
 
@@ -553,24 +562,12 @@ project_doc_fallback_filenames = ["AGENTS.md", "README.md", "CONTRIBUTING.md"]
 project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 
 
-# ── 调试与可复现性配置 ──────────────────────────────────────────────────────
-
-# 表路径: debug.config_lockfile (以下使用 dotted key, 可在当前位置逐项启用)
-# export_dir — 类型: 绝对路径 (可选)
-# 作用: 将会话解析后的有效配置锁文件写入指定目录
-# debug.config_lockfile.export_dir = 'C:\Users\you\.codex\config-locks'
-#
-# load_path — 类型: 绝对路径 (可选)
-# 作用: 从指定锁文件回放有效配置, 用于调试和复现配置解析问题
-# debug.config_lockfile.load_path = 'C:\Users\you\.codex\config-locks\session-config.toml'
-#
-# allow_codex_version_mismatch — 类型: 布尔值 | 默认: false
-# 是否允许回放由其他 Codex 版本生成的锁文件
-# debug.config_lockfile.allow_codex_version_mismatch = false
-#
-# save_fields_resolved_from_model_catalog — 类型: 布尔值 (可选)
-# 是否把从模型目录 / 会话配置解析出的字段也写入锁文件
-# debug.config_lockfile.save_fields_resolved_from_model_catalog = true
+# ── Goals 配置 ──────────────────────────────────────────────────────────────
+# max_goal_token_budget — 类型: 正整数 (可选)
+# 默认: 无
+# 作用: 同时作为新 Goal 未显式指定 token_budget 时的默认预算, 以及允许设置的
+#       最大 Goal token 预算; 设置为 0 会导致配置解析失败
+# goals.max_goal_token_budget = 100000
 
 
 # ── 实验性: 实时语音对话 ────────────────────────────────────────────────────
@@ -1567,6 +1564,9 @@ terminal_resize_reflow_max_rows = 9000
 # 重复的有效工具名, 会在采样前以 duplicate tool 错误终止当前 turn。
 # 不同命名空间中的同名工具不冲突
 # tool_registry.error_on_tool_collisions = false
+# turn_metadata_includes_tool_info — 类型: 布尔值 | 默认: false
+# 将当前 turn 实际可用工具的权威名称、命名空间和来源信息写入请求 metadata
+# tool_registry.turn_metadata_includes_tool_info = false
 
 # ── 稳定功能 (Stable) ──────────────────────────────────────────────────────
 
@@ -1617,6 +1617,10 @@ fast_mode = true
 # 对使用 Codex backend 认证的内置 OpenAI provider 请求启用 zstd 压缩;
 # 自定义 provider、普通 API Key 或其他认证路径不因此自动压缩
 enable_request_compression = true
+
+# unbounded_connection_retries — 默认: true | 稳定
+# 采样连接暂时失败时持续重连, 让当前 turn 等待网络恢复, 不受普通重试次数上限约束
+unbounded_connection_retries = true
 
 # skill_mcp_dependency_install — 默认: true | 稳定
 # 当 Skill 需要的 MCP 依赖缺失时, 提示安装
@@ -1874,6 +1878,10 @@ prevent_idle_sleep = true
 # 尺寸的 developer message; 回放既有历史时不会补写过去未产生的通知
 # image_resize_notice = false
 
+# unified_image_budget — 默认: false | 开发中
+# 忽略旧版 detail 提示, 对所有图片统一应用像素与 token 预算
+# unified_image_budget = false
+
 # code_mode — 默认: false | 开发中
 # 启用由独立宿主进程执行的最小 JavaScript 模式; 宿主失败策略由
 # code_mode_host.disable_in_process_fallback 控制
@@ -1882,15 +1890,18 @@ prevent_idle_sleep = true
 #
 # 对象写法:
 # code_mode.enabled = true
+# default_exec_yield_time_ms — 类型: 非负整数 (毫秒) | 默认: 30000
+# code mode 的 exec 未显式传 yield_time_ms 时使用的等待时间; 该值也会写入
+# 模型可见的工具说明
+# code_mode.default_exec_yield_time_ms = 30000
 # code_mode.excluded_tool_namespaces = ["web"]
 # code_mode.direct_only_tool_namespaces = ["image_gen"]
 # direct_only_tool_namespaces 中的命名空间只作为模型顶层工具暴露:
 # 它们绕过延迟加载, 并从 code_mode 的嵌套工具面中移除
 
-# code_mode_buffered_exec — 默认: false | 开发中
-# 启用后, code mode 的 exec 在未显式设置 yield_time_ms 时默认等待 30 秒,
-# 而不是常规的 10 秒; 有效默认值会写入模型可见的工具说明
-# code_mode_buffered_exec = false
+# code_mode_interrupt — 默认: false | 开发中
+# turn 被中断时终止正在运行的 code mode cell 及其嵌套工具调用
+# code_mode_interrupt = false
 
 # code_mode_only — 默认: false | 开发中
 # 仅向模型暴露 code_mode 入口; 开启本项会自动启用 code_mode
@@ -1937,6 +1948,10 @@ prevent_idle_sleep = true
 # 启用本地线程存储压缩, 用于减少本地会话持久化占用
 # local_thread_store_compression = false
 
+# background_paginated_rollout_migration — 默认: false | 开发中
+# 在后台把旧版本地 rollout 文件迁移为分页历史格式
+# background_paginated_rollout_migration = false
+
 # external_agent_memory_import — 默认: false | 开发中
 # 启用外部 Agent 项目记忆的发现、选择和导入流程
 # external_agent_memory_import = false
@@ -1949,6 +1964,10 @@ prevent_idle_sleep = true
 # apply_patch_streaming_events — 默认: false | 开发中
 # 在生成 apply_patch 输入时流式展示结构化进度
 # apply_patch_streaming_events = false
+
+# apply_patch_preserve_line_endings — 默认: false | 开发中
+# apply_patch 更新现有文件时保留其 CRLF/LF 行尾风格
+# apply_patch_preserve_line_endings = false
 
 # exec_permission_approvals — 默认: false | 开发中 (别名: request_permissions)
 # 允许在沙箱中动态请求额外的文件系统权限审批
@@ -1969,12 +1988,8 @@ prevent_idle_sleep = true
 # token_budget = false
 #
 # token_budget.enabled = true
-# mode — 类型: 字符串 | 默认: "thread" | 可选值: "thread" | "name"
-# thread 在上下文窗口元数据中显示线程 ID; name 显示 Agent task path
-# token_budget.mode = "thread"
-#
-# 仅显式设置 enabled 和/或 mode 时, 当前模型目录中的
-# model_messages.token_budget 可以提供阈值、文案和 fallback 默认值。
+# 仅显式设置 enabled 时, 当前模型目录中的 model_messages.token_budget 可以提供
+# 阈值、文案和 fallback 默认值。
 # 一旦显式设置下方任一具体字段, 用户对象整体优先, 不再套用模型自带默认值
 # reminder_threshold_tokens — 类型: 正整数 (可选) | 配置默认: 无
 # 剩余 token 小于等于该值时注入提醒; 没有用户值或模型默认时不会触发阈值提醒
@@ -2042,9 +2057,50 @@ prevent_idle_sleep = true
 # 让使用 ChatGPT 认证的会话采用 Agent Identity
 # use_agent_identity = false
 
+# psp — 默认: false | 开发中
+# 为第一方 ChatGPT 请求附加 PSP 路由标记; 普通自定义 provider 不使用该路径
+# psp = false
+
+# guardian_reuse_parent_compaction — 默认: false | 开发中
+# Guardian 审批审查重启时复用父会话的加密压缩内容
+# guardian_reuse_parent_compaction = false
+
+# guardian_enhanced_node_repl_transcripts — 默认: false | 开发中
+# 把已完成的 node_repl/code mode 响应加入 Guardian 审查 transcript
+# guardian_enhanced_node_repl_transcripts = false
+
+# guardian_node_repl_transcript_images — 默认: false | 开发中
+# 把已完成的 node_repl/code mode 响应图片也加入 Guardian 审查 transcript
+# guardian_node_repl_transcript_images = false
+
 # guardianv2 — 默认: false | 开发中
-# Guardian V2 的预留功能门禁; 当前仓库仅注册该开关, 尚无独立运行时消费者
+# 启用 Guardian V2 自动审批审查; 可写成布尔值或以下结构化对象
 # guardianv2 = false
+# guardianv2.enabled = true
+# classifier_instructions — 类型: 字符串 (可选) | 默认: 内置风险分类提示
+# guardianv2.classifier_instructions = "评估工具操作的风险与用户授权范围。"
+# review_threshold — 类型: 浮点数 | 默认: 0.8 | 范围: 0.0-1.0
+# guardianv2.review_threshold = 0.8
+# reasoning_effort — 类型: 字符串 | 默认: "low"
+# guardianv2.reasoning_effort = "low"
+# max_action_tokens / max_classifier_instruction_tokens — 默认: 10000 | 范围: 100-100000
+# guardianv2.max_action_tokens = 10000
+# guardianv2.max_classifier_instruction_tokens = 10000
+# transcript.sources — 可选值: "tool_calls" | "tool_outputs" | "reasoning"
+# 默认: ["tool_calls", "tool_outputs"]
+# guardianv2.transcript.sources = ["tool_calls", "tool_outputs"]
+# 单条消息/工具输出 token 上限默认分别为 2000/1000; 各类 transcript 总上限
+# 默认均为 10000; 这些 token 字段范围均为 100-100000, 且单条上限不能超过总上限
+# guardianv2.transcript.max_message_entry_tokens = 2000
+# guardianv2.transcript.max_tool_entry_tokens = 1000
+# guardianv2.transcript.max_message_transcript_tokens = 10000
+# guardianv2.transcript.max_tool_transcript_tokens = 10000
+# max_recent_non_user_entries — 类型: 正整数 | 默认: 40
+# guardianv2.transcript.max_recent_non_user_entries = 40
+
+# retain_client_developer_messages — 默认: false | 开发中
+# 在上下文压缩后保留由客户端写入的 developer 消息
+# retain_client_developer_messages = false
 
 # non_prefixed_mcp_tool_names — 默认: false | 开发中
 # 使用规范对象写法, 可为全部或指定 MCP 服务器去掉历史 mcp__ 前缀
@@ -2133,6 +2189,7 @@ prevent_idle_sleep = true
 # skill_env_var_dependency_prompt — 已移除 (缺失 Skill 环境变量提示已删除)
 # plugin_hooks                  — 已移除 (插件 hooks 不再由 feature flag 控制)
 # enable_fanout                 — 已移除 (CSV-backed Agent jobs 已删除)
+# code_mode_buffered_exec       — 已移除; 请改用 code_mode.default_exec_yield_time_ms
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -2151,9 +2208,12 @@ prevent_idle_sleep = true
 #   - PreCompact / PostCompact: 匹配 "manual" / "auto"
 #   - UserPromptSubmit / Stop: 当前忽略 matcher
 # handler:
-#   - 目前仅 command 类型会执行; prompt / agent 类型可解析但尚未执行
-#   - timeout 单位为秒, 默认 600; 普通 async = true hook 目前会被跳过;
-#     SessionEnd 例外, 会发出警告并同步执行
+#   - command 类型支持同步或 async = true 异步执行; 异步 hook 在后台运行, 不能
+#     改变当前事件的控制结果。prompt / agent 类型可解析但尚未执行
+#   - mcp_tool 类型同步调用指定 MCP 服务器工具, 不能用于 SessionEnd;
+#     input 中的 ${field.path} 占位符会从 hook 事件 JSON 展开
+#   - timeout 单位为秒, 默认 600; SessionEnd 默认 1 秒且最多 3 秒, 即使声明
+#     async 也会发出警告并同步执行
 #   - additionalContextLimit 只对 PreToolUse、PostToolUse、SessionStart、
 #     UserPromptSubmit、SubagentStart 生效, 控制单个 hook 的 additionalContext
 #     溢出阈值; 默认约 2500 token, 设为 0 可禁用该 hook 的磁盘溢出。
@@ -2208,6 +2268,17 @@ prevent_idle_sleep = true
 # [[hooks.PostToolUse.hooks]]
 # type = "command"
 # command = "python3 ~/.codex/hooks/post_tool.py"
+#
+# ── MCP tool hook: 调用指定 MCP 工具 ───────────────────────────────────────
+# [[hooks.PostToolUse]]
+# matcher = "mcp__security__scan"
+# [[hooks.PostToolUse.hooks]]
+# type = "mcp_tool"
+# server = "security"
+# tool = "scan"
+# input = { tool_name = "${tool_name}", tool_input = "${tool_input}" }
+# timeout = 30
+# statusMessage = "运行安全扫描"
 #
 # [[hooks.PreCompact]]
 # matcher = "*"
@@ -2457,6 +2528,16 @@ config = [
 # args = ["--format", "raw"]
 # 说明: auth 与显式 aws 配置互斥; command 不能为空。auth 的其余字段与下方
 #       [model_providers.<id>.auth] 相同。
+
+# ── [model_providers.amazon-bedrock-runtime] — Amazon Bedrock Runtime ─────
+# 作用: 使用 Amazon Bedrock Runtime 的 OpenAI-compatible endpoint, 支持 AWS
+#       profile / region 与 GPT-5.6 global routing
+# 说明: 该内置 provider 不带 Mantle 的客户端请求头; 通常只需选择 provider 和
+#       AWS 设置, 不要填写 name / wire_api 等内置字段
+# 要使用它, 请把第 1 节的 model_provider 改为 "amazon-bedrock-runtime"。
+# [model_providers.amazon-bedrock-runtime.aws]
+# profile = "codex-bedrock"
+# region = "us-west-2"
 
 [model_providers.custom]
 # name — 类型: 非空字符串 | 自定义提供商必填
@@ -2713,6 +2794,13 @@ http_headers = { "x-org" = "your-org" }
 # 从环境变量读取值的 HTTP 头 (同 model_providers 中的用法)
 # env_http_headers = { "X-Custom" = "MY_ENV_VAR" }
 
+# http_headers_helper — 类型: 字符串命令 (仅本地 streamable_http)
+# 每次 MCP 客户端创建时运行一次命令, 读取 stdout 中的 JSON 字符串键值对并
+# 附加动态 HTTP headers; 命令在 MCP 配置 cwd 中执行, 超时 10 秒, 输出最多 64 KiB
+# helper 返回的 header 会覆盖同名静态/env header, 但不能覆盖 Authorization 等
+# 协议保留 header。命令可能被本机进程检查到, 不要把凭证写进命令文本。
+# http_headers_helper = "python3 ~/.codex/mcp_headers.py"
+
 startup_timeout_sec = 30
 tool_timeout_sec = 120
 
@@ -2726,6 +2814,10 @@ tool_timeout_sec = 120
 # oauth_resource = "https://mcp.example.com/"
 # [mcp_servers.company_oauth.oauth]
 # client_id = "your-oauth-client-id"
+# callback_port — 类型: 0-65535 整数 (可选)
+# 仅为此服务器 OAuth 流程指定固定回调端口; 优先于顶层 mcp_oauth_callback_port
+# [mcp_servers.company_oauth.oauth]
+# callback_port = 1456
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
