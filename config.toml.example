@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.148.0 (发布于 2026-08-18)                     #
+#  适用版本: Codex CLI rust-v0.149.0 (发布于 2026-08-20)                     #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -45,25 +45,27 @@ review_model = "gpt-5.6-sol"
 # 说明: 内置提供商有 openai / amazon-bedrock / amazon-bedrock-runtime /
 #       ollama / lmstudio;
 #       amazon-bedrock 可覆盖 endpoint、HTTP headers、命令认证以及
-#       aws.profile / aws.region。未使用命令认证、托管 Bedrock API Key 或
-#       AWS_BEARER_TOKEN_BEDROCK 时, 请求鉴权才回退到 AWS SDK/SigV4
+#       aws.profile / aws.region / aws.auth_refresh。未使用命令认证、托管
+#       Bedrock API Key 或 AWS_BEARER_TOKEN_BEDROCK 时, 请求鉴权才回退到
+#       AWS SDK/SigV4
 #       你也可以在 [model_providers] 小节中自定义提供商, 然后把名字填在这里
 model_provider = "custom"
 
 # ── approval_policy ────────────────────────────────────────────────────────
 # 类型: 字符串或 granular 对象 (可选; 对象形式见第 28 节)
-# 默认: untrusted 项目使用 "untrusted"; 其他项目使用 "on-request"
+# 默认: 已标记为 untrusted 的项目对每条命令请求审批; 其他项目使用 "on-request"
 #       企业 requirements 可以限制可用值或改变最终默认值
 # 可选值:
-#   "untrusted"  — 只有已知安全且无需复杂解析的只读命令自动执行;
-#                  其他命令触发用户审批, 不路由到 Auto-review
 #   "on-request" — 模型可以主动请求审批; 危险命令或执行策略规则也可能强制
 #                  触发审批; 普通操作仍在当前沙箱和权限 profile 内执行
 #   "never"      — 不显示审批提示; 需要审批、越界或命中禁止规则的操作会被
 #                  直接拒绝或把失败返回给模型, 不会通过审批提升权限
 # 说明: 该策略参与 shell/exec、apply_patch、部分 MCP、Skill 和权限请求等流程。
 #       它决定是否允许发起审批; 实际可执行范围仍由 sandbox_mode 或当前
-#       permissions profile 决定
+#       permissions profile 决定。rust-v0.149.0 起不再支持显式设置
+#       approval_policy = "untrusted"; 保留该旧值会导致配置加载失败。项目被标记
+#       为 untrusted 时, Codex 会在内部对每条命令请求审批, 只有显式 exec policy
+#       allow 规则可以跳过该审批
 approval_policy = "on-request"
 
 # ── approvals_reviewer ────────────────────────────────────────────────────
@@ -77,7 +79,7 @@ approval_policy = "on-request"
 # 说明: 这不会禁用 ARC 等安全检查; guardian_approval 功能标志在 v0.124.0 起
 #       已稳定并默认启用, 只有显式关闭时才会隐藏 Auto-review 入口。
 #       Auto-review 仅路由 on-request 或 granular 策略实际产生的审批;
-#       untrusted 不走 Auto-review, never 不产生审批提示。
+#       项目不信任状态派生的逐命令审批不走 Auto-review, never 不产生审批提示。
 #       rust-v0.146.1 起, TUI 切换到模型目录中 model_specialty = "cyber" 的
 #       模型时, 会尝试为当前线程改用 :workspace + on-request。若
 #       guardian_approval 可用且 requirements 允许 auto_review, reviewer 会设为
@@ -347,7 +349,8 @@ model_context_window = 272000
 #   "auto"      — 优先用密钥链, 不可用时退回到文件存储 (推荐)
 #   "ephemeral" — 只存储在内存中, 进程退出后凭证丢失 (最安全但每次都要重新登录)
 # 作用: 控制 CLI 认证凭证 (如 API Key) 的存储方式
-# 说明: 示例这里显式设为 "auto"; 若完全省略此项, 实际默认值仍是 "file"
+# 说明: 示例这里显式设为 "auto"; 若完全省略此项, 实际默认值仍是 "file"。
+#       rust-v0.149.0 起, 本地 requirements.toml 可以强制此值, 用户配置无法覆盖
 cli_auth_credentials_store = "auto"
 
 # ── mcp_oauth_credentials_store ────────────────────────────────────────────
@@ -391,7 +394,8 @@ mcp_oauth_credentials_store = "auto"
 # 类型: 字符串 (可选)
 # 默认: "https://chatgpt.com/backend-api/"
 # 作用: ChatGPT 后端 API 的基础 URL
-# 说明: 通常不需要修改; 仅在企业部署或使用代理时才需要调整
+# 说明: 通常不需要修改; 仅在企业部署或使用代理时才需要调整。
+#       rust-v0.149.0 起, 本地 requirements.toml 可以强制此值, 用户配置无法覆盖
 chatgpt_base_url = "https://chatgpt.com/backend-api/"
 
 # ── apps_mcp_product_sku ───────────────────────────────────────────────────
@@ -624,13 +628,9 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # 已移除旧键: experimental_thread_store_endpoint
 # 说明: 如果设置该旧键, Codex 会直接报错; 请从 config.toml 中删除。
 
-# ── experimental_thread_config_endpoint ────────────────────────────────────
-# 类型: 字符串 (可选)
-# 默认: 无
-# 作用: 为 app-server 指定远端线程级配置加载服务的地址
-# 说明: 这是实验性配置, 主要用于集成方按 thread 返回模型、权限、profile、
-#       provider 等会话配置; 普通 CLI / TUI 使用场景通常不需要设置
-# experimental_thread_config_endpoint = "https://threads.example.internal/config"
+# 已移除旧键: experimental_thread_config_endpoint
+# 说明: rust-v0.149.0 起该实验性远端线程配置服务已被完全移除;
+#       保留此键会因未知字段导致配置加载失败, 请直接删除
 
 # ── [realtime] — 实时语音会话配置 ────────────────────────────────────────
 # 作用: 配置 realtime 会话的协议版本、会话类型与语音;
@@ -1287,7 +1287,7 @@ terminal_resize_reflow_max_rows = 9000
 #   两段 chord 用一个空格分隔, 每一段都使用相同的按键语法
 #
 # 常用上下文:
-#   global   — 全局动作: open_transcript, open_external_editor, copy,
+#   global   — 全局动作: open_agents, open_transcript, open_external_editor, copy,
 #              clear_terminal, submit, queue, toggle_shortcuts,
 #              toggle_vim_mode, toggle_fast_mode, toggle_raw_output,
 #              toggle_side_conversation
@@ -1304,7 +1304,7 @@ terminal_resize_reflow_max_rows = 9000
 #              append_line_end, insert_line_start, open_line_below,
 #              open_line_above, move_left, move_right, move_up, move_down,
 #              move_word_forward, move_word_backward, move_word_end,
-#              move_line_start, move_line_end, delete_char, substitute_char,
+#              move_line_start, move_line_end, delete_char, replace_char, substitute_char,
 #              delete_to_line_end, change_to_line_end, yank_line, paste_after,
 #              start_delete_operator, start_yank_operator,
 #              start_change_operator, cancel_operator
@@ -1320,10 +1320,12 @@ terminal_resize_reflow_max_rows = 9000
 #              close_transcript
 #   list     — 列表选择动作: move_up, move_down, move_left, move_right,
 #              page_up, page_down, jump_top, jump_bottom, accept, cancel
+#   agents   — Agents 总览动作: search, new_task, rename, stop, toggle_grouping
 #   approval — 审批弹窗动作: open_fullscreen, open_thread, approve,
 #              approve_for_session, approve_for_prefix, deny, decline, cancel
 #
 # [tui.keymap.global]
+# open_agents = "alt-a"
 # open_transcript = "ctrl-t"
 # open_external_editor = "ctrl-x ctrl-e"
 # copy = ["ctrl-y", "alt-y"]
@@ -1347,6 +1349,7 @@ terminal_resize_reflow_max_rows = 9000
 # enter_insert = "i"
 # append_line_end = "shift-a"
 # delete_char = "x"
+# replace_char = "r"
 # substitute_char = "s"
 # change_to_line_end = "shift-c"
 # start_change_operator = "c"
@@ -1372,6 +1375,13 @@ terminal_resize_reflow_max_rows = 9000
 # page_down = "page-down"
 # jump_top = "home"
 # jump_bottom = "end"
+#
+# [tui.keymap.agents]
+# search = "ctrl-f"
+# new_task = "ctrl-n"
+# rename = "ctrl-r"
+# stop = "ctrl-x"
+# toggle_grouping = "ctrl-s"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -1750,6 +1760,18 @@ plugin_sharing = true
 # 说明: 这是 requirements 管理的能力门禁, 通常不应在用户 config.toml 中手动设置
 # in_app_browser = true
 
+# in_app_chat — 默认: true | 稳定
+# 允许桌面端显示应用内聊天面板
+# 说明: 这是 requirements-only 管理门禁, 管理员可设为 false;
+#       不应在用户 config.toml 中手动设置
+# in_app_chat = true
+
+# in_app_dictation — 默认: true | 稳定
+# 允许桌面端使用应用内听写功能
+# 说明: 这是 requirements-only 管理门禁, 管理员可设为 false;
+#       不应在用户 config.toml 中手动设置
+# in_app_dictation = true
+
 # in_app_updates — 默认: true | 稳定
 # 允许桌面端执行应用内更新
 # 说明: 这是 requirements-only 管理门禁, 管理员可设为 false;
@@ -1920,6 +1942,10 @@ prevent_idle_sleep = true
 # 允许 turn 在选定的 executor 仍处于启动阶段时先行开始
 # deferred_executor = false
 
+# cwd_relative_turn_diffs — 默认: false | 开发中
+# 让 turn 的 diff 展示路径相对于当前工作目录, 而不是相对于 Git 根目录
+# cwd_relative_turn_diffs = false
+
 # deferred_tool_world_state — 默认: false | 开发中
 # 把延迟加载工具命名空间的增删变化记录到模型可见 world state;
 # 启用后 tool_search 不再重复列出同一份来源清单
@@ -2075,20 +2101,37 @@ prevent_idle_sleep = true
 
 # guardianv2 — 默认: false | 开发中
 # 启用 Guardian V2 自动审批审查; 可写成布尔值或以下结构化对象
+# 说明: rust-v0.149.0 起, 未在本地指定的分类提示、阈值、推理强度、token 上限
+#       和 transcript 上限可由当前模型目录提供默认值; 本地配置仍优先
 # guardianv2 = false
 # guardianv2.enabled = true
 # classifier_instructions — 类型: 字符串 (可选) | 默认: 内置风险分类提示
 # guardianv2.classifier_instructions = "评估工具操作的风险与用户授权范围。"
-# review_threshold — 类型: 浮点数 | 默认: 0.8 | 范围: 0.0-1.0
-# guardianv2.review_threshold = 0.8
+# review_threshold — 类型: 浮点数 | 范围: 0.0-1.0
+# 默认: 内置提示使用 0.5; 若自定义 classifier_instructions 但未同时设置阈值,
+#       为保留旧提示校准而使用 0.8; 模型目录也可以提供默认值
+# guardianv2.review_threshold = 0.5
+# max_tool_call_lag — 类型: 非负整数 | 默认: 3
+# 当最新风险评分落后当前工具调用超过此数量时, 不再用该旧评分自动批准审批
+# guardianv2.max_tool_call_lag = 3
 # reasoning_effort — 类型: 字符串 | 默认: "low"
 # guardianv2.reasoning_effort = "low"
 # max_action_tokens / max_classifier_instruction_tokens — 默认: 10000 | 范围: 100-100000
 # guardianv2.max_action_tokens = 10000
 # guardianv2.max_classifier_instruction_tokens = 10000
+# max_parent_compaction_tokens — 默认: 25000 | 范围: 100-100000
+# 限制随 Guardian 请求附带的父会话加密压缩内容 token 数
+# guardianv2.max_parent_compaction_tokens = 25000
+# review_scope.sandboxed_exec_commands — 类型: 布尔值 | 默认: false
+# 是否把普通沙箱内 shell 命令也纳入 Guardian V2 分类; 请求 require_escalated 的
+# shell 命令仍会分类, 其他工具和带命名空间的 shell 工具不受此开关排除
+# guardianv2.review_scope.sandboxed_exec_commands = false
 # transcript.sources — 可选值: "tool_calls" | "tool_outputs" | "reasoning"
 # 默认: ["tool_calls", "tool_outputs"]
 # guardianv2.transcript.sources = ["tool_calls", "tool_outputs"]
+# transcript.include_images — 类型: 布尔值 | 默认: false
+# 是否包含最近消息与已配置工具输出中的截图
+# guardianv2.transcript.include_images = false
 # 单条消息/工具输出 token 上限默认分别为 2000/1000; 各类 transcript 总上限
 # 默认均为 10000; 这些 token 字段范围均为 100-100000, 且单条上限不能超过总上限
 # guardianv2.transcript.max_message_entry_tokens = 2000
@@ -2166,6 +2209,7 @@ prevent_idle_sleep = true
 # request_rule            — 已移除
 # codex_git_commit        — 已移除
 # apply_patch_freeform    — 已移除
+# send_async_message      — 已移除; 异步用户消息不再需要功能门禁
 # unavailable_dummy_tools — 已移除
 # responses_websockets    — 已移除
 # responses_websockets_v2 — 已移除
@@ -2392,6 +2436,12 @@ interrupt_message = true
 # 设为 false 后, 已发现技能仍可存在, 但不会自动把技能使用规则加入提示词
 # include_instructions = true
 #
+# max_context_tokens — 类型: 正整数 (可选)
+# 作用: 限制 available-skills 目录占用的 token 数
+# 默认: 模型上下文窗口的 2%; 无法确定窗口时回退为 8000 个字符
+# 说明: 显式值最高按 10000 token 生效; 设为 0 会导致配置解析失败
+# max_context_tokens = 5000
+#
 # config — 类型: 对象数组
 # 选择规则只从用户配置 (包括 profile) 和会话 flags 读取; 项目、系统与
 # 托管配置层中的同名规则不会参与合成
@@ -2445,20 +2495,14 @@ config = [
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║                     第 19 节: Marketplaces (插件市场) 配置              ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
-# 作用: 记录已添加的插件市场来源与刷新元数据
-# 说明: 通常由 `codex marketplace add` / 刷新流程自动维护, 一般不需要手动编辑
+# 作用: 记录已添加的插件市场来源
+# 说明: 通常由 `codex marketplace add` / 刷新流程自动维护, 一般不需要手动编辑。
+#       rust-v0.149.0 起, 已激活 revision 等运行时升级状态保存在 marketplace
+#       安装元数据中, 不再写入 config.toml。现有 last_updated / last_revision
+#       已无运行时作用, 应从配置中删除
 # 名称: 只能包含 ASCII 字母、数字、下划线和连字符
 
 # [marketplaces.example-marketplace]
-# last_updated — 类型: 字符串 (可选)
-# 最后一次成功添加或刷新此 marketplace 的时间戳
-# last_updated = "2026-04-16T09:30:00Z"
-
-# last_revision — 类型: 字符串 (可选)
-# 最近一次成功激活的 Git revision
-# 通常由 Codex 自动写入, 例如 commit SHA
-# last_revision = "0123456789abcdef"
-
 # source_type — 类型: 字符串 (可选) | 可选值: "git" | "local"
 # marketplace 的来源类型
 # source_type = "git"
@@ -2484,13 +2528,13 @@ config = [
 # 说明: 内置提供商有 openai / amazon-bedrock / ollama / lmstudio
 #       openai / ollama / lmstudio 不能在这里重定义;
 #       amazon-bedrock 支持覆盖 base_url、auth、http_headers、
-#       aws.profile 与 aws.region
+#       aws.profile、aws.region 与 aws.auth_refresh
 #       你也可以在这里添加自定义提供商 (如本地代理、Azure OpenAI 等)
 
 # ── [model_providers.amazon-bedrock] — Amazon Bedrock ─────────────────────
 # 作用: 覆盖内置 amazon-bedrock 提供商的 endpoint、认证、HTTP headers 或 AWS 设置
 # 说明: 无需自行填写 name / base_url / wire_api 等字段, CLI 已内置这些默认值
-#       除下列五类字段外, 设置其他 provider 字段的非默认值会报错
+#       除下列字段外, 设置其他 provider 字段的非默认值会报错
 #       当前模型发现由具体 model provider 负责, Bedrock 账户状态也会
 #       暴露给 app 客户端; 使用 Bedrock 时通常只需要选择 provider 和 AWS 设置。
 #       Web search 只走 hosted cached/text-only 路径; live 或 indexed 会降为
@@ -2518,6 +2562,17 @@ config = [
 # AWS SDK/SigV4 回退则使用 SDK 默认 region 解析链
 # region = "us-west-2"
 #
+# [model_providers.amazon-bedrock.aws.auth_refresh]
+# command — 类型: 字符串 | 必填且必须精确为 "aws"
+# AWS SDK/SigV4 请求遇到可刷新的过期凭证错误后, 直接执行此命令并重新签名重试;
+# 只使用 command/args 启动进程, 不经过 shell。Bearer token、托管 Bedrock API Key
+# 或上方 provider.auth 命令认证路径不会触发它
+# command = "aws"
+# args — 类型: 字符串数组 | 默认: []
+# args = ["sso", "login", "--profile", "codex-bedrock"]
+# timeout_ms — 类型: 正整数 | 默认: 300000
+# timeout_ms = 300000
+#
 # 认证优先级为命令 auth > Codex 托管 Bedrock API Key >
 # AWS_BEARER_TOKEN_BEDROCK > AWS SDK/SigV4。环境 bearer token 还必须通过
 # 本节 region、AWS_REGION 或 AWS_DEFAULT_REGION 提供 region。
@@ -2538,6 +2593,7 @@ config = [
 # [model_providers.amazon-bedrock-runtime.aws]
 # profile = "codex-bedrock"
 # region = "us-west-2"
+# 也支持与上方相同的 [model_providers.amazon-bedrock-runtime.aws.auth_refresh] 配置
 
 [model_providers.custom]
 # name — 类型: 非空字符串 | 自定义提供商必填
@@ -3020,7 +3076,7 @@ headers = {}
 # 作用: 为不同的项目目录设置信任级别
 # 说明:
 #   "trusted"   — 默认审批策略为 "on-request"
-#   "untrusted" — 默认审批策略为 "untrusted", 审批更严格
+#   "untrusted" — 默认对每条命令请求审批, 只有显式 exec policy allow 规则可跳过
 # 沙箱说明: 在 macOS/Linux 上, 两种已记录的 trust 状态都默认派生
 #             workspace-write; Windows 只有配置了 [windows].sandbox 才如此,
 #             否则回落到 read-only。trust_level 本身不授予全磁盘或网络权限。
@@ -3099,7 +3155,7 @@ trust_level = "trusted"
 
 # ── 预设文件示例: $CODEX_HOME/safe.config.toml ───────────────────────────
 # model = "gpt-5.6-sol"
-# approval_policy = "untrusted"
+# approval_policy = "never"
 # sandbox_mode = "read-only"
 # web_search = "disabled"
 # service_tier = "flex"
