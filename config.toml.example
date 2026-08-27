@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.149.0 (发布于 2026-08-20)                     #
+#  适用版本: Codex CLI rust-v0.150.1 (发布于 2026-08-27)                     #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -1108,6 +1108,50 @@ enabled = true
 #   { type = "plugin", id = "slack@openai-curated" },
 # ]
 
+# ── [browser_use] — Browser Use 用户策略 ───────────────────────────
+# 类型: 对象 (可选) | rust-v0.150.0 起可在 config.toml 中保存
+# 作用: 配置浏览器历史访问和按 origin 匹配的访问、下载、上传、
+#       完整 CDP 权限偏好
+# 说明: 未设置的字段留给宿主默认值或企业 requirements 决定;
+#       access / downloads / uploads / full_cdp_access 只接受 "allow" 或 "deny"
+#
+# [browser_use]
+# allow_history_access = false
+#
+# [browser_use.default_origin_policy]
+# access = "deny"
+# downloads = "deny"
+# uploads = "deny"
+# full_cdp_access = "deny"
+#
+# [browser_use.origins."https://example.com"]
+# access = "allow"
+# downloads = "allow"
+# uploads = "deny"
+# full_cdp_access = "deny"
+
+# ── [computer_use] — Computer Use 应用访问策略 ───────────────────
+# 类型: 对象 (可选) | rust-v0.150.0 起可在 config.toml 中保存
+# 作用: 按 macOS bundle ID、Windows AUMID 或可执行文件签名信息配置
+#       Computer Use 应用访问偏好
+# 说明: 未设置时留给宿主默认值或企业 requirements 决定;
+#       所有 access 值只接受 "allow" 或 "deny"
+#
+# [computer_use]
+# default_app_access = "deny"
+#
+# [computer_use.macos.bundle_ids]
+# "com.apple.Safari" = "allow"
+#
+# [computer_use.windows.aumids]
+# "Microsoft.Paint_8wekyb3d8bbwe!App" = "allow"
+#
+# [[computer_use.windows.exes]]
+# publisher_name = "CN=Google LLC"
+# product_name = "Google Chrome"
+# binary_name = "chrome.exe" # 可选; 省略时不按二进制文件名细分
+# access = "allow"
+
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║                     第 12 节: TUI (终端界面) 配置                       ║
@@ -1165,6 +1209,7 @@ show_tooltips = true
 #   "reasoning"            — 当前推理等级
 #   "current-dir"          — 当前工作目录
 #   "project-name"         — 项目名 (也接受旧别名 project / project-root)
+#   "hostname"             — 当前主机名
 #   "git-branch"           — 当前 Git 分支 (仅在 Git 仓库中显示)
 #   "pull-request-number"  — 当前分支对应的打开 PR 编号 (仅在可用时显示)
 #   "branch-changes"       — 当前分支相对默认分支的已提交变更摘要 (仅在可用时显示)
@@ -1292,6 +1337,7 @@ terminal_resize_reflow_max_rows = 9000
 #              toggle_vim_mode, toggle_fast_mode, toggle_raw_output,
 #              toggle_side_conversation
 #   chat     — 聊天区动作: increase_reasoning_effort, decrease_reasoning_effort,
+#              previous_permission_mode, next_permission_mode, toggle_voice_mute,
 #              edit_queued_message, interrupt_turn
 #   composer — 输入框动作: submit, queue, toggle_shortcuts,
 #              history_search_previous, history_search_next
@@ -1304,7 +1350,8 @@ terminal_resize_reflow_max_rows = 9000
 #              append_line_end, insert_line_start, open_line_below,
 #              open_line_above, move_left, move_right, move_up, move_down,
 #              move_word_forward, move_word_backward, move_word_end,
-#              move_line_start, move_line_end, delete_char, replace_char, substitute_char,
+#              move_line_start, move_line_end, delete_char, replace_char, repeat_last_change,
+#              substitute_char,
 #              delete_to_line_end, change_to_line_end, yank_line, paste_after,
 #              start_delete_operator, start_yank_operator,
 #              start_change_operator, cancel_operator
@@ -1335,6 +1382,9 @@ terminal_resize_reflow_max_rows = 9000
 #
 # [tui.keymap.chat]
 # interrupt_turn = "esc"
+# previous_permission_mode = "f7"
+# next_permission_mode = "f8"
+# toggle_voice_mute = "f9"
 #
 # [tui.keymap.composer]
 # submit = "enter"
@@ -1350,6 +1400,7 @@ terminal_resize_reflow_max_rows = 9000
 # append_line_end = "shift-a"
 # delete_char = "x"
 # replace_char = "r"
+# repeat_last_change = "."
 # substitute_char = "s"
 # change_to_line_end = "shift-c"
 # start_change_operator = "c"
@@ -1772,6 +1823,12 @@ plugin_sharing = true
 #       不应在用户 config.toml 中手动设置
 # in_app_dictation = true
 
+# in_app_local_automation — 默认: true | 稳定
+# 允许桌面端运行本地自动化任务
+# 说明: 这是 requirements-only 管理门禁, 管理员可设为 false;
+#       不应在用户 config.toml 中手动设置
+# in_app_local_automation = true
+
 # in_app_updates — 默认: true | 稳定
 # 允许桌面端执行应用内更新
 # 说明: 这是 requirements-only 管理门禁, 管理员可设为 false;
@@ -1835,6 +1892,11 @@ mentions_v2 = true
 # 启用远端 compaction v2 Responses 客户端路径
 remote_compaction_v2 = true
 
+# compaction_image_budget — 默认: true | 稳定
+# 把压缩后保留的图片也计入远端 compaction 上下文 token 预算;
+# 超出预算时会从较旧图片开始修剪。rust-v0.150.1 起默认启用
+compaction_image_budget = true
+
 # memories — 默认: false | 稳定 (别名: memory_tool)
 # 启用记忆系统 (从会话中提取经验, 在未来会话中注入)
 memories = true
@@ -1873,6 +1935,12 @@ prevent_idle_sleep = true
 # allow_upstream_proxy — 类型: 布尔值 | 默认: true
 # network_proxy.allow_upstream_proxy = true
 #
+# credential_broker — 类型: 布尔值 | 默认: false
+# 启用受管凭据代理, 让沙箱进程用别名请求凭据,
+# 由托管代理在转发到受信 HTTPS 端点时注入;
+# 开启后会同时开启 MITM, 且该项不允许从项目级 .codex/config.toml 生效
+# network_proxy.credential_broker = false
+#
 # allow_local_binding — 类型: 布尔值 | 默认: false
 # network_proxy.allow_local_binding = false
 #
@@ -1889,6 +1957,14 @@ prevent_idle_sleep = true
 # network_proxy.unix_sockets."/tmp/example.sock" = "allow"
 
 # ── 开发中功能 (Under Development) ─────────────────────────────────────────
+
+# transcript_v2 — 默认: false | 开发中
+# 启用可交互的 transcript 输入框和 turn 选择界面
+# transcript_v2 = false
+
+# content_item_kinds — 默认: false | 开发中
+# 在内部 Responses metadata 中传递每个内容项的分类信息
+# content_item_kinds = false
 
 # executed_tool_call_metadata — 默认: false | 开发中
 # 记录模型尝试的直连和 code mode 工具调用名称及参数, 并把有界、必要时截断的
@@ -1933,10 +2009,10 @@ prevent_idle_sleep = true
 # 将 shell 执行路由到 zsh exec bridge
 # shell_zsh_fork = false
 
-# unified_exec_zsh_fork — 默认: false | 开发中
-# 允许 unified_exec 与 zsh exec bridge 组合使用
-# 说明: 这是组合开关; 单独开启不会自动启用 unified_exec 或 shell_zsh_fork
-# unified_exec_zsh_fork = false
+# shell_snapshot_v2 — 默认: false | 开发中
+# 把经过策略过滤的 shell 快照完全保存在 executor 内存中,
+# 供 unified exec 后续进程复用
+# shell_snapshot_v2 = false
 
 # deferred_executor — 默认: false | 开发中
 # 允许 turn 在选定的 executor 仍处于启动阶段时先行开始
@@ -2017,6 +2093,10 @@ prevent_idle_sleep = true
 # 仅显式设置 enabled 时, 当前模型目录中的 model_messages.token_budget 可以提供
 # 阈值、文案和 fallback 默认值。
 # 一旦显式设置下方任一具体字段, 用户对象整体优先, 不再套用模型自带默认值
+# use_history_notes_extension — 类型: 布尔值 | 默认: false
+# 向 token-budget 会话暴露内置 history / notes 扩展,
+# 使模型可在上下文窗口之间读写持久化历史与笔记
+# token_budget.use_history_notes_extension = false
 # reminder_threshold_tokens — 类型: 正整数 (可选) | 配置默认: 无
 # 剩余 token 小于等于该值时注入提醒; 没有用户值或模型默认时不会触发阈值提醒
 # token_budget.reminder_threshold_tokens = 16000
@@ -2119,6 +2199,10 @@ prevent_idle_sleep = true
 # max_action_tokens / max_classifier_instruction_tokens — 默认: 10000 | 范围: 100-100000
 # guardianv2.max_action_tokens = 10000
 # guardianv2.max_classifier_instruction_tokens = 10000
+# reuse_parent_compaction — 类型: 布尔值 | 默认: true
+# Guardian 审查会话重启时复用父会话的加密 compaction;
+# 模型目录可提供默认值, 本地配置优先
+# guardianv2.reuse_parent_compaction = true
 # max_parent_compaction_tokens — 默认: 25000 | 范围: 100-100000
 # 限制随 Guardian 请求附带的父会话加密压缩内容 token 数
 # guardianv2.max_parent_compaction_tokens = 25000
@@ -2126,6 +2210,10 @@ prevent_idle_sleep = true
 # 是否把普通沙箱内 shell 命令也纳入 Guardian V2 分类; 请求 require_escalated 的
 # shell 命令仍会分类, 其他工具和带命名空间的 shell 工具不受此开关排除
 # guardianv2.review_scope.sandboxed_exec_commands = false
+# review_scope.computer_use_only — 类型: 布尔值 | 默认: false
+# 把异步风险分类和快速批准限定为 browser / computer-use 工具;
+# 为 true 时使用专用 scope, 不再应用上方的 sandboxed_exec_commands
+# guardianv2.review_scope.computer_use_only = false
 # transcript.sources — 可选值: "tool_calls" | "tool_outputs" | "reasoning"
 # 默认: ["tool_calls", "tool_outputs"]
 # guardianv2.transcript.sources = ["tool_calls", "tool_outputs"]
@@ -2140,6 +2228,10 @@ prevent_idle_sleep = true
 # guardianv2.transcript.max_tool_transcript_tokens = 10000
 # max_recent_non_user_entries — 类型: 正整数 | 默认: 40
 # guardianv2.transcript.max_recent_non_user_entries = 40
+
+# guardian_ext — 默认: false | 开发中
+# 启用由 Extension 实现的同步 Guardian 审批审查器
+# guardian_ext = false
 
 # retain_client_developer_messages — 默认: false | 开发中
 # 在上下文压缩后保留由客户端写入的 developer 消息
@@ -2234,6 +2326,7 @@ prevent_idle_sleep = true
 # plugin_hooks                  — 已移除 (插件 hooks 不再由 feature flag 控制)
 # enable_fanout                 — 已移除 (CSV-backed Agent jobs 已删除)
 # code_mode_buffered_exec       — 已移除; 请改用 code_mode.default_exec_yield_time_ms
+# unified_exec_zsh_fork         — 已移除; unified_exec 的 shell 执行已统一
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -2243,14 +2336,14 @@ prevent_idle_sleep = true
 # 说明: v0.124.0 起 hooks 已稳定; 也可以继续使用 ~/.codex/hooks.json
 # 支持事件: PreToolUse / PermissionRequest / PostToolUse / SessionStart /
 #           SessionEnd / UserPromptSubmit / PreCompact / PostCompact /
-#           SubagentStart / SubagentStop / Stop
+#           SubagentStart / SubagentStop / Stop / Interrupt
 # matcher:
 #   - PreToolUse / PermissionRequest / PostToolUse: 匹配工具名或兼容别名
 #   - SessionStart: 匹配 "startup" / "resume" / "clear" / "compact"
 #   - SessionEnd: 匹配结束原因; 当前值为 "other", 且只对根线程执行
 #   - SubagentStart / SubagentStop: 匹配 agent_type, 例如 "worker" 或 "review"
 #   - PreCompact / PostCompact: 匹配 "manual" / "auto"
-#   - UserPromptSubmit / Stop: 当前忽略 matcher
+#   - UserPromptSubmit / Stop / Interrupt: 当前忽略 matcher
 # handler:
 #   - command 类型支持同步或 async = true 异步执行; 异步 hook 在后台运行, 不能
 #     改变当前事件的控制结果。prompt / agent 类型可解析但尚未执行
@@ -2348,6 +2441,16 @@ prevent_idle_sleep = true
 # [[hooks.SubagentStop.hooks]]
 # type = "command"
 # command = "python3 ~/.codex/hooks/subagent_stop.py"
+#
+# ── Interrupt: 活跃的顶层 turn 被中断、正式标记 aborted 前运行 ──────
+# matcher 当前忽略; 支持 command 和 mcp_tool handler, 输出不能阻止中断
+# [[hooks.Interrupt]]
+#
+# [[hooks.Interrupt.hooks]]
+# type = "command"
+# command = "python3 ~/.codex/hooks/interrupt.py"
+# timeout = 10
+# statusMessage = "处理 turn 中断"
 #
 # ── hook state: 用户级启用/禁用状态 ────────────────────────────────────────
 # 作用: 记录单个 hook 是否启用以及已信任的命令内容哈希; 通常由 UI / app-server 写入
@@ -2999,6 +3102,11 @@ environment = "dev"
 # ⚠️ 注意: 启用后原始输入会进入 codex_otel.log_only tracing 日志事件;
 #           任何本地或 OTEL 日志消费者都可能保存或传输敏感内容
 log_user_prompt = false
+
+# tool_result.max_bytes — 类型: 非负整数 | 默认: 2048
+# 限制 codex.tool_result 日志记录中的工具结果 UTF-8 字节数;
+# 仅影响日志, 不影响模型可见输出。调高会让更多工具数据进入日志
+tool_result.max_bytes = 2048
 
 # ── span_attributes ────────────────────────────────────────────────────────
 # 类型: 键值对 (可选) | 默认: {}
