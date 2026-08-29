@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.150.1 (发布于 2026-08-27)                     #
+#  适用版本: Codex CLI rust-v0.151.0 (发布于 2026-08-29)                     #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -694,6 +694,14 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # 说明: 本地监听仍然绑定 127.0.0.1, 但 OAuth 流程会使用此 URL
 # mcp_oauth_callback_url = "http://127.0.0.1:1455/callback"
 
+# ── mcp_optional_startup_grace_ms ─────────────────────────────────────────
+# 类型: 非负整数 (毫秒) (可选)
+# 默认: 1000
+# 作用: 构建初始工具目录时, 最多额外等待仍在启动的可选 MCP 服务器这么久
+# 说明: 必须等待的 MCP 服务器仍按各自 startup_timeout_sec 等待。设为 0 会禁用
+#       共享宽限期, 改为按每个可选服务器自己的 startup_timeout_sec 等待
+# mcp_optional_startup_grace_ms = 1000
+
 
 # ── 本地/开源模型提供商 ─────────────────────────────────────────────────────
 
@@ -1350,15 +1358,18 @@ terminal_resize_reflow_max_rows = 9000
 #              append_line_end, insert_line_start, open_line_below,
 #              open_line_above, move_left, move_right, move_up, move_down,
 #              move_word_forward, move_word_backward, move_word_end,
-#              move_line_start, move_line_end, delete_char, replace_char, repeat_last_change,
-#              substitute_char,
+#              move_line_start, move_line_end, find_forward, find_backward,
+#              till_forward, till_backward, jump_top, jump_bottom,
+#              delete_char, replace_char, repeat_last_change, substitute_char,
 #              delete_to_line_end, change_to_line_end, yank_line, paste_after,
 #              start_delete_operator, start_yank_operator,
 #              start_change_operator, cancel_operator
 #   vim_operator — Vim operator-pending 动作: delete_line, yank_line,
 #              motion_left, motion_right, motion_up, motion_down,
 #              motion_word_forward, motion_word_backward, motion_word_end,
-#              motion_line_start, motion_line_end, select_inner_text_object,
+#              motion_line_start, motion_line_end, motion_find_forward,
+#              motion_find_backward, motion_till_forward, motion_till_backward,
+#              motion_jump_top, motion_jump_bottom, select_inner_text_object,
 #              select_around_text_object, cancel
 #   vim_text_object — Vim 文本对象动作: word, big_word, parentheses,
 #              brackets, braces, double_quote, single_quote, backtick, cancel
@@ -1404,10 +1415,22 @@ terminal_resize_reflow_max_rows = 9000
 # substitute_char = "s"
 # change_to_line_end = "shift-c"
 # start_change_operator = "c"
+# find_forward = "f"
+# find_backward = "shift-f"
+# till_forward = "t"
+# till_backward = "shift-t"
+# jump_top = "home"
+# jump_bottom = "shift-g"
 #
 # [tui.keymap.vim_operator]
 # delete_line = "d"
 # yank_line = "y"
+# motion_find_forward = "f"
+# motion_find_backward = "shift-f"
+# motion_till_forward = "t"
+# motion_till_backward = "shift-t"
+# motion_jump_top = "home"
+# motion_jump_bottom = "shift-g"
 # select_inner_text_object = "i"
 # select_around_text_object = "a"
 #
@@ -1659,6 +1682,10 @@ unified_exec = true
 # 字段名为历史沿用: true 表示保持 fail-closed, 独立宿主不可用时直接失败;
 # false 允许可选 code mode 退回直连工具。code_mode_only 始终保持 fail-closed
 # code_mode_host.disable_in_process_fallback = false
+
+# content_item_kinds — 默认: true | 稳定
+# 在内部 Responses metadata 中传递每个内容项的分类信息
+# content_item_kinds = true
 
 # shell_snapshot — 默认: true | 稳定
 # 启用 shell 快照 (环境变量捕获)
@@ -1962,10 +1989,6 @@ prevent_idle_sleep = true
 # 启用可交互的 transcript 输入框和 turn 选择界面
 # transcript_v2 = false
 
-# content_item_kinds — 默认: false | 开发中
-# 在内部 Responses metadata 中传递每个内容项的分类信息
-# content_item_kinds = false
-
 # executed_tool_call_metadata — 默认: false | 开发中
 # 记录模型尝试的直连和 code mode 工具调用名称及参数, 并把有界、必要时截断的
 # 元数据附到下一次 Responses 请求中的匹配工具输出; 被阻止或失败的尝试也会记录
@@ -1996,6 +2019,11 @@ prevent_idle_sleep = true
 # code_mode.direct_only_tool_namespaces = ["image_gen"]
 # direct_only_tool_namespaces 中的命名空间只作为模型顶层工具暴露:
 # 它们绕过延迟加载, 并从 code_mode 的嵌套工具面中移除
+
+# code_mode_prewarm — 默认: false | 开发中
+# 在会话启动时提前建立 code mode 独立宿主连接, 减少首次调用的等待时间;
+# 宿主不可用时不会执行预热
+# code_mode_prewarm = false
 
 # code_mode_interrupt — 默认: false | 开发中
 # turn 被中断时终止正在运行的 code mode cell 及其嵌套工具调用
@@ -2063,6 +2091,11 @@ prevent_idle_sleep = true
 # 与 Skills, 并为当前线程缓存有界的发现结果
 # executor_capability_discovery = false
 
+# skip_host_skill_discovery — 默认: false | 开发中
+# 当没有已注册扩展要求宿主 Skill 快照时, 跳过宿主 Skill 发现;
+# 插件目录仍会先完成解析
+# skip_host_skill_discovery = false
+
 # apply_patch_streaming_events — 默认: false | 开发中
 # 在生成 apply_patch 输入时流式展示结构化进度
 # apply_patch_streaming_events = false
@@ -2074,6 +2107,11 @@ prevent_idle_sleep = true
 # exec_permission_approvals — 默认: false | 开发中 (别名: request_permissions)
 # 允许在沙箱中动态请求额外的文件系统权限审批
 # exec_permission_approvals = false
+
+# write_stdin_approval — 默认: false | 开发中
+# 向已提权的 unified-exec 终端写入非空输入前触发审批;
+# 纯轮询和符合规则的非 TTY 中断输入不触发此审批
+# write_stdin_approval = false
 
 # request_permissions_tool — 默认: false | 开发中
 # 暴露内置的 request_permissions 工具, 让模型可以主动请求文件系统权限
@@ -2167,6 +2205,15 @@ prevent_idle_sleep = true
 # 为第一方 ChatGPT 请求附加 PSP 路由标记; 普通自定义 provider 不使用该路径
 # psp = false
 
+# bedrock_setup_wizard — 默认: false | 开发中
+# 在嵌入式 TUI 尚未登录、未显式选择模型提供商且允许 API 登录时,
+# 提供 Amazon Bedrock 初始化向导
+# bedrock_setup_wizard = false
+
+# step_model_switching — 默认: false | 开发中
+# 允许后续 step capture 显式请求切换模型; 关闭时会拒绝 turn settings 更新
+# step_model_switching = false
+
 # guardian_reuse_parent_compaction — 默认: false | 开发中
 # Guardian 审批审查重启时复用父会话的加密压缩内容
 # guardian_reuse_parent_compaction = false
@@ -2185,15 +2232,21 @@ prevent_idle_sleep = true
 #       和 transcript 上限可由当前模型目录提供默认值; 本地配置仍优先
 # guardianv2 = false
 # guardianv2.enabled = true
+# free_guardian — 类型: 布尔值 | 默认: false
+# 让 Guardian 审查和分类使用不计量的 Codex 端点; 仅对支持该路由的认证生效
+# guardianv2.free_guardian = false
+# persist_scores — 类型: 布尔值 | 默认: false
+# 把已审查动作及风险评分写入非临时会话的 rollout 文件, 仅建议用于调试
+# guardianv2.persist_scores = false
 # classifier_instructions — 类型: 字符串 (可选) | 默认: 内置风险分类提示
 # guardianv2.classifier_instructions = "评估工具操作的风险与用户授权范围。"
 # review_threshold — 类型: 浮点数 | 范围: 0.0-1.0
 # 默认: 内置提示使用 0.5; 若自定义 classifier_instructions 但未同时设置阈值,
 #       为保留旧提示校准而使用 0.8; 模型目录也可以提供默认值
 # guardianv2.review_threshold = 0.5
-# max_tool_call_lag — 类型: 非负整数 | 默认: 3
+# max_tool_call_lag — 类型: 非负整数 | 默认: 2
 # 当最新风险评分落后当前工具调用超过此数量时, 不再用该旧评分自动批准审批
-# guardianv2.max_tool_call_lag = 3
+# guardianv2.max_tool_call_lag = 2
 # reasoning_effort — 类型: 字符串 | 默认: "low"
 # guardianv2.reasoning_effort = "low"
 # max_action_tokens / max_classifier_instruction_tokens — 默认: 10000 | 范围: 100-100000
@@ -2210,16 +2263,16 @@ prevent_idle_sleep = true
 # 是否把普通沙箱内 shell 命令也纳入 Guardian V2 分类; 请求 require_escalated 的
 # shell 命令仍会分类, 其他工具和带命名空间的 shell 工具不受此开关排除
 # guardianv2.review_scope.sandboxed_exec_commands = false
-# review_scope.computer_use_only — 类型: 布尔值 | 默认: false
+# review_scope.computer_use_only — 类型: 布尔值 | 默认: true
 # 把异步风险分类和快速批准限定为 browser / computer-use 工具;
 # 为 true 时使用专用 scope, 不再应用上方的 sandboxed_exec_commands
-# guardianv2.review_scope.computer_use_only = false
+# guardianv2.review_scope.computer_use_only = true
 # transcript.sources — 可选值: "tool_calls" | "tool_outputs" | "reasoning"
 # 默认: ["tool_calls", "tool_outputs"]
 # guardianv2.transcript.sources = ["tool_calls", "tool_outputs"]
-# transcript.include_images — 类型: 布尔值 | 默认: false
+# transcript.include_images — 类型: 布尔值 | 默认: true
 # 是否包含最近消息与已配置工具输出中的截图
-# guardianv2.transcript.include_images = false
+# guardianv2.transcript.include_images = true
 # 单条消息/工具输出 token 上限默认分别为 2000/1000; 各类 transcript 总上限
 # 默认均为 10000; 这些 token 字段范围均为 100-100000, 且单条上限不能超过总上限
 # guardianv2.transcript.max_message_entry_tokens = 2000
@@ -2973,9 +3026,12 @@ tool_timeout_sec = 120
 # oauth_resource = "https://mcp.example.com/"
 # [mcp_servers.company_oauth.oauth]
 # client_id = "your-oauth-client-id"
+# callback_url — 类型: 字符串 (可选)
+# 与此预注册 OAuth client 绑定的回调 URL; 优先于顶层 mcp_oauth_callback_url。
+# 省略端口的 http://127.0.0.1 URL 会在授权请求中补上本次本地监听端口
+# callback_url = "http://127.0.0.1/callback/company-oauth"
 # callback_port — 类型: 0-65535 整数 (可选)
 # 仅为此服务器 OAuth 流程指定固定回调端口; 优先于顶层 mcp_oauth_callback_port
-# [mcp_servers.company_oauth.oauth]
 # callback_port = 1456
 
 
