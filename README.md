@@ -20,7 +20,7 @@ npx skills add https://github.com/noahacgn/skills -g -a codex
 npx skills ls -g
 
 # Update all skills
-npx skills update
+npx skills update -g
 
 # Remove all global skills
 npx skills remove --all -g
