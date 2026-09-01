@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.151.0 (发布于 2026-08-29)                     #
+#  适用版本: Codex CLI rust-v0.152.0 (发布于 2026-09-01)                     #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -1081,10 +1081,10 @@ min_rate_limit_remaining_percent = 25
 enabled = true
 
 # ── [tools.update_plan] — update_plan 工具开关 ─────────────────────────────
-# 类型: 对象 (可选) | 默认: 未设置时启用
+# 类型: 对象 (可选) | 默认: 未设置时禁用
 # 作用: 控制是否向模型注册 update_plan 工具; 设为 false 会完全隐藏该工具
 [tools.update_plan]
-# enabled — 类型: 布尔值 | 默认: true
+# enabled — 类型: 布尔值 | 默认: false
 enabled = true
 
 
@@ -1371,6 +1371,7 @@ terminal_resize_reflow_max_rows = 9000
 #              motion_find_backward, motion_till_forward, motion_till_backward,
 #              motion_jump_top, motion_jump_bottom, select_inner_text_object,
 #              select_around_text_object, cancel
+#   vim_search — Vim 搜索动作: forward, backward, next, previous
 #   vim_text_object — Vim 文本对象动作: word, big_word, parentheses,
 #              brackets, braces, double_quote, single_quote, backtick, cancel
 #   pager    — 覆盖层滚动动作: scroll_up, scroll_down, page_up, page_down,
@@ -1433,6 +1434,12 @@ terminal_resize_reflow_max_rows = 9000
 # motion_jump_bottom = "shift-g"
 # select_inner_text_object = "i"
 # select_around_text_object = "a"
+#
+# [tui.keymap.vim_search]
+# forward = "/"
+# backward = "?"
+# next = "n"
+# previous = "shift-n"
 #
 # [tui.keymap.vim_text_object]
 # word = "w"
@@ -1662,6 +1669,14 @@ shell_tool = true
 # 启用内置的本地图片查看工具; 关闭后根 Agent、全新上下文子 Agent 和 Guardian
 # turn 都不会注册原生 view_image, 其他图片工具不受影响
 view_image = true
+
+# sleep_tool — 默认: true | 稳定
+# 启用内置的 clock.sleep 工具; 默认按模型能力和 current_time_reminder 配置决定
+# 是否注册。除布尔值外, 也可使用对象形式覆盖选择模式
+sleep_tool = true
+# sleep_tool.enabled = true
+# sleep_tool.mode = "model_driven"
+# mode 可选 "model_driven" (沿用模型和旧 clock 配置) 或 "always_on"
 
 # secret_auth_storage — 默认: Windows 为 true, 其他平台为 false | 稳定
 # 仅在凭证存储实际选择 keyring 时, 使用本地加密 secrets 文件保存认证载荷,
@@ -1999,6 +2014,10 @@ prevent_idle_sleep = true
 # 尺寸的 developer message; 回放既有历史时不会补写过去未产生的通知
 # image_resize_notice = false
 
+# omit_app_server_notification_media — 默认: false | 开发中
+# 从 app-server item 通知中省略内联图片和音频内容, 以减少通知负载
+# omit_app_server_notification_media = false
+
 # unified_image_budget — 默认: false | 开发中
 # 忽略旧版 detail 提示, 对所有图片统一应用像素与 token 预算
 # unified_image_budget = false
@@ -2042,6 +2061,10 @@ prevent_idle_sleep = true
 # 供 unified exec 后续进程复用
 # shell_snapshot_v2 = false
 
+# powershell_shell_version — 默认: false | 开发中
+# 在环境上下文中暴露所选 PowerShell 执行主机的有限主/次版本号
+# powershell_shell_version = false
+
 # deferred_executor — 默认: false | 开发中
 # 允许 turn 在选定的 executor 仍处于启动阶段时先行开始
 # deferred_executor = false
@@ -2077,6 +2100,10 @@ prevent_idle_sleep = true
 # local_thread_store_compression — 默认: false | 开发中
 # 启用本地线程存储压缩, 用于减少本地会话持久化占用
 # local_thread_store_compression = false
+
+# local_thread_store_shared_compression — 默认: false | 开发中
+# 允许仅由支持压缩 lineage 的读取器使用的共享 Codex home 压缩线程存储
+# local_thread_store_shared_compression = false
 
 # background_paginated_rollout_migration — 默认: false | 开发中
 # 在后台把旧版本地 rollout 文件迁移为分页历史格式
@@ -2970,6 +2997,9 @@ disabled_tools = ["delete_file"]
 # approval_mode — 类型: 字符串 | 语义同上方 default_tools_approval_mode
 # 仅覆盖这个 MCP 工具的审批方式
 # approval_mode = "approve"
+# output_token_limit — 类型: 正整数 (可选)
+# 限制此 MCP 工具输出的 token 预算; 截断前会额外预留标准 20% 序列化空间
+# output_token_limit = 12000
 
 # ── 示例 2: streamable_http 传输 (远程服务器) ──────────────────────────────
 [mcp_servers.github]
