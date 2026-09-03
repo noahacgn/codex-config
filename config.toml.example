@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.152.0 (发布于 2026-09-01)                     #
+#  适用版本: Codex CLI rust-v0.153.0 (发布于 2026-09-03)                     #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -260,14 +260,6 @@ check_for_update_on_startup = true
 # 说明: 当你在 [features] 中开启了 "开发中" 阶段的功能时, Codex 会在启动时
 #       显示警告; 如果你知道风险并想隐藏警告, 设为 true
 suppress_unstable_features_warning = true
-
-# ── disable_paste_burst ────────────────────────────────────────────────────
-# 类型: 布尔值 (可选)
-# 默认: false
-# 作用: 是否禁用 TUI 的 "粘贴检测" 功能
-# 说明: 默认情况下, Codex 会检测你快速输入的字符序列(通常是粘贴操作)并做
-#       特殊处理以优化体验; 如果粘贴时出现异常, 可以设为 true 来禁用
-disable_paste_burst = false
 
 # ── hide_agent_reasoning ───────────────────────────────────────────────────
 # 类型: 布尔值 (可选)
@@ -1179,6 +1171,16 @@ alternate_screen = "auto"
 # 是否启用 TUI 动画效果 (欢迎画面、闪烁效果、加载动画等)
 animations = true
 
+# auto_recap — 类型: 布尔值 | 默认: true
+# 终端失去焦点时是否自动生成对话 recap
+# 设为 false 只关闭自动 recap, 仍可随时使用 /recap 手动生成
+auto_recap = true
+
+# disable_paste_burst — 类型: 布尔值 (可选) | 默认: false
+# 是否完全禁用快速输入的突发粘贴检测;
+# true 会直接插入所有字符, 不再缓冲或用占位符替换大段粘贴内容
+disable_paste_burst = false
+
 # notification_condition — 类型: 字符串 | 默认: "unfocused"
 # 可选值:
 #   "unfocused" — 仅当终端失去焦点时发送通知
@@ -1362,6 +1364,7 @@ terminal_resize_reflow_max_rows = 9000
 #              till_forward, till_backward, jump_top, jump_bottom,
 #              delete_char, replace_char, repeat_last_change, substitute_char,
 #              delete_to_line_end, change_to_line_end, yank_line, paste_after,
+#              undo, redo,
 #              start_delete_operator, start_yank_operator,
 #              start_change_operator, cancel_operator
 #   vim_operator — Vim operator-pending 动作: delete_line, yank_line,
@@ -1414,6 +1417,8 @@ terminal_resize_reflow_max_rows = 9000
 # replace_char = "r"
 # repeat_last_change = "."
 # substitute_char = "s"
+# undo = "u"
+# redo = "ctrl-r"
 # change_to_line_end = "shift-c"
 # start_change_operator = "c"
 # find_forward = "f"
@@ -2180,6 +2185,15 @@ prevent_idle_sleep = true
 # 超过自动压缩阈值后, 为 fallback 记录额外保留的 token 数
 # token_budget.auto_compact_fallback_buffer_tokens = 4000
 
+# context_management — 默认: false | 开发中
+# 启用实验性上下文管理; 可使用布尔值, 或使用带
+# experimental_mode 字段的对象形式, 两种写法二选一
+# 对符合条件的 ChatGPT Plus、Pro 或 Pro Lite 会话, 且使用 Codex
+# backend 时, 会启用 token-budget 上下文、history notes 和 new_context 工具;
+# API Key 会话、自定义 provider 及临时结构化线程不生效
+# context_management = false
+# context_management.experimental_mode = true
+
 # rollout_budget — 默认: false | 开发中
 # 为根线程及其所有子 Agent 设置共享的加权 token 总预算;
 # 达到预算时中止当前 turn, 并可在跨过指定剩余额度时向各线程注入提醒
@@ -2336,6 +2350,11 @@ prevent_idle_sleep = true
 # stdio 还要求对应服务器环境设置 CODEX_MCP_PROTOCOL_VERSION="2026-07-28";
 # 未设置该标记时继续使用旧协议, 未知版本标记会被拒绝
 # mcp_2026_07_28 = false
+
+# mcp_oauth_refresh_coordination — 默认: false | 开发中
+# 让 MCP 客户端通过已配置的凭据存储协调 OAuth token 刷新;
+# false 保留旧的刷新模式
+# mcp_oauth_refresh_coordination = false
 
 # realtime_conversation — 默认: false | 开发中
 # 启用实验性实时语音会话 API; 协议版本、会话类型与语音由 [realtime]
@@ -3090,8 +3109,8 @@ approvals_reviewer = "user"
 #   "writes"  — 只对非只读工具询问; 不记住会话级批准
 #   "approve" — 自动批准, 不弹出询问
 # 为所有 App 工具设置默认审批方式; 优先级从高到低为:
-# 托管要求 > 单工具 approval_mode > 单 App default_tools_approval_mode
-# > 此全局默认 > 内置 "auto"
+# 托管要求 > 单工具 approval_mode > 单账号 default_tools_approval_mode
+# > 单 App default_tools_approval_mode > 此全局默认 > 内置 "auto"
 default_tools_approval_mode = "auto"
 
 # destructive_enabled — 类型: 布尔值 | 默认: true
@@ -3131,6 +3150,17 @@ approvals_reviewer = "user"
 
 destructive_enabled = false
 open_world_enabled = true
+
+# ── 单个已连接账号配置 ────────────────────────────────────────
+# 表路径: [apps.<app_id>.links.<link_id>]
+# 作用: 按 App 返回的 link ID 为特定账号覆盖审批配置
+# approvals_reviewer 优先于单 App 值; 未命中时回退到单 App、
+# [apps._default], 最后回退到顶层 approvals_reviewer
+# default_tools_approval_mode 低于单工具 approval_mode, 但高于单 App 和全局默认
+# 将 link_calendar 替换为实际 link ID; ID 可能包含特殊字符, 建议保留引号
+# [apps.github.links."link_calendar"]
+# approvals_reviewer = "auto_review"
+# default_tools_approval_mode = "writes"
 
 # ── 单个工具配置 ───────────────────────────────────────────────────────────
 [apps.github.tools.search_issues]
