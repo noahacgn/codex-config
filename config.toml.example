@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.153.0 (发布于 2026-09-03)                     #
+#  适用版本: Codex CLI rust-v0.154.0 (发布于 2026-09-09 UTC)                 #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -107,6 +107,16 @@ approval_policy = "on-request"
 #       read-only。Windows 若未启用 [windows].sandbox, workspace-write 即使
 #       显式设置也会降级为 read-only
 sandbox_mode = "workspace-write"
+
+# ── allow_symlinked_codex_home ────────────────────────────────────────────
+# 类型: 布尔值 (可选)
+# 默认: false
+# 作用: 允许 macOS 沙箱中位于 CODEX_HOME 本身或其下方的可写根目录穿过符号链接
+# 说明: 只在启动时读取宿主用户级 $CODEX_HOME/config.toml 中的值;
+#       项目配置、独立 profile 和 CLI 覆盖不参与此开关的解析。
+#       此项本身不授予写权限, 但启用后会信任符号链接目标, 即使目标位于
+#       CODEX_HOME 之外或在两次命令之间发生变化。Linux / Windows 不受影响
+# allow_symlinked_codex_home = false
 
 # ── default_permissions ──────────────────────────────────────────────────
 # 类型: 字符串 (可选)
@@ -285,6 +295,14 @@ show_raw_agent_reasoning = false
 # 说明: 当模型在后台运行命令时, 最多等待这么长时间来收集输出;
 #       超时后会停止等待; 如果你经常跑需要很长时间的命令, 可以调大
 background_terminal_max_timeout = 300000
+
+# ── thread_unload_delay_secs ──────────────────────────────────────────────
+# 类型: 非负整数 (秒) (可选)
+# 默认: 60
+# 作用: app-server 在线程没有订阅者且无活动持续达到此时长后卸载线程
+# 说明: 0 表示满足条件后立即卸载; 修改后需要重启 app-server。
+#       超出平台计时器可表示范围的数值会导致配置加载失败
+thread_unload_delay_secs = 60
 
 # ── tool_output_token_limit ────────────────────────────────────────────────
 # 类型: 整数 (可选)
@@ -627,6 +645,7 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # ── [realtime] — 实时语音会话配置 ────────────────────────────────────────
 # 作用: 配置 realtime 会话的协议版本、会话类型与语音;
 #       transport 字段目前只被解析, 不决定实际启动传输
+#       实时语音会话已不再需要单独开启功能标志
 # 说明: WebSocket 未显式指定版本时使用下方 version (默认 v2);
 #       WebRTC 未指定版本时使用 v1, 且 AVAS WebRTC 只支持 v1 或 v3。
 #       WebRTC 只支持 conversational; transcription 仅 v2 WebSocket 支持,
@@ -1171,6 +1190,10 @@ alternate_screen = "auto"
 # 是否启用 TUI 动画效果 (欢迎画面、闪烁效果、加载动画等)
 animations = true
 
+# whimsy — 类型: 布尔值 | 默认: true
+# 是否启用 Astra 输入框星光等装饰效果; 同时要求 animations = true
+whimsy = true
+
 # auto_recap — 类型: 布尔值 | 默认: true
 # 终端失去焦点时是否自动生成对话 recap
 # 设为 false 只关闭自动 recap, 仍可随时使用 /recap 手动生成
@@ -1211,7 +1234,7 @@ notifications = true
 show_tooltips = true
 
 # status_line — 类型: 字符串数组 (可选)
-# 默认: ["model-with-reasoning", "current-dir"]
+# 默认: ["model-with-reasoning", "current-dir", "thread-name"]
 # 作用: TUI 底部状态栏显示的信息项 (按顺序排列)
 # 可用项:
 #   "model"                — 当前模型名称 (也接受旧别名 model-name)
@@ -1238,10 +1261,11 @@ show_tooltips = true
 #   "thread-id"            — 当前线程 ID (也接受旧别名 session-id)
 #   "fast-mode"            — Fast 模式状态
 #   "raw-output"           — 原始 scrollback 模式状态
+#   "thread-name"          — 当前线程名称; 未命名时不显示此项
 #   "thread-title"         — 当前线程标题; 未命名时回退到线程 ID
 #   "task-progress"        — 最近一次 update_plan 的任务进度 (可用时显示)
 #   "workspace-headline"   — 当前工作区通知标题 (仅在可用时显示)
-status_line = ["model-with-reasoning", "context-used", "current-dir"]
+status_line = ["model-with-reasoning", "context-used", "current-dir", "thread-name"]
 
 # status_line_use_colors — 类型: 布尔值 | 默认: true
 # 是否使用当前语法主题派生出的颜色来渲染状态栏信息项
@@ -1250,6 +1274,10 @@ status_line_use_colors = true
 # vim_mode_default — 类型: 布尔值 | 默认: false
 # 是否默认以 Vim Normal 模式启动输入框; 也可在 TUI 中用 /vim 切换
 vim_mode_default = false
+
+# question_esc_back — 类型: 布尔值 | 默认: true
+# 在异步提问界面按 Esc 返回聊天输入框, 并保留尚未提交的回答草稿
+question_esc_back = true
 
 # raw_output_mode — 类型: 布尔值 | 默认: false
 # 是否默认启用原始 scrollback 模式, 方便从终端复制完整会话内容
@@ -1273,7 +1301,7 @@ session_picker_view = "dense"
 # resume_cwd = "session"
 
 # terminal_title — 类型: 字符串数组 (可选)
-# 默认: ["activity", "project-name"]
+# 默认: ["activity", "thread-name", "project-name"]
 # 作用: 配置终端窗口/标签页标题中显示的信息项 (按顺序排列)
 # 可用项:
 #   "app-name"             — Codex 应用名
@@ -1282,6 +1310,7 @@ session_picker_view = "dense"
 #   "activity"             — 运行时动画指示器; 阻塞等待用户时显示 action-required
 #                             也接受旧别名 spinner
 #   "run-state"            — 紧凑状态文本 (也接受旧别名 status)
+#   "thread-name"          — 当前线程名称; 未命名时不显示此项
 #   "thread-title"         — 当前线程标题; 未命名时回退到线程 ID
 #                             (也接受旧别名 thread)
 #   "git-branch"           — 当前 Git 分支 (可用时显示)
@@ -1299,7 +1328,7 @@ session_picker_view = "dense"
 #   "model-with-reasoning" — 模型名称 + 推理等级
 #   "reasoning"            — 当前推理等级
 #   "task-progress"        — 最近一次 update_plan 的任务进度 (可用时显示)
-terminal_title = ["activity", "project-name"]
+terminal_title = ["activity", "thread-name", "project-name"]
 
 # theme — 类型: 字符串 (可选) | 默认: 无 (自动检测明/暗主题)
 # 代码高亮的配色主题 (kebab-case 格式)
@@ -1348,7 +1377,7 @@ terminal_resize_reflow_max_rows = 9000
 #              toggle_side_conversation
 #   chat     — 聊天区动作: increase_reasoning_effort, decrease_reasoning_effort,
 #              previous_permission_mode, next_permission_mode, toggle_voice_mute,
-#              edit_queued_message, interrupt_turn
+#              edit_queued_message, prompt_stack_back, skip_question, interrupt_turn
 #   composer — 输入框动作: submit, queue, toggle_shortcuts,
 #              history_search_previous, history_search_next
 #   editor   — 文本编辑动作: insert_newline, move_left, move_right, move_up,
@@ -1358,7 +1387,8 @@ terminal_resize_reflow_max_rows = 9000
 #              kill_line_end, kill_whole_line, yank
 #   vim_normal — Vim Normal 模式动作: enter_insert, append_after_cursor,
 #              append_line_end, insert_line_start, open_line_below,
-#              open_line_above, move_left, move_right, move_up, move_down,
+#              open_line_above, enter_replace_mode, move_left, move_right,
+#              move_up, move_down,
 #              move_word_forward, move_word_backward, move_word_end,
 #              move_line_start, move_line_end, find_forward, find_backward,
 #              till_forward, till_backward, jump_top, jump_bottom,
@@ -1382,7 +1412,7 @@ terminal_resize_reflow_max_rows = 9000
 #              close_transcript
 #   list     — 列表选择动作: move_up, move_down, move_left, move_right,
 #              page_up, page_down, jump_top, jump_bottom, accept, cancel
-#   agents   — Agents 总览动作: search, new_task, rename, stop, toggle_grouping
+#   agents   — Agents 总览动作: resume, search, new_task, rename, stop, toggle_grouping
 #   approval — 审批弹窗动作: open_fullscreen, open_thread, approve,
 #              approve_for_session, approve_for_prefix, deny, decline, cancel
 #
@@ -1400,6 +1430,12 @@ terminal_resize_reflow_max_rows = 9000
 # previous_permission_mode = "f7"
 # next_permission_mode = "f8"
 # toggle_voice_mute = "f9"
+# 先向上浏览待处理的异步问题, 再编辑最后一条排队消息 (以下为内置默认键)
+# edit_queued_message = ["alt-up", "shift-left"]
+# 反向浏览问题, 逐步返回聊天输入框
+# prompt_stack_back = ["alt-down", "shift-right"]
+# 跳过当前聚焦的问题
+# skip_question = "ctrl-]"
 #
 # [tui.keymap.composer]
 # submit = "enter"
@@ -1412,6 +1448,8 @@ terminal_resize_reflow_max_rows = 9000
 #
 # [tui.keymap.vim_normal]
 # enter_insert = "i"
+# 进入 Replace 模式, 持续覆盖光标下的字符 (默认 R)
+# enter_replace_mode = "shift-r"
 # append_line_end = "shift-a"
 # delete_char = "x"
 # replace_char = "r"
@@ -1463,6 +1501,8 @@ terminal_resize_reflow_max_rows = 9000
 # jump_bottom = "end"
 #
 # [tui.keymap.agents]
+# 打开会话恢复选择器 (内置默认键)
+# resume = "ctrl-o"
 # search = "ctrl-f"
 # new_task = "ctrl-n"
 # rename = "ctrl-r"
@@ -1688,11 +1728,16 @@ sleep_tool = true
 # 并把文件密钥存入 OS keyring; 对 file / ephemeral 存储路径无影响
 secret_auth_storage = true
 
-# unified_exec — 默认: true (非Windows) / false (Windows) | 稳定
+# unified_exec — 默认: true (各平台) | 稳定
 # 别名: experimental_use_unified_exec_tool
 # 使用统一的 PTY-backed 执行工具来替代多个 shell 工具
 # 说明: 提供更好的终端模拟, 支持交互式命令
 unified_exec = true
+
+# unified_exec_tty — 默认: true | 稳定
+# 允许 unified_exec 命令分配交互式终端; 关闭后会拒绝 tty = true 的请求,
+# 非 TTY 命令仍可执行。此项不会单独启用 unified_exec
+unified_exec_tty = true
 
 # code_mode_host — 默认: true | 稳定
 # 在独立宿主进程中运行 JavaScript code mode。Codex 进程内的 V8 实现已经移除;
@@ -1950,6 +1995,11 @@ memories = true
 
 # ── 实验功能 (Experimental) ────────────────────────────────────────────────
 
+# worktrees — 默认: false | 实验
+# 启用受管 Git worktree 创建和按仓库组织会话的功能;
+# 可在 /experimental 中切换, 启用后需要重启 Codex
+# worktrees = false
+
 # prevent_idle_sleep — 默认: false | 实验 (macOS/Linux/Windows)
 # 防止系统在 Codex 活跃时进入休眠
 prevent_idle_sleep = true
@@ -2070,6 +2120,12 @@ prevent_idle_sleep = true
 # 在环境上下文中暴露所选 PowerShell 执行主机的有限主/次版本号
 # powershell_shell_version = false
 
+# windows_sandbox_service — 默认: false | 开发中 (仅 Windows)
+# 在 elevated 沙箱初始化时, 尝试通过已安装的 Windows 沙箱服务进行预配;
+# 沙箱模式仍由 [windows].sandbox 等配置决定。使用 workload identity 时
+# 继续使用原有的沙箱初始化路径
+# windows_sandbox_service = false
+
 # deferred_executor — 默认: false | 开发中
 # 允许 turn 在选定的 executor 仍处于启动阶段时先行开始
 # deferred_executor = false
@@ -2160,9 +2216,9 @@ prevent_idle_sleep = true
 # token_budget = false
 #
 # token_budget.enabled = true
-# 仅显式设置 enabled 时, 当前模型目录中的 model_messages.token_budget 可以提供
-# 阈值、文案和 fallback 默认值。
-# 一旦显式设置下方任一具体字段, 用户对象整体优先, 不再套用模型自带默认值
+# 仅显式设置 enabled / use_history_notes_extension 时, 当前模型目录中的
+# model_messages.token_budget 仍可提供阈值、文案和 fallback 默认值。
+# 一旦显式设置其他具体字段, 用户对象整体优先, 不再套用模型自带默认值
 # use_history_notes_extension — 类型: 布尔值 | 默认: false
 # 向 token-budget 会话暴露内置 history / notes 扩展,
 # 使模型可在上下文窗口之间读写持久化历史与笔记
@@ -2190,7 +2246,9 @@ prevent_idle_sleep = true
 # experimental_mode 字段的对象形式, 两种写法二选一
 # 对符合条件的 ChatGPT Plus、Pro 或 Pro Lite 会话, 且使用 Codex
 # backend 时, 会启用 token-budget 上下文、history notes 和 new_context 工具;
-# API Key 会话、自定义 provider 及临时结构化线程不生效
+# 启动模型还必须在模型目录中声明 supports_experimental_context = true。
+# API Key 会话、自定义 provider、未声明支持的模型及临时结构化线程不生效
+# 全新子会话按自己的启动模型重新判定; 携带历史的 fork 保留父会话的生效状态
 # context_management = false
 # context_management.experimental_mode = true
 
@@ -2212,6 +2270,12 @@ prevent_idle_sleep = true
 # prefill_token_weight — 类型: 非负有限浮点数 | 默认: 1.0
 # 非缓存输入 token 的计费权重
 # rollout_budget.prefill_token_weight = 0.25
+
+# reasoning_effort_override — 默认: false | 开发中
+# 在推理等级首次确立或发生变化时, 向会话历史追加可信的配置记录;
+# 仅用于内置 OpenAI provider 且模型启用 use_responses_lite 的会话,
+# 不替换请求顶层的 reasoning.effort。除 disabled 外的未知自定义等级不会写入
+# reasoning_effort_override = false
 
 # current_time_reminder — 默认: false | 开发中
 # 按经过时间向上下文注入当前 UTC 时间, 并暴露当前时间工具;
@@ -2273,6 +2337,11 @@ prevent_idle_sleep = true
 #       和 transcript 上限可由当前模型目录提供默认值; 本地配置仍优先
 # guardianv2 = false
 # guardianv2.enabled = true
+# thread_context — 类型: 布尔值 | 默认: false
+# 同步与异步 Guardian 使用线程持有的上下文; 独立于 guardianv2.enabled,
+# 不会因为设置此项而自动启用 Guardian V2。
+# 上下文模式在线程的 Guardian 证据初始化时确定, 不随后续回合热切换
+# guardianv2.thread_context = false
 # free_guardian — 类型: 布尔值 | 默认: false
 # 让 Guardian 审查和分类使用不计量的 Codex 端点; 仅对支持该路由的认证生效
 # guardianv2.free_guardian = false
@@ -2356,11 +2425,6 @@ prevent_idle_sleep = true
 # false 保留旧的刷新模式
 # mcp_oauth_refresh_coordination = false
 
-# realtime_conversation — 默认: false | 开发中
-# 启用实验性实时语音会话 API; 协议版本、会话类型与语音由 [realtime]
-# 和启动请求共同决定; 传输仅由启动请求决定, 省略时使用 WebSocket
-# realtime_conversation = false
-
 # runtime_metrics — 默认: false | 开发中
 # 启用运行时性能指标快照
 # runtime_metrics = false
@@ -2401,6 +2465,7 @@ prevent_idle_sleep = true
 # codex_git_commit        — 已移除
 # apply_patch_freeform    — 已移除
 # send_async_message      — 已移除; 异步用户消息不再需要功能门禁
+# realtime_conversation   — 已移除; 实时语音会话不再需要按线程开启此标志
 # unavailable_dummy_tools — 已移除
 # responses_websockets    — 已移除
 # responses_websockets_v2 — 已移除
