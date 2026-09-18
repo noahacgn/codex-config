@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.154.0 (发布于 2026-09-09 UTC)                 #
+#  适用版本: Codex CLI rust-v0.155.0 (发布于 2026-09-17 UTC)                 #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -45,7 +45,7 @@ review_model = "gpt-5.6-sol"
 # 说明: 内置提供商有 openai / amazon-bedrock / amazon-bedrock-runtime /
 #       ollama / lmstudio;
 #       amazon-bedrock 可覆盖 endpoint、HTTP headers、命令认证以及
-#       aws.profile / aws.region / aws.auth_refresh。未使用命令认证、托管
+#       aws.profile / aws.region / aws.credential_export / aws.auth_refresh。未使用命令认证、托管
 #       Bedrock API Key 或 AWS_BEARER_TOKEN_BEDROCK 时, 请求鉴权才回退到
 #       AWS SDK/SigV4
 #       你也可以在 [model_providers] 小节中自定义提供商, 然后把名字填在这里
@@ -988,6 +988,15 @@ set = { LANG = "en_US.UTF-8" }
 # 前提: 需要启用 [features] memories = true
 
 [memories]
+# version — 类型: 字符串 | 默认: "v1" | 可选值: "v1" | "v2"
+# 选择记忆流水线; v1 使用 memories 目录, v2 使用隔离的 memories_v2 目录
+# 两个版本的记忆产物与存储彼此隔离; 切换版本后不会混用另一版本的已有产物
+version = "v1"
+
+# dual_write — 类型: 布尔值 | 默认: false
+# 在选定版本继续提供上下文的同时, 后台同时生成 v1 与 v2 记忆
+dual_write = false
+
 # generate_memories — 类型: 布尔值 | 默认: true
 # 是否把新建线程标记为可供后续记忆生成
 # 实际提取在符合条件的根会话启动时异步运行, 从已达到空闲时间等条件的历史
@@ -1233,6 +1242,11 @@ notifications = true
 # 是否在启动时显示快捷键提示
 show_tooltips = true
 
+# show_server_version_notice — 类型: 布尔值 | 默认: true
+# 连接到较旧的稳定版 app-server 时, 是否在 TUI 中显示信息提示;
+# 不影响兼容性错误或版本状态判断
+show_server_version_notice = true
+
 # status_line — 类型: 字符串数组 (可选)
 # 默认: ["model-with-reasoning", "current-dir", "thread-name"]
 # 作用: TUI 底部状态栏显示的信息项 (按顺序排列)
@@ -1412,7 +1426,8 @@ terminal_resize_reflow_max_rows = 9000
 #              close_transcript
 #   list     — 列表选择动作: move_up, move_down, move_left, move_right,
 #              page_up, page_down, jump_top, jump_bottom, accept, cancel
-#   agents   — Agents 总览动作: resume, search, new_task, rename, stop, toggle_grouping
+#   agents   — Agents 总览动作: resume, search, new_task, rename, stop,
+#              archive, delete, hide, toggle_grouping
 #   approval — 审批弹窗动作: open_fullscreen, open_thread, approve,
 #              approve_for_session, approve_for_prefix, deny, decline, cancel
 #
@@ -1507,6 +1522,9 @@ terminal_resize_reflow_max_rows = 9000
 # new_task = "ctrl-n"
 # rename = "ctrl-r"
 # stop = "ctrl-x"
+# archive = "ctrl-e"
+# delete = "delete"
+# hide = "ctrl-w"
 # toggle_grouping = "ctrl-s"
 
 
@@ -1980,10 +1998,6 @@ goals = true
 # 使用统一的 @ mention 弹窗搜索文件、目录、Apps、插件和 Skills
 mentions_v2 = true
 
-# remote_compaction_v2 — 默认: true | 稳定
-# 启用远端 compaction v2 Responses 客户端路径
-remote_compaction_v2 = true
-
 # compaction_image_budget — 默认: true | 稳定
 # 把压缩后保留的图片也计入远端 compaction 上下文 token 预算;
 # 超出预算时会从较旧图片开始修剪。rust-v0.150.1 起默认启用
@@ -1999,6 +2013,10 @@ memories = true
 # 启用受管 Git worktree 创建和按仓库组织会话的功能;
 # 可在 /experimental 中切换, 启用后需要重启 Codex
 # worktrees = false
+
+# realtime_conversation — 默认: false | 实验
+# 启用实时语音对话; 可在 /experimental 中启用, 重启 Codex 后使用 /voice
+# realtime_conversation = false
 
 # prevent_idle_sleep — 默认: false | 实验 (macOS/Linux/Windows)
 # 防止系统在 Codex 活跃时进入休眠
@@ -2037,6 +2055,17 @@ prevent_idle_sleep = true
 # 由托管代理在转发到受信 HTTPS 端点时注入;
 # 开启后会同时开启 MITM, 且该项不允许从项目级 .codex/config.toml 生效
 # network_proxy.credential_broker = false
+#
+# credentials — 类型: 键值对 | 默认: {}
+# 为自定义凭据族声明环境变量、凭据格式和允许注入凭据的 URL 前缀;
+# 仅在 credential_broker 启用时生效。每个 provider 至少需要 env、patterns
+# 和 url_prefixes 或 url_prefix_from_env。auth 可选 "bearer"、"token"、
+# "basic"、"header"; 使用 "header" 时必须同时设置 header, prefix 可选。
+# [features.network_proxy.credentials.example]
+# env = ["VENDOR_TOKEN"]
+# patterns = ["^vendor_[a-z]{24}$"]
+# url_prefixes = ["https://api.vendor.example/v1"]
+# auth = ["bearer"]
 #
 # allow_local_binding — 类型: 布尔值 | 默认: false
 # network_proxy.allow_local_binding = false
@@ -2125,6 +2154,10 @@ prevent_idle_sleep = true
 # 沙箱模式仍由 [windows].sandbox 等配置决定。使用 workload identity 时
 # 继续使用原有的沙箱初始化路径
 # windows_sandbox_service = false
+
+# api_key_model_discovery — 默认: false | 开发中
+# 为 OpenAI API Key 认证启用远程模型目录发现
+# api_key_model_discovery = false
 
 # deferred_executor — 默认: false | 开发中
 # 允许 turn 在选定的 executor 仍处于启动阶段时先行开始
@@ -2420,6 +2453,10 @@ prevent_idle_sleep = true
 # 未设置该标记时继续使用旧协议, 未知版本标记会被拒绝
 # mcp_2026_07_28 = false
 
+# codex_apps_mcp_2026_07_28 — 默认: false | 开发中
+# 为宿主拥有的 Codex Apps MCP server 启用 MCP 2026-07-28 协议
+# codex_apps_mcp_2026_07_28 = false
+
 # mcp_oauth_refresh_coordination — 默认: false | 开发中
 # 让 MCP 客户端通过已配置的凭据存储协调 OAuth token 刷新;
 # false 保留旧的刷新模式
@@ -2465,7 +2502,7 @@ prevent_idle_sleep = true
 # codex_git_commit        — 已移除
 # apply_patch_freeform    — 已移除
 # send_async_message      — 已移除; 异步用户消息不再需要功能门禁
-# realtime_conversation   — 已移除; 实时语音会话不再需要按线程开启此标志
+# remote_compaction_v2     — 已移除兼容标志; 远端 compaction v2 已成为默认路径
 # unavailable_dummy_tools — 已移除
 # responses_websockets    — 已移除
 # responses_websockets_v2 — 已移除
@@ -2795,7 +2832,7 @@ config = [
 # 说明: 内置提供商有 openai / amazon-bedrock / ollama / lmstudio
 #       openai / ollama / lmstudio 不能在这里重定义;
 #       amazon-bedrock 支持覆盖 base_url、auth、http_headers、
-#       aws.profile、aws.region 与 aws.auth_refresh
+#       aws.profile、aws.region、aws.credential_export 与 aws.auth_refresh
 #       你也可以在这里添加自定义提供商 (如本地代理、Azure OpenAI 等)
 
 # ── [model_providers.amazon-bedrock] — Amazon Bedrock ─────────────────────
@@ -2829,6 +2866,17 @@ config = [
 # AWS SDK/SigV4 回退则使用 SDK 默认 region 解析链
 # region = "us-west-2"
 #
+# [model_providers.amazon-bedrock.aws.credential_export]
+# command — 类型: 字符串 | 必填; 绝对路径或不含路径的可执行文件名, 直接启动且不经过 shell
+# command = "aws"
+# args — 类型: 字符串数组 | 默认: []
+# args = ["configure", "export-credentials", "--profile", "codex-bedrock"]
+# timeout_ms — 类型: 正整数 | 默认: 30000
+# timeout_ms = 30000
+# 命令 stdout 必须是 AWS 凭据 JSON, 可为 {"AccessKeyId":"...","SecretAccessKey":"..."}
+# 或包含同样字段的 {"Credentials": {...}}; 可选 SessionToken / Expiration 字段。
+# credential_export 与 aws.profile 互斥; 它会替代 AWS SDK 凭证链, 并在凭据临近过期时刷新。
+#
 # [model_providers.amazon-bedrock.aws.auth_refresh]
 # command — 类型: 字符串 | 必填且必须精确为 "aws"
 # AWS SDK/SigV4 请求遇到可刷新的过期凭证错误后, 直接执行此命令并重新签名重试;
@@ -2860,7 +2908,7 @@ config = [
 # [model_providers.amazon-bedrock-runtime.aws]
 # profile = "codex-bedrock"
 # region = "us-west-2"
-# 也支持与上方相同的 [model_providers.amazon-bedrock-runtime.aws.auth_refresh] 配置
+# 也支持与上方相同的 credential_export / auth_refresh 配置
 
 [model_providers.custom]
 # name — 类型: 非空字符串 | 自定义提供商必填
