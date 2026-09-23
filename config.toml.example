@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.155.0 (发布于 2026-09-17 UTC)                 #
+#  适用版本: Codex CLI rust-v0.156.0 (发布于 2026-09-22 UTC)                 #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -168,13 +168,11 @@ service_tier = "priority"
 
 # ── personality ────────────────────────────────────────────────────────────
 # 类型: 字符串 (可选)
-# 默认: "pragmatic" (当 personality 功能启用时)
-# 可选值:
-#   "none"      — 不注入任何性格描述, 模型用最原始的风格回答
-#   "friendly"  — 友好风格: 回答更亲切、更口语化
-#   "pragmatic" — 务实风格: 回答直接、高效、专注于解决问题 (推荐)
-# 说明: 影响模型回答的语气和风格, 不影响技术能力
-personality = "pragmatic"
+# 默认: 不设置, 使用模型自带的指令与风格
+# rust-v0.156.0 起, "friendly" / "pragmatic" 不再选择风格, TUI 也不再提供
+# 性格选择。"none" 仍可移除模型指令模板中的 # Personality 一级标题段落;
+# 若设置了自定义 model_instructions_file, 则优先使用该文件, 不执行此移除
+# personality = "none"
 
 
 # ── 推理能力相关 ────────────────────────────────────────────────────────────
@@ -329,6 +327,13 @@ model_auto_compact_token_limit = 180000
 #   "body_after_prefix" — 只统计压缩窗口保留前缀之后的采样输出与后续增长
 # 作用: 控制自动压缩阈值的计数范围; 通常保持默认即可
 model_auto_compact_token_limit_scope = "total"
+
+# ── model_post_turn_compact_threshold_percent ───────────────────────────────
+# 类型: 整数 (可选) | 范围: 0-100 | 默认: 0 (关闭)
+# 作用: 最终回复完成后, 上下文达到可用窗口的指定百分比时执行压缩
+# 说明: 既有自动压缩上限仍然生效; 省略或设为 0 只关闭回合结束时的压缩。
+#       token_budget 模式不使用此策略; 有待处理输入或回合已取消时也会跳过
+# model_post_turn_compact_threshold_percent = 80
 
 # ── model_context_window ───────────────────────────────────────────────────
 # 类型: 整数 (可选)
@@ -740,6 +745,12 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # 追加给 Auto-reviewer 的审查策略; 只影响自动审批审查, 不影响人工审批
 # policy = "仅在命令意图清晰、风险可控且不会泄露敏感数据时批准。"
 
+# experimental_policy_template — 类型: 字符串 (可选) | 默认: 内置模板
+# 替换完整的 Guardian 审查提示模板; 必须包含 {{ tenant_policy_config }} 占位符,
+# 运行时会将其替换为生效的审查策略, 并在模板后附加输出格式约定。
+# 这是实验选项, 适合需要维护完整审批提示的宿主集成
+# experimental_policy_template = "依据以下策略审查操作的风险与授权: {{ tenant_policy_config }}"
+
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║                     第 3 节: 分析、反馈与音频                           ║
@@ -828,9 +839,8 @@ hide_gpt5_1_migration_prompt = true
 # 是否隐藏 "遇到速率限制时建议切换模型" 的提示
 hide_rate_limit_model_nudge = false
 
-# hide_world_writable_warning — 类型: 布尔值 | 默认: false
-# 是否已确认 Windows 上目录权限过于开放的警告
-hide_world_writable_warning = true
+# hide_world_writable_warning 是旧记录字段; Windows 目录权限扫描与相应警告
+# 已移除, 新配置无需设置
 
 # fast_default_opt_out — 类型: 布尔值 | 默认: false
 # 是否已退出 Codex 托管的 fast 默认服务层
@@ -874,18 +884,12 @@ model_migrations = { "gpt-5.3-codex" = "gpt-5.4" }
 # sandbox — 类型: 字符串 | 默认: 无 (Disabled, 不启用 Windows 沙箱)
 # 可选值:
 #   "elevated"   — 提权沙箱: 首次运行时需要管理员权限来创建受限沙箱用户并配置
-#                  操作系统级 ACL; 安全性最高; 设置完成后自动记录在配置中
+#                  操作系统级 ACL; 设置完成后自动记录在配置中
 #   "unelevated" — 非提权沙箱: 使用受限进程令牌 (restricted token) 实现沙箱,
-#                  无需管理员权限; 安全性稍低但更易部署
+#                  无需管理员权限
+#   "mxc"        — 使用 Windows MXC 沙箱实现; 需要执行宿主提供对应运行支持
 # 说明: 仅在 Windows 上生效; macOS/Linux 使用其他沙箱机制
 sandbox = "elevated"
-
-# sandbox_private_desktop — 类型: 布尔值 | 默认: true
-# 是否让 Windows 沙箱中的最终子进程使用私有桌面;
-# 同时适用于 "elevated" 和 "unelevated"
-# 设为 false 时, 子进程将在 Winsta0\Default 桌面上运行;
-# requirements.toml 可以强制此值
-# sandbox_private_desktop = true
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -1195,13 +1199,35 @@ enabled = true
 #       也可以用 --no-alt-screen 命令行参数来覆盖
 alternate_screen = "auto"
 
+# fullscreen_transcript — 类型: 布尔值 | 默认: false
+# 让 TUI 接管全屏对话记录的滚动、鼠标选择和搜索; /tui 可保存下次启动的选择
+# alternate_screen = "never" 或 --no-alt-screen 会阻止使用全屏模式
+fullscreen_transcript = false
+
 # animations — 类型: 布尔值 | 默认: true
-# 是否启用 TUI 动画效果 (欢迎画面、闪烁效果、加载动画等)
+# 是否启用 TUI 动画效果; 系统的减少动态效果设置会进一步关闭动画。
+# 未显式配置本项时, 首次检测到屏幕阅读器也会保存 animations = false
 animations = true
 
-# whimsy — 类型: 布尔值 | 默认: true
-# 是否启用 Astra 输入框星光等装饰效果; 同时要求 animations = true
-whimsy = true
+# screen_reader_detection_done — 类型: 布尔值 (可选) | 默认: 未设置
+# 一次性屏幕阅读器检测的完成标记, 通常由 TUI 自动维护。
+# true / false 都会跳过检测; 删除此项才会允许重新检测
+# screen_reader_detection_done = true
+
+# effects — 各项类型: 布尔值 | 默认: 全部 true; 同时要求 animations = true
+# 使用 dotted key 保持后续字段仍属于 [tui]; 关闭效果不会停止相应底层活动
+effects.welcome = true   # 欢迎画面动画
+effects.starfield = true # 输入框星空动画
+effects.effort = true    # 推理等级切换动画
+effects.shimmer = true   # 状态与加载文字的流光效果
+effects.progress = true  # 活动标记与加载旋转动画
+effects.title = true     # 需要用户操作时闪烁终端标题指示器
+
+# rendering — 各项类型: 布尔值 | 默认: 全部 true
+# 独立于 animations / effects; 关闭后保留对应内容的原始文本
+rendering.mermaid = true # 将支持的 Mermaid 代码块渲染为图表
+rendering.math = true    # 将数学表达式渲染为 Unicode 记号
+rendering.tables = true  # 渲染 Markdown 管道表格, 包括 Markdown 代码块中的表格
 
 # auto_recap — 类型: 布尔值 | 默认: true
 # 终端失去焦点时是否自动生成对话 recap
@@ -1243,7 +1269,7 @@ notifications = true
 show_tooltips = true
 
 # show_server_version_notice — 类型: 布尔值 | 默认: true
-# 连接到较旧的稳定版 app-server 时, 是否在 TUI 中显示信息提示;
+# 连接的 app-server 与客户端版本不同时, 是否在 TUI 中显示信息提示;
 # 不影响兼容性错误或版本状态判断
 show_server_version_notice = true
 
@@ -1350,6 +1376,7 @@ terminal_title = ["activity", "thread-name", "project-name"]
 #       可以用 /theme 命令在 TUI 中切换, 或查看 $CODEX_HOME/themes 自定义主题
 # 常用内置主题: "catppuccin-latte", "catppuccin-mocha", "github",
 #               "gruvbox-dark", "gruvbox-light"
+# v0.156.0 新增: "ada", "babbage", "curie", "cushman", "dali", "davinci"
 theme = "catppuccin-latte"
 
 # pet — 类型: 字符串 (可选) | 默认: 无
@@ -1388,9 +1415,10 @@ terminal_resize_reflow_max_rows = 9000
 #   global   — 全局动作: open_agents, open_transcript, open_external_editor, copy,
 #              clear_terminal, submit, queue, toggle_shortcuts,
 #              toggle_vim_mode, toggle_fast_mode, toggle_raw_output,
-#              toggle_side_conversation
+#              toggle_side_conversation, find_transcript, focus_activity
 #   chat     — 聊天区动作: increase_reasoning_effort, decrease_reasoning_effort,
-#              previous_permission_mode, next_permission_mode, toggle_voice_mute,
+#              previous_permission_mode, next_permission_mode, toggle_voice,
+#              toggle_voice_mute,
 #              edit_queued_message, prompt_stack_back, skip_question, interrupt_turn
 #   composer — 输入框动作: submit, queue, toggle_shortcuts,
 #              history_search_previous, history_search_next
@@ -1423,10 +1451,10 @@ terminal_resize_reflow_max_rows = 9000
 #              brackets, braces, double_quote, single_quote, backtick, cancel
 #   pager    — 覆盖层滚动动作: scroll_up, scroll_down, page_up, page_down,
 #              half_page_up, half_page_down, jump_top, jump_bottom, close,
-#              close_transcript
+#              close_transcript, find
 #   list     — 列表选择动作: move_up, move_down, move_left, move_right,
 #              page_up, page_down, jump_top, jump_bottom, accept, cancel
-#   agents   — Agents 总览动作: resume, search, new_task, rename, stop,
+#   agents   — Agents 总览动作: resume, search, new_task, new_worktree, rename, stop,
 #              archive, delete, hide, toggle_grouping
 #   approval — 审批弹窗动作: open_fullscreen, open_thread, approve,
 #              approve_for_session, approve_for_prefix, deny, decline, cancel
@@ -1434,6 +1462,8 @@ terminal_resize_reflow_max_rows = 9000
 # [tui.keymap.global]
 # open_agents = "alt-a"
 # open_transcript = "ctrl-t"
+# find_transcript = "f3" # 搜索完整对话记录 (内置默认键)
+# focus_activity = "f4" # 聚焦全屏对话中的活动组 (内置默认键)
 # open_external_editor = "ctrl-x ctrl-e"
 # copy = ["ctrl-y", "alt-y"]
 # toggle_side_conversation = "f12"
@@ -1443,7 +1473,8 @@ terminal_resize_reflow_max_rows = 9000
 # [tui.keymap.chat]
 # interrupt_turn = "esc"
 # previous_permission_mode = "f7"
-# next_permission_mode = "f8"
+# next_permission_mode = "f6"
+# toggle_voice = "f8" # 启动或结束语音对话 (内置默认键)
 # toggle_voice_mute = "f9"
 # 先向上浏览待处理的异步问题, 再编辑最后一条排队消息 (以下为内置默认键)
 # edit_queued_message = ["alt-up", "shift-left"]
@@ -1509,6 +1540,9 @@ terminal_resize_reflow_max_rows = 9000
 # single_quote = "'"
 # backtick = "`"
 #
+# [tui.keymap.pager]
+# find = ["f3", "/"] # 在对话记录查看器中搜索 (内置默认键)
+#
 # [tui.keymap.list]
 # page_up = "page-up"
 # page_down = "page-down"
@@ -1517,15 +1551,16 @@ terminal_resize_reflow_max_rows = 9000
 #
 # [tui.keymap.agents]
 # 打开会话恢复选择器 (内置默认键)
-# resume = "ctrl-o"
-# search = "ctrl-f"
-# new_task = "ctrl-n"
-# rename = "ctrl-r"
-# stop = "ctrl-x"
-# archive = "ctrl-e"
-# delete = "delete"
-# hide = "ctrl-w"
-# toggle_grouping = "ctrl-s"
+# resume = "o"
+# search = "f"
+# new_task = "n" # 在选中项目的当前检出目录中创建会话
+# new_worktree = "w" # 从项目默认分支创建 worktree 会话
+# rename = "r"
+# stop = "x"
+# archive = "a"
+# delete = "backspace"
+# hide = "h"
+# toggle_grouping = "g"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -1647,8 +1682,9 @@ terminal_resize_reflow_max_rows = 9000
 # allow_upstream_proxy — 类型: 布尔值 | 默认: true
 #   是否允许托管代理将请求转发到上游代理 (如企业代理)
 #
-# allow_local_binding — 类型: 布尔值 | 默认: false
-#   是否允许代理连接本机、环回或私网目标; 开启会扩大本机及内网访问面
+# allow_local_binding — 类型: 布尔值 | 默认: MXC 为 true, 其他实现为 false
+#   允许本地服务与宿主环回直连, 并跳过代理的额外私网目标检查; 域名规则仍生效。
+#   MXC 无法实施 false, 显式设置 false 会被拒绝
 #
 # dangerously_allow_non_loopback_proxy — 类型: 布尔值 | 默认: false
 #   ⚠️ 危险: 允许 HTTP/SOCKS 代理绑定非 loopback 地址 (如 0.0.0.0)
@@ -1659,6 +1695,9 @@ terminal_resize_reflow_max_rows = 9000
 #
 # 表路径: [permissions.<profile>.network.domains]
 # 类型: 键值对 | key 为域名/模式, value 为 "allow" | "deny"
+# *.example.com 仅匹配子域, **.example.com 同时匹配主域与子域;
+# ? 匹配恰好一个字符 (包括点), 可以与 * 组合使用。
+# deny 规则优先; 单独的全局 * 默认被拒绝
 # 独立示例 (将 domain_example 替换为你的 profile 名):
 #   [permissions.domain_example.network.domains]
 #   "api.openai.com" = "allow"
@@ -1775,10 +1814,6 @@ unified_exec_tty = true
 # 说明: 为本地 turn environment 捕获一次 shell 初始化环境, 后续命令加载并复用;
 #       不会记录上一条命令对环境变量或工作目录造成的变更
 shell_snapshot = true
-
-# personality — 默认: true | 稳定
-# 启用性格选择功能, 在 TUI 中可选择 none/friendly/pragmatic
-personality = true
 
 # fast_mode — 默认: true | 稳定
 # 启用 Fast 模式, 在 TUI 中可切换
@@ -1985,6 +2020,10 @@ hooks = true
 # 启用 Auto-review 审批审查能力; approvals_reviewer = "auto_review" 会使用它
 guardian_approval = true
 
+# guardian_reuse_parent_compaction — 默认: true | 稳定
+# Guardian 审批审查重启时复用父会话的加密压缩内容
+# guardian_reuse_parent_compaction = true
+
 # workspace_dependencies — 默认: true | 稳定
 # 启用 workspace 级依赖支持
 # 说明: 允许 Codex 感知并使用工作区声明的依赖关系
@@ -2007,16 +2046,29 @@ compaction_image_budget = true
 # 启用记忆系统 (从会话中提取经验, 在未来会话中注入)
 memories = true
 
+# worktrees — 默认: true | 稳定
+# 启用受管 Git worktree 创建和按仓库组织会话的功能
+# worktrees = true
+
+# realtime_conversation — 默认: true | 稳定
+# 启用 TUI 实时语音对话; 使用 /voice 或默认 F8 切换, /voice settings 选择声音
+# realtime_conversation = true
+
+# system_proxy_fallback — 默认: true | 稳定
+# 符合条件的初始化请求在常规网络路由失败后, 尝试通过系统代理重试;
+# 不等同于让所有请求始终使用系统代理的 respect_system_proxy
+# system_proxy_fallback = true
+
 # ── 实验功能 (Experimental) ────────────────────────────────────────────────
 
-# worktrees — 默认: false | 实验
-# 启用受管 Git worktree 创建和按仓库组织会话的功能;
-# 可在 /experimental 中切换, 启用后需要重启 Codex
-# worktrees = false
+# analytics_plan_history — 默认: false | 实验
+# 在 /analytics 中预览个人账号的五小时与每周额度历史
+# analytics_plan_history = false
 
-# realtime_conversation — 默认: false | 实验
-# 启用实时语音对话; 可在 /experimental 中启用, 重启 Codex 后使用 /voice
-# realtime_conversation = false
+# daemon_auto_start — 默认: false | 实验
+# 符合条件的交互启动、恢复和派生会话自动使用共享本地后台服务器;
+# 修改在下次启动生效, --no-daemon 可跳过后台服务器
+# daemon_auto_start = false
 
 # prevent_idle_sleep — 默认: false | 实验 (macOS/Linux/Windows)
 # 防止系统在 Codex 活跃时进入休眠
@@ -2067,7 +2119,9 @@ prevent_idle_sleep = true
 # url_prefixes = ["https://api.vendor.example/v1"]
 # auth = ["bearer"]
 #
-# allow_local_binding — 类型: 布尔值 | 默认: false
+# allow_local_binding — 类型: 布尔值 | 默认: MXC 为 true, 其他实现为 false
+# 允许本地服务、宿主环回直连并跳过额外私网目标检查; 域名规则仍然生效。
+# 下方 false 仅适用于非 MXC 实现; MXC 下应省略或设为 true
 # network_proxy.allow_local_binding = false
 #
 # dangerously_allow_non_loopback_proxy — 类型: 布尔值 | 默认: false
@@ -2084,9 +2138,10 @@ prevent_idle_sleep = true
 
 # ── 开发中功能 (Under Development) ─────────────────────────────────────────
 
-# transcript_v2 — 默认: false | 开发中
-# 启用可交互的 transcript 输入框和 turn 选择界面
-# transcript_v2 = false
+# agent_message_board — 默认: false | 开发中
+# 为同一 Agent 树启用共享讨论工具; 还要求 multi_agent_v2 = true,
+# 且当前会话不是临时会话
+# agent_message_board = false
 
 # executed_tool_call_metadata — 默认: false | 开发中
 # 记录模型尝试的直连和 code mode 工具调用名称及参数, 并把有界、必要时截断的
@@ -2118,6 +2173,10 @@ prevent_idle_sleep = true
 # code mode 的 exec 未显式传 yield_time_ms 时使用的等待时间; 该值也会写入
 # 模型可见的工具说明
 # code_mode.default_exec_yield_time_ms = 30000
+# experimental_show_cell_overhead — 类型: 布尔值 | 默认: false
+# 在 cell 返回中展示 handler 耗时、code mode 宿主耗时和框架开销;
+# 此选项及输出格式均为实验性, 可能改变或移除
+# code_mode.experimental_show_cell_overhead = false
 # code_mode.excluded_tool_namespaces = ["web"]
 # code_mode.direct_only_tool_namespaces = ["image_gen"]
 # direct_only_tool_namespaces 中的命名空间只作为模型顶层工具暴露:
@@ -2242,6 +2301,11 @@ prevent_idle_sleep = true
 # 在 Default 模式 (非 Plan 模式) 中允许 request_user_input
 # default_mode_request_user_input = false
 
+# send_message_to_user_async — 默认: false | 开发中
+# 允许根 Agent 使用异步用户消息工具, 即使模型目录未声明支持;
+# 关闭此项不会覆盖模型目录本身声明的支持, 子 Agent 不暴露该工具
+# send_message_to_user_async = false
+
 # token_budget — 默认: false | 开发中
 # 向模型提供上下文窗口标识、剩余 token 查询工具和新窗口工具;
 # 配置阈值后, 还会在接近自动压缩时向模型注入一次收尾提醒
@@ -2335,6 +2399,10 @@ prevent_idle_sleep = true
 # 最长 12 小时
 # current_time_reminder.sleep_tool = false
 
+# nonfatal_clock_read_errors — 默认: false | 开发中
+# 时钟读取失败时向模型报告错误, 让回合继续; 影响当前时间提醒与相关时钟工具
+# nonfatal_clock_read_errors = false
+
 # use_agent_identity — 默认: false | 开发中
 # 让使用 ChatGPT 认证的会话采用 Agent Identity
 # use_agent_identity = false
@@ -2351,10 +2419,6 @@ prevent_idle_sleep = true
 # step_model_switching — 默认: false | 开发中
 # 允许后续 step capture 显式请求切换模型; 关闭时会拒绝 turn settings 更新
 # step_model_switching = false
-
-# guardian_reuse_parent_compaction — 默认: false | 开发中
-# Guardian 审批审查重启时复用父会话的加密压缩内容
-# guardian_reuse_parent_compaction = false
 
 # guardian_enhanced_node_repl_transcripts — 默认: false | 开发中
 # 把已完成的 node_repl/code mode 响应加入 Guardian 审查 transcript
@@ -2375,9 +2439,7 @@ prevent_idle_sleep = true
 # 不会因为设置此项而自动启用 Guardian V2。
 # 上下文模式在线程的 Guardian 证据初始化时确定, 不随后续回合热切换
 # guardianv2.thread_context = false
-# free_guardian — 类型: 布尔值 | 默认: false
-# 让 Guardian 审查和分类使用不计量的 Codex 端点; 仅对支持该路由的认证生效
-# guardianv2.free_guardian = false
+# Guardian 计费由后端决定; free_guardian 已无运行时作用, 不再提供配置示例
 # persist_scores — 类型: 布尔值 | 默认: false
 # 把已审查动作及风险评分写入非临时会话的 rollout 文件, 仅建议用于调试
 # guardianv2.persist_scores = false
@@ -2425,10 +2487,6 @@ prevent_idle_sleep = true
 # max_recent_non_user_entries — 类型: 正整数 | 默认: 40
 # guardianv2.transcript.max_recent_non_user_entries = 40
 
-# guardian_ext — 默认: false | 开发中
-# 启用由 Extension 实现的同步 Guardian 审批审查器
-# guardian_ext = false
-
 # retain_client_developer_messages — 默认: false | 开发中
 # 在上下文压缩后保留由客户端写入的 developer 消息
 # retain_client_developer_messages = false
@@ -2462,6 +2520,12 @@ prevent_idle_sleep = true
 # false 保留旧的刷新模式
 # mcp_oauth_refresh_coordination = false
 
+# use_xaa — 默认: false | 开发中
+# 为配置为 ema_auth 的 MCP 资源启用企业刷新令牌交换; 需同时配置第 21 节的
+# mcp_enterprise_managed_auth 与资源注册。必须由用户级、宿主或托管配置启用,
+# 项目级 .codex/config.toml 不能自行启用
+# use_xaa = false
+
 # runtime_metrics — 默认: false | 开发中
 # 启用运行时性能指标快照
 # runtime_metrics = false
@@ -2484,6 +2548,7 @@ prevent_idle_sleep = true
 # use_legacy_landlock — 已弃用: 旧版 Linux 沙箱实现开关;
 #                        如无特殊需要, 请删除此项
 # imagegenext         — image_generation 的历史别名; 请改用规范名称
+# transcript_v2       — 已忽略; 全屏界面使用 [tui].fullscreen_transcript
 
 # ── 已移除功能 (Removed) — 不要在新配置中使用 ──────────────────────────────
 # undo                   — 已移除, /undo 现在会报告不可用
@@ -2501,7 +2566,9 @@ prevent_idle_sleep = true
 # request_rule            — 已移除
 # codex_git_commit        — 已移除
 # apply_patch_freeform    — 已移除
-# send_async_message      — 已移除; 异步用户消息不再需要功能门禁
+# send_async_message      — 已移除; 工具可用性由模型目录或 send_message_to_user_async 决定
+# personality             — 已移除; 不再控制性格选择
+# guardian_ext            — 已移除; 原同步 Guardian Extension 原型不再使用
 # remote_compaction_v2     — 已移除兼容标志; 远端 compaction v2 已成为默认路径
 # unavailable_dummy_tools — 已移除
 # responses_websockets    — 已移除
@@ -2785,7 +2852,8 @@ config = [
 # enabled = true
 #
 # ── 插件内 MCP server 策略覆盖 ─────────────────────────────────────────────
-# 说明: 插件 manifest 决定 MCP server 如何启动; 这里只覆盖启用状态与工具策略
+# 说明: 插件 manifest 决定 MCP server 如何启动; 宿主配置可覆盖启用状态、
+#       企业认证注册与工具策略
 # [plugins."example-plugin@example-marketplace".mcp_servers.docs]
 # enabled = true
 # default_tools_approval_mode = "prompt"
@@ -2794,6 +2862,19 @@ config = [
 #
 # [plugins."example-plugin@example-marketplace".mcp_servers.docs.tools.search]
 # approval_mode = "approve"
+
+# ── 插件 MCP 企业认证注册 (可选) ──────────────────────────────────────────
+# 前提: 启用 [features].use_xaa 并配置第 21 节的共享企业 IdP。
+# 必须在同一个非项目配置层完整声明, 插件 manifest 不能自行选择企业认证。
+# url / client_id / authorization_server_issuer / resource 为必填字符串;
+# scopes 为可选字符串数组, 默认 []。url 必须匹配插件声明的实际 HTTP 端点,
+# 不会改写插件端点; 不匹配时会禁用该服务器
+# [plugins."example-plugin@example-marketplace".mcp_servers.docs.ema_auth]
+# url = "https://mcp.example.com/docs"
+# client_id = "docs-resource-client"
+# authorization_server_issuer = "https://auth.example.com"
+# resource = "https://mcp.example.com/docs"
+# scopes = ["read:docs"]
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -2921,6 +3002,11 @@ name = "custom"
 # API 基础 URL; 对于自定义提供商, 通常指向你的本地代理或第三方 API
 base_url = "http://127.0.0.1:8317/v1"
 
+# model_catalog_url — 类型: 字符串 (可选) | 默认: 无
+# 模型目录的完整 URL; 返回 Codex 原生目录格式, 不改变 base_url 的推理路由。
+# 未设置时, OpenAI 默认从 Codex backend 发现模型; 覆盖 base_url 时按该端点解析
+# model_catalog_url = "https://gateway.example.com/codex/models"
+
 # wire_api — 类型: 字符串 | 默认: "responses"
 # API 协议: 目前仅支持 "responses"
 wire_api = "responses"
@@ -3012,6 +3098,32 @@ query_params = { "api-version" = "2026-01-01" }
 # 执行命令时的工作目录; 相对路径 (包括默认的 ".") 按声明该 provider 的
 # config.toml 所在目录解析, 普通用户配置通常因此解析到 $CODEX_HOME
 # cwd = 'C:\Users\you'
+
+# ── [model_providers.<id>.gateway_oauth] — 网关附加 OAuth ──────────────────
+# 作用: 在提供商主认证之外, 获取并发送网关所需的第二份 OAuth 凭证
+# 约束: 必须设置提供商 base_url; 不可与 AWS / Amazon Bedrock 认证组合。
+# base_url、authorization_url 和 token_url 必须使用 HTTPS (环回地址允许 HTTP),
+# 且不能含 URL 用户名、密码或 fragment。以下均为需替换的示例地址
+# [model_providers.custom.gateway_oauth]
+# authorization_url — 类型: 字符串 (必填), 授权端点
+# authorization_url = "https://login.example.com/oauth/authorize"
+# token_url — 类型: 字符串 (必填), 令牌端点
+# token_url = "https://login.example.com/oauth/token"
+# client_id — 类型: 非空字符串 (必填), 已注册的 OAuth 客户端 ID
+# client_id = "codex-gateway-client"
+# resource — 类型: 字符串 (可选), OAuth 资源标识
+# resource = "https://gateway.example.com"
+# scopes — 类型: 字符串数组 | 默认: []
+# scopes = ["openid", "offline_access"]
+# redirect_port — 类型: 整数 (可选) | 范围: 1-65535
+# 省略时使用系统分配的临时本地回调端口; 不接受 0
+# redirect_port = 1457
+# delivery — 必填对象; 以下两种写法二选一
+# header: kind / name 必填; scheme 默认 "Bearer"
+# 不能使用 Authorization、Cookie 等保留头, 也不能与提供商静态或环境变量头冲突
+# delivery = { kind = "header", name = "X-Gateway-Token", scheme = "Bearer" }
+# cookie: kind / name 必填, 不使用 scheme; 提供商不能另外配置 Cookie 头
+# delivery = { kind = "cookie", name = "gateway_session" }
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -3148,8 +3260,9 @@ required = false
 #   "chatgpt" — 对与 https://chatgpt.com/backend-api/codex 同源的地址
 #               使用当前 ChatGPT 会话;
 #               会话提供方不可用时仍可回退到已存储的 OAuth 凭证
-# 已配置的 bearer token 或 Authorization header 始终优先于此认证流程;
-# 两种模式最终都允许回退到未认证连接。
+#   "ema_auth" — 通过企业 IdP 刷新令牌交换资源专属授权, 不允许替代凭证或回退
+# oauth / chatgpt 下, 已配置的 bearer token 或 Authorization header 优先;
+# 这两种模式最终允许回退到未认证连接。ema_auth 的完整示例与约束见下方
 # auth = "oauth"
 
 # bearer_token_env_var — 类型: 字符串 (可选)
@@ -3196,6 +3309,30 @@ tool_timeout_sec = 120
 # 仅为此服务器 OAuth 流程指定固定回调端口; 优先于顶层 mcp_oauth_callback_port
 # callback_port = 1456
 
+# ── 示例 3: 企业托管 MCP 认证 (EMA / XAA) ─────────────────────────────────
+# 前提: 在非项目配置中设置 [features].use_xaa = true。
+# 共享 IdP 与 Codex 账号凭证独立; issuer / client_id 必须在同一受信配置层声明,
+# 托管层优先于普通用户配置。项目配置或插件声明不能选择、替换企业 IdP
+# [mcp_enterprise_managed_auth.idp]
+# issuer — 类型: 字符串 (必填), 企业 OAuth 发现与身份验证的 issuer
+# issuer = "https://idp.example.com"
+# client_id — 类型: 字符串 (必填), 企业 IdP 注册的公共 OAuth 客户端 ID
+# client_id = "codex-enterprise-client"
+#
+# 每个资源的传输、授权、scope 和 resource 也必须在一个非项目配置层完整声明。
+# 仅支持宿主本地连接的 streamable HTTP; 不允许 bearer_token_env_var、非空
+# http_headers / env_http_headers 或 http_headers_helper, 不回退到普通 OAuth
+# [mcp_servers.company_ema]
+# url = "https://mcp.example.com/docs"
+# auth = "ema_auth"
+# scopes = ["read:docs"]
+# oauth_resource = "https://mcp.example.com/docs"
+# [mcp_servers.company_ema.oauth]
+# client_id = "docs-resource-client"
+# authorization_server_issuer — 类型: 字符串 (可选), 预期的资源授权服务器 issuer
+# 仅允许与 auth = "ema_auth" 一起使用
+# authorization_server_issuer = "https://auth.example.com"
+
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║                     第 22 节: Apps 控制                                 ║
@@ -3239,6 +3376,14 @@ open_world_enabled = true
 # ── 单个 App 配置 ──────────────────────────────────────────────────────────
 [apps.github]
 enabled = true
+
+# omit_tools_from — 类型: 字符串数组 (可选)
+# 按工具暴露位置隐藏此 App 的工具; 各值彼此独立:
+#   "direct" — 初始直连工具; "deferred" — tool search 发现结果;
+#   "code_mode" — code mode 嵌套工具
+# 与服务器级排除项叠加; 省略时继承较低优先级的 App 配置,
+# [] 只清除 App 层排除项, 不清除服务器级限制
+# omit_tools_from = ["code_mode"]
 
 # default_tools_enabled — 类型: 布尔值 (可选)
 # 此 App 的工具是否默认启用; 设置后优先于 destructive/open_world hint 门控
@@ -3445,7 +3590,6 @@ trust_level = "trusted"
 # sandbox_mode = "workspace-write"
 # web_search = "cached"
 # service_tier = "priority"
-# personality = "pragmatic"
 # model_reasoning_effort = "high"
 # model_reasoning_summary = "auto"
 # model_verbosity = "medium"
@@ -3480,7 +3624,6 @@ trust_level = "trusted"
 # sandbox_mode = "danger-full-access"
 # web_search = "live"
 # service_tier = "priority"
-# personality = "pragmatic"
 # model_reasoning_effort = "medium"
 # model_reasoning_summary = "concise"
 # model_verbosity = "low"
@@ -3496,7 +3639,6 @@ trust_level = "trusted"
 # sandbox_mode = "read-only"
 # web_search = "disabled"
 # service_tier = "flex"
-# personality = "pragmatic"
 # model_reasoning_effort = "high"
 # model_reasoning_summary = "auto"
 # model_verbosity = "medium"
