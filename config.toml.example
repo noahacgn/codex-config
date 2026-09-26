@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.156.0 (发布于 2026-09-22 UTC)                 #
+#  适用版本: Codex CLI rust-v0.157.0 (发布于 2026-09-25 UTC)                 #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -104,8 +104,9 @@ approval_policy = "on-request"
 #                          ⚠️ 有风险! 仅在你完全信任模型输出时使用
 # 说明: 沙箱决定了模型可以对你的电脑做什么; 未显式设置时, macOS/Linux 上
 #       已记录 trust 状态的项目通常派生为 workspace-write, 未记录时回落到
-#       read-only。Windows 若未启用 [windows].sandbox, workspace-write 即使
-#       显式设置也会降级为 read-only
+#       read-only。Windows 还要求有效的 Windows 沙箱: 可由 [windows].sandbox
+#       显式选择, 或由 [features].prefer_mxc 在本机满足条件时自动选择;
+#       否则 workspace-write 即使显式设置也会降级为 read-only
 sandbox_mode = "workspace-write"
 
 # ── allow_symlinked_codex_home ────────────────────────────────────────────
@@ -736,20 +737,27 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 # ╔═══════════════════════════════════════════════════════════════════════════╗
 # ║                     第 2 节: Auto-review 审批审查策略                  ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
-# 作用: 为 approvals_reviewer = "auto_review" 提供额外策略说明
-# 说明: 这些文字会注入 Auto-reviewer 的审查提示中; 企业托管的 requirements
-#       policy 会覆盖这里的用户级 policy
+# 作用: 为 approvals_reviewer = "auto_review" 提供审查策略和额外策略说明
+# 说明: 只影响自动审批审查, 不影响人工审批; 企业 requirements.toml 中的
+#       guardian_policy_config / guardian_extra_policy 分别优先于本节的
+#       policy / extra_policy, 纯空白策略按未设置处理
 
 [auto_review]
 # policy — 类型: 字符串 (可选)
-# 追加给 Auto-reviewer 的审查策略; 只影响自动审批审查, 不影响人工审批
+# 替换审查模板中的租户策略; 未设置时使用模型目录或内置策略
 # policy = "仅在命令意图清晰、风险可控且不会泄露敏感数据时批准。"
 
+# extra_policy — 类型: 字符串 (可选) | 默认: 无
+# 在生效的租户策略之外补充审查要求, 不替换 policy; 同时用于 Guardian
+# 审批提示和 Guardian V2 的异步风险分类
+# extra_policy = "涉及生产环境的写操作必须具备用户明确授权。"
+
 # experimental_policy_template — 类型: 字符串 (可选) | 默认: 内置模板
-# 替换完整的 Guardian 审查提示模板; 必须包含 {{ tenant_policy_config }} 占位符,
-# 运行时会将其替换为生效的审查策略, 并在模板后附加输出格式约定。
-# 这是实验选项, 适合需要维护完整审批提示的宿主集成
-# experimental_policy_template = "依据以下策略审查操作的风险与授权: {{ tenant_policy_config }}"
+# 替换完整的 Guardian 审查提示模板; 应保留 {{ tenant_policy_config }} 和
+# {{ extra_policy }} 两个占位符, 运行时分别填入租户策略与额外策略,
+# 并在模板后附加输出格式约定。省略 {{ extra_policy }} 会导致额外策略
+# 不进入该审查提示。这是实验选项, 适合需要维护完整审批提示的宿主集成
+# experimental_policy_template = "依据以下策略审查风险与授权: {{ tenant_policy_config }} 额外要求: {{ extra_policy }}"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
@@ -881,14 +889,17 @@ model_migrations = { "gpt-5.3-codex" = "gpt-5.4" }
 # 作用: 配置 Windows 平台上的沙箱实现方式
 
 [windows]
-# sandbox — 类型: 字符串 | 默认: 无 (Disabled, 不启用 Windows 沙箱)
+# sandbox — 类型: 字符串 | 配置默认: 无
 # 可选值:
 #   "elevated"   — 提权沙箱: 首次运行时需要管理员权限来创建受限沙箱用户并配置
 #                  操作系统级 ACL; 设置完成后自动记录在配置中
 #   "unelevated" — 非提权沙箱: 使用受限进程令牌 (restricted token) 实现沙箱,
 #                  无需管理员权限
 #   "mxc"        — 使用 Windows MXC 沙箱实现; 需要执行宿主提供对应运行支持
-# 说明: 仅在 Windows 上生效; macOS/Linux 使用其他沙箱机制
+# 说明: 仅在 Windows 上生效; macOS/Linux 使用其他沙箱机制。未设置且未通过
+#       其他机制选择有效后端时, Windows 沙箱保持禁用。
+#       [features].prefer_mxc = true 可在本机满足条件时优先选择 MXC;
+#       该偏好不改写此配置, 远程执行器仍继承显式配置的后端
 sandbox = "elevated"
 
 
@@ -1199,10 +1210,10 @@ enabled = true
 #       也可以用 --no-alt-screen 命令行参数来覆盖
 alternate_screen = "auto"
 
-# fullscreen_transcript — 类型: 布尔值 | 默认: false
+# fullscreen_transcript — 类型: 布尔值 | 默认: true
 # 让 TUI 接管全屏对话记录的滚动、鼠标选择和搜索; /tui 可保存下次启动的选择
 # alternate_screen = "never" 或 --no-alt-screen 会阻止使用全屏模式
-fullscreen_transcript = false
+fullscreen_transcript = true
 
 # animations — 类型: 布尔值 | 默认: true
 # 是否启用 TUI 动画效果; 系统的减少动态效果设置会进一步关闭动画。
@@ -1228,6 +1239,7 @@ effects.title = true     # 需要用户操作时闪烁终端标题指示器
 rendering.mermaid = true # 将支持的 Mermaid 代码块渲染为图表
 rendering.math = true    # 将数学表达式渲染为 Unicode 记号
 rendering.tables = true  # 渲染 Markdown 管道表格, 包括 Markdown 代码块中的表格
+rendering.lists = true   # 将 Markdown 项目符号和任务列表标记渲染为 Unicode 符号
 
 # auto_recap — 类型: 布尔值 | 默认: true
 # 终端失去焦点时是否自动生成对话 recap
@@ -2059,16 +2071,16 @@ memories = true
 # 不等同于让所有请求始终使用系统代理的 respect_system_proxy
 # system_proxy_fallback = true
 
+# daemon_auto_start — 默认: true | 稳定
+# 符合条件的交互启动、恢复和派生会话自动使用共享本地后台服务器;
+# 修改在下次启动生效, --no-daemon 可跳过后台服务器
+# daemon_auto_start = true
+
 # ── 实验功能 (Experimental) ────────────────────────────────────────────────
 
 # analytics_plan_history — 默认: false | 实验
 # 在 /analytics 中预览个人账号的五小时与每周额度历史
 # analytics_plan_history = false
-
-# daemon_auto_start — 默认: false | 实验
-# 符合条件的交互启动、恢复和派生会话自动使用共享本地后台服务器;
-# 修改在下次启动生效, --no-daemon 可跳过后台服务器
-# daemon_auto_start = false
 
 # prevent_idle_sleep — 默认: false | 实验 (macOS/Linux/Windows)
 # 防止系统在 Codex 活跃时进入休眠
@@ -2213,6 +2225,13 @@ prevent_idle_sleep = true
 # 沙箱模式仍由 [windows].sandbox 等配置决定。使用 workload identity 时
 # 继续使用原有的沙箱初始化路径
 # windows_sandbox_service = false
+
+# prefer_mxc — 默认: false | 开发中 (仅 Windows)
+# 本机支持原生 MXC 进程安全环境, 且生效的网络配置未禁止本地端口绑定
+# (allow_local_binding = false) 时, 优先使用 MXC 沙箱; 托管网络约束优先。
+# 条件不满足时保留原有后端选择; 该偏好只影响本机, 远程执行器仍继承
+# [windows].sandbox 的配置, 不继承本机自动选择的结果
+# prefer_mxc = false
 
 # api_key_model_discovery — 默认: false | 开发中
 # 为 OpenAI API Key 认证启用远程模型目录发现
@@ -2434,11 +2453,11 @@ prevent_idle_sleep = true
 #       和 transcript 上限可由当前模型目录提供默认值; 本地配置仍优先
 # guardianv2 = false
 # guardianv2.enabled = true
-# thread_context — 类型: 布尔值 | 默认: false
+# thread_context — 类型: 布尔值 | 默认: true | 稳定
 # 同步与异步 Guardian 使用线程持有的上下文; 独立于 guardianv2.enabled,
 # 不会因为设置此项而自动启用 Guardian V2。
 # 上下文模式在线程的 Guardian 证据初始化时确定, 不随后续回合热切换
-# guardianv2.thread_context = false
+# guardianv2.thread_context = true
 # Guardian 计费由后端决定; free_guardian 已无运行时作用, 不再提供配置示例
 # persist_scores — 类型: 布尔值 | 默认: false
 # 把已审查动作及风险评分写入非临时会话的 rollout 文件, 仅建议用于调试
@@ -3434,17 +3453,20 @@ approval_mode = "prompt"
 
 
 # ╔═══════════════════════════════════════════════════════════════════════════╗
-# ║                     第 23 节: Orchestrator 功能开关                     ║
+# ║                     第 23 节: 云技能与 Orchestrator 工具                ║
 # ╚═══════════════════════════════════════════════════════════════════════════╝
-# 作用: 控制由宿主 orchestrator 提供的 Skills 和 MCP 工具是否暴露给模型
-# 默认: 两项均为 true
-# 说明: 这里只控制 orchestrator 拥有的能力, 不等同于 [skills]、
-#       [mcp_servers] 或 [features].apps 等普通用户配置。
+# 作用: 分别控制云技能的发现与暴露、宿主 orchestrator 提供的 MCP 工具
+# 说明: 不等同于本地 [skills]、[mcp_servers] 或 [features].apps 等配置
 
-[orchestrator.skills]
+[cloud.skills]
+# enabled — 类型: 布尔值 | 默认: true
+# 允许发现云技能并将其暴露给模型; 仍需宿主提供云技能 provider,
+# 单独开启此项不会为未接入云技能的宿主增加能力
 enabled = true
 
 [orchestrator.mcp]
+# enabled — 类型: 布尔值 | 默认: true
+# 控制宿主 orchestrator 提供的 MCP 工具是否暴露给模型
 enabled = true
 
 
@@ -3560,8 +3582,10 @@ headers = {}
 #   "trusted"   — 默认审批策略为 "on-request"
 #   "untrusted" — 默认对每条命令请求审批, 只有显式 exec policy allow 规则可跳过
 # 沙箱说明: 在 macOS/Linux 上, 两种已记录的 trust 状态都默认派生
-#             workspace-write; Windows 只有配置了 [windows].sandbox 才如此,
-#             否则回落到 read-only。trust_level 本身不授予全磁盘或网络权限。
+#             workspace-write; Windows 还要求有效的 Windows 沙箱, 可由
+#             [windows].sandbox 显式选择, 或由 [features].prefer_mxc 在
+#             本机满足条件时自动选择; 否则回落到 read-only。
+#             trust_level 本身不授予全磁盘或网络权限。
 # 提示: Codex 会在你首次打开新项目时自动询问信任级别, 结果保存在这里
 
 [projects.'C:\Users\you']
