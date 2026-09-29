@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.158.0 (源码提交 064c6b8c73)                   #
+#  适用版本: Codex CLI rust-v0.159.0 (源码提交 687a119f0f)                   #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -99,7 +99,8 @@ approval_policy = "on-request"
 #                          网络访问默认关闭; 这是最安全的选项
 #   "workspace-write"    — 工作区可写: 可以读取整个磁盘, 但只能在当前工作目录、
 #                          临时目录及 [sandbox_workspace_write] 的额外目录写入
-#                          .git / .agents / .codex 目录自动设为只读保护
+#                          可写根目录下的 .git / .agents / .codex / .aws
+#                          目录默认设为只读保护
 #   "danger-full-access" — 完全访问: 没有任何限制, 可以读写所有文件、访问网络
 #                          ⚠️ 有风险! 仅在你完全信任模型输出时使用
 # 说明: 沙箱决定了模型可以对你的电脑做什么; 未显式设置时, macOS/Linux 上
@@ -743,6 +744,14 @@ project_root_markers = [".git", "package.json", "go.mod", "pyproject.toml"]
 #       policy / extra_policy, 纯空白策略按未设置处理
 
 [auto_review]
+# circuit_break_action — 类型: 字符串 (可选) | 默认: "default"
+# 控制 Guardian 熔断中断回合时是否同时提供结构化错误详情
+# 可选值:
+#   "default" — 发出警告并中断, 不附带结构化错误详情
+#   "strict"  — 同样发出警告并中断, 额外附带结构化错误详情
+# 注意: strict 写入的结构化错误可能无法被读取同一会话历史的旧客户端识别
+# circuit_break_action = "default"
+
 # policy — 类型: 字符串 (可选)
 # 替换审查模板中的租户策略; 未设置时使用模型目录或内置策略
 # policy = "仅在命令意图清晰、风险可控且不会泄露敏感数据时批准。"
@@ -1606,6 +1615,9 @@ terminal_resize_reflow_max_rows = 9000
 #       MCP sandbox state、shell 提权和 app-server API 中往返传递。
 #       使用自定义 profile 时必须通过 default_permissions 选择它; 未定义 parent
 #       或循环继承都会报错。继承按 parent 先、child 后逐键合并, child 同名项覆盖。
+#       受限沙箱默认保护可写根目录下的 .git / .agents / .codex / .aws 目录;
+#       明确配置的 filesystem 规则可以覆盖相应目录的默认只读保护。
+#       命令获批扩大访问范围后, 显式配置的文件系统 deny 规则仍然保留。
 #
 # 结构:
 #   [permissions.<profile-name>]
@@ -2068,7 +2080,8 @@ hooks = true
 guardian_approval = true
 
 # guardian_reuse_parent_compaction — 默认: true | 稳定
-# Guardian 审批审查重启时复用父会话的加密压缩内容
+# Guardian 审批审查重启时复用父会话的加密压缩内容;
+# 设为 false 时, 父会话压缩前后会保留独立的审查记录
 # guardian_reuse_parent_compaction = true
 
 # workspace_dependencies — 默认: true | 稳定
@@ -2189,6 +2202,12 @@ prevent_idle_sleep = true
 # 收到 Agent 消息时, 不再在 reasoning / commentary 边界打断当前采样;
 # 待处理消息会在下一个正常输入边界交付
 # defer_mailbox_preemption = false
+
+# instant_interrupt — 默认: false | 开发中
+# 收到新用户输入时抢占正在生成的模型回复, 并让前台等待 code mode
+# 执行结果的调用及时返回, 使模型更早接收并处理补充指令;
+# 已启动的 code mode 执行单元及其嵌套工具会继续在后台运行
+# instant_interrupt = false
 
 # agent_message_board — 默认: false | 开发中
 # 为同一 Agent 树启用共享讨论工具; 还要求 multi_agent_v2 = true。
