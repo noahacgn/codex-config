@@ -2,7 +2,7 @@
 #                    Codex CLI — config.toml 完整配置参考                      #
 #                                                                             #
 #  文件位置: ~/.codex/config.toml (即 $CODEX_HOME/config.toml)                #
-#  适用版本: Codex CLI rust-v0.157.0 (发布于 2026-09-25 UTC)                 #
+#  适用版本: Codex CLI rust-v0.158.0 (源码提交 064c6b8c73)                   #
 #  说    明: 本文件覆盖当前公开 Schema 可见配置项, 并附带详细中文参考         #
 #            尽量标注类型 / 默认值 / 可选值 / 运行时作用                      #
 #            本文件含非默认值和环境相关示例, 使用前请按实际环境审阅              #
@@ -1215,6 +1215,25 @@ alternate_screen = "auto"
 # alternate_screen = "never" 或 --no-alt-screen 会阻止使用全屏模式
 fullscreen_transcript = true
 
+# copy_on_select — 类型: 字符串 | 默认: "auto"
+# 控制全屏对话记录中的鼠标选择是否在松开按钮时自动复制。
+# 可选值:
+#   "auto"   — 按终端选择; 直接运行于 Ghostty 1.2+、macOS Kitty、
+#                Windows Terminal 或 Windows VS Code 时默认不自动复制;
+#                未识别的终端、无法识别版本的 Ghostty 及 tmux/Zellij 默认复制
+#   "always" — 每次松开鼠标时复制非空选择
+#   "never"  — 仅在显式触发复制操作时复制
+copy_on_select = "auto"
+
+# right_click_paste — 类型: 字符串 | 默认: "auto"
+# 控制全屏 TUI 无选区时的右键文本粘贴; 不改变终端自身的粘贴快捷键。
+# 可选值:
+#   "auto" — 在 Windows / WSL / Linux 启用
+#   "on"   — 额外允许在 macOS 启用
+#   "off"  — 交由终端处理右键粘贴
+# auto / on 均不会在 SSH 或已识别的 VS Code 终端中读取本地剪贴板
+right_click_paste = "auto"
+
 # animations — 类型: 布尔值 | 默认: true
 # 是否启用 TUI 动画效果; 系统的减少动态效果设置会进一步关闭动画。
 # 未显式配置本项时, 首次检测到屏幕阅读器也会保存 animations = false
@@ -1808,6 +1827,11 @@ unified_exec = true
 # 非 TTY 命令仍可执行。此项不会单独启用 unified_exec
 unified_exec_tty = true
 
+# write_stdin_approval — 默认: true | 稳定
+# 向已提权的 unified-exec 终端写入非空输入前触发审批;
+# 纯轮询和符合规则的非 TTY 中断输入不触发此审批
+write_stdin_approval = true
+
 # code_mode_host — 默认: true | 稳定
 # 在独立宿主进程中运行 JavaScript code mode。Codex 进程内的 V8 实现已经移除;
 # 使用规范对象写法可控制独立宿主不可用时是否允许退回普通直连工具面
@@ -1929,6 +1953,17 @@ multi_agent = true
 # wait_agent_enabled — 类型: 布尔值 | 默认: true
 # 是否暴露 wait_agent 工具; 设为 false 会从 Multi-Agent V2 工具面中移除它
 # multi_agent_v2.wait_agent_enabled = true
+#
+# disable_direct_message — 类型: 布尔值 | 默认: false
+# 隐藏模型的直接消息工具, 仍允许派生子 Agent 并接收自动返回的结果。
+# 必须同时启用 agent_message_board 并保证本会话的讨论板可用, 否则工具注册失败;
+# 临时会话还需设置下方 message_board_in_memory = true
+# multi_agent_v2.disable_direct_message = false
+#
+# message_board_in_memory — 类型: 布尔值 | 默认: false
+# 用于训练会话的内存讨论板, 临时会话也能使用;
+# 仍须启用 multi_agent_v2 和 agent_message_board
+# multi_agent_v2.message_board_in_memory = false
 #
 # non_code_mode_only — 类型: 布尔值 | 默认: true
 # 是否只把 Multi-Agent V2 工具作为模型直连的顶层工具暴露, 不放入 code mode
@@ -2150,9 +2185,14 @@ prevent_idle_sleep = true
 
 # ── 开发中功能 (Under Development) ─────────────────────────────────────────
 
+# defer_mailbox_preemption — 默认: false | 开发中
+# 收到 Agent 消息时, 不再在 reasoning / commentary 边界打断当前采样;
+# 待处理消息会在下一个正常输入边界交付
+# defer_mailbox_preemption = false
+
 # agent_message_board — 默认: false | 开发中
-# 为同一 Agent 树启用共享讨论工具; 还要求 multi_agent_v2 = true,
-# 且当前会话不是临时会话
+# 为同一 Agent 树启用共享讨论工具; 还要求 multi_agent_v2 = true。
+# 默认使用状态数据库; 临时会话需设置 multi_agent_v2.message_board_in_memory = true
 # agent_message_board = false
 
 # executed_tool_call_metadata — 默认: false | 开发中
@@ -2189,6 +2229,11 @@ prevent_idle_sleep = true
 # 在 cell 返回中展示 handler 耗时、code mode 宿主耗时和框架开销;
 # 此选项及输出格式均为实验性, 可能改变或移除
 # code_mode.experimental_show_cell_overhead = false
+# tool_input_schema_max_bytes — 类型: 正整数 (UTF-8 字节) | 有效默认/最小值: 16000
+# 限制每个工具在 code mode 中渲染的输入类型大小; 小于 16000 的正数按 16000 处理。
+# 普通 MCP 工具还会取服务器显式配置的同名上限与本值中的较大值,
+# 增大上限可保留更多参数描述
+# code_mode.tool_input_schema_max_bytes = 16000
 # code_mode.excluded_tool_namespaces = ["web"]
 # code_mode.direct_only_tool_namespaces = ["image_gen"]
 # direct_only_tool_namespaces 中的命名空间只作为模型顶层工具暴露:
@@ -2306,11 +2351,6 @@ prevent_idle_sleep = true
 # exec_permission_approvals — 默认: false | 开发中 (别名: request_permissions)
 # 允许在沙箱中动态请求额外的文件系统权限审批
 # exec_permission_approvals = false
-
-# write_stdin_approval — 默认: false | 开发中
-# 向已提权的 unified-exec 终端写入非空输入前触发审批;
-# 纯轮询和符合规则的非 TTY 中断输入不触发此审批
-# write_stdin_approval = false
 
 # request_permissions_tool — 默认: false | 开发中
 # 暴露内置的 request_permissions 工具, 让模型可以主动请求文件系统权限
@@ -2453,11 +2493,9 @@ prevent_idle_sleep = true
 #       和 transcript 上限可由当前模型目录提供默认值; 本地配置仍优先
 # guardianv2 = false
 # guardianv2.enabled = true
-# thread_context — 类型: 布尔值 | 默认: true | 稳定
-# 同步与异步 Guardian 使用线程持有的上下文; 独立于 guardianv2.enabled,
-# 不会因为设置此项而自动启用 Guardian V2。
-# 上下文模式在线程的 Guardian 证据初始化时确定, 不随后续回合热切换
-# guardianv2.thread_context = true
+# rust-v0.158.0 起, 同步与异步 Guardian 始终使用线程持有的上下文。
+# guardianv2.thread_context 已失效并会产生弃用提示, 应从配置和预设中删除;
+# 此固定行为独立于 guardianv2.enabled, 不会自动启用 Guardian V2
 # Guardian 计费由后端决定; free_guardian 已无运行时作用, 不再提供配置示例
 # persist_scores — 类型: 布尔值 | 默认: false
 # 把已审查动作及风险评分写入非临时会话的 rollout 文件, 仅建议用于调试
@@ -3223,6 +3261,19 @@ required = false
 # 省略时继承较低优先级配置; 显式 [] 会清除继承的排除项
 # omit_tools_from = ["deferred", "code_mode"]
 
+# startup_readiness — 类型: 字符串 | 默认: "connection"
+# 可选值:
+#   "connection" — 按实时连接状态判断启动就绪
+#   "catalog"    — 有有效工具目录缓存时, 允许先向模型暴露目录并后台建立连接;
+#                    执行工具时仍要求本次实时连接可用, 没有有效缓存时仍需等待连接
+# startup_readiness = "connection"
+
+# tool_input_schema_max_bytes — 类型: 正整数 (UTF-8 字节) | 默认: 5000
+# 普通 MCP 工具输入 schema 的压缩阈值; 增大可保留更多参数描述。
+# 显式设置后, code mode 渲染该服务器工具的输入类型时也会参考此上限,
+# 但 code mode 仍至少使用 16000 字节及其自身配置的上限
+# tool_input_schema_max_bytes = 5000
+
 # startup_timeout_sec — 类型: 浮点数 (秒, 可选) | 有效默认: 30
 # 分别用于客户端/传输创建、MCP initialize 握手和首次 tools/list;
 # 每个阶段独立计时, 不共享总窗口
@@ -3320,6 +3371,10 @@ tool_timeout_sec = 120
 # oauth_resource = "https://mcp.example.com/"
 # [mcp_servers.company_oauth.oauth]
 # client_id = "your-oauth-client-id"
+# client_secret — 类型: 非空字符串 (可选)
+# 预注册 OAuth 客户端在令牌交换时使用的 secret; 必须同时设置非空 client_id。
+# 仅适用于 HTTP MCP OAuth, 请只在本地配置中填入真实凭证
+# client_secret = "replace-with-your-client-secret"
 # callback_url — 类型: 字符串 (可选)
 # 与此预注册 OAuth client 绑定的回调 URL; 优先于顶层 mcp_oauth_callback_url。
 # 省略端口的 http://127.0.0.1 URL 会在授权请求中补上本次本地监听端口
@@ -3498,6 +3553,16 @@ environment = "dev"
 # ⚠️ 注意: 启用后原始输入会进入 codex_otel.log_only tracing 日志事件;
 #           任何本地或 OTEL 日志消费者都可能保存或传输敏感内容
 log_user_prompt = false
+
+# log_agent_responses — 类型: 布尔值 | 默认: false
+# 将主 Agent 和派生子 Agent 的最终回复写入 OTLP 日志, 回复文本最多 64 KiB。
+# 还须将 otel.exporter 配置为 otlp-http 或 otlp-grpc; 只配置 trace_exporter 不生效
+log_agent_responses = false
+
+# log_guardian_assessments — 类型: 布尔值 | 默认: false
+# 将已完成的 Guardian 审查结果写入 OTLP 日志, 理由文本最多 64 KiB。
+# 同样要求显式配置 OTLP 日志 exporter; 启用任一日志选项可能导出敏感文本
+log_guardian_assessments = false
 
 # tool_result.max_bytes — 类型: 非负整数 | 默认: 2048
 # 限制 codex.tool_result 日志记录中的工具结果 UTF-8 字节数;
